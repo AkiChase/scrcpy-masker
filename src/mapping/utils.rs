@@ -1,20 +1,5 @@
 // use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*, window::CursorGrabMode};
 
-// #[derive(Component)]
-// pub struct KeyOptionPosition {
-//     pub x: f32,
-//     pub y: f32,
-// }
-
-// #[derive(Component)]
-// pub struct KeyOptionNote(String);
-
-// #[derive(Component)]
-// pub struct KeyOptionPointerId(String);
-
-// #[derive(Component)]
-// pub struct KeyOptionKey(String);
-
 // fn lock_cursor_with_virtual_mouse(
 //     mut input: ResMut<ButtonInput<KeyCode>>,
 //     mut window: Single<&mut Window>,

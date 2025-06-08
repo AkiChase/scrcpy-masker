@@ -1,12 +1,18 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{BufReader, Write},
+    path::Path,
+};
 
 use bevy::{ecs::resource::Resource, input::keyboard::KeyCode};
 use bevy_ineffable::{
     config::InputConfig,
     phantom::IAWrp,
-    prelude::{ContinuousBinding, IneffableCommands, InputAction, InputBinding, InputKind},
+    prelude::{ContinuousBinding, InputAction, InputBinding, InputKind},
 };
 use paste::paste;
+use ron::ser::{PrettyConfig, to_string_pretty};
 use seq_macro::seq;
 use serde::{Deserialize, Serialize};
 use strum_macros::{AsRefStr, Display};
@@ -114,6 +120,7 @@ impl_mapping_type_methods! {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MappingConfig {
+    pub version: String,
     pub title: String,
     pub original_size: Size,
     pub mappings: HashMap<MappingAction, MappingType>,
@@ -122,25 +129,25 @@ pub struct MappingConfig {
 #[derive(Resource)]
 pub struct ActiveMappingConfig(pub MappingConfig);
 
-pub fn load_mapping_config(mut ineffable: IneffableCommands) -> MappingConfig {
-    // TODO load from file
-    let mapping_config = MappingConfig {
-        title: "test".to_string(),
+pub fn default_mapping_config() -> MappingConfig {
+    MappingConfig {
+        version: "0.0.1".to_string(),
+        title: "Default".to_string(),
         original_size: Size {
-            width: 1920,
-            height: 1080,
+            width: 1280,
+            height: 720,
         },
         mappings: HashMap::from([
             (
                 MappingAction::SingleTap1,
                 MappingType::SingleTap(
                     MappingSingleTap::new(
-                        (100, 200).into(),
-                        "test",
+                        (100, 100).into(),
+                        "SingleTap (duration)",
                         0,
                         3000,
                         false,
-                        ContinuousBinding::hold(KeyCode::KeyA).0,
+                        ContinuousBinding::hold(KeyCode::Digit1).0,
                     )
                     .unwrap(),
                 ),
@@ -149,18 +156,26 @@ pub fn load_mapping_config(mut ineffable: IneffableCommands) -> MappingConfig {
                 MappingAction::SingleTap2,
                 MappingType::SingleTap(
                     MappingSingleTap::new(
-                        (200, 300).into(),
-                        "test",
+                        (200, 100).into(),
+                        "SingleTap (sync)",
                         0,
                         0,
                         true,
-                        ContinuousBinding::hold(KeyCode::KeyS).0,
+                        ContinuousBinding::hold(KeyCode::Digit2).0,
                     )
                     .unwrap(),
                 ),
             ),
         ]),
-    };
+    }
+}
+
+pub fn load_mapping_config(path: &Path) -> Result<(MappingConfig, InputConfig), String> {
+    // load from file
+    let file = File::open(path).map_err(|e| format!("Cannot open mapping config file: {}", e))?;
+    let reader = BufReader::new(file);
+    let mapping_config: MappingConfig = ron::de::from_reader(reader)
+        .map_err(|e| format!("Cannot parse mapping config file: {}", e))?;
 
     // apply config
     let mut all_bindings: HashMap<String, Vec<InputBinding>> = HashMap::new();
@@ -172,9 +187,19 @@ pub fn load_mapping_config(mut ineffable: IneffableCommands) -> MappingConfig {
     let binding_config: HashMap<String, HashMap<String, Vec<InputBinding>>> =
         HashMap::from([("MappingAction".to_string(), all_bindings)]);
 
-    let mut config = InputConfig::new();
-    config.bindings = binding_config;
-    ineffable.set_config(&config);
+    let mut input_config = InputConfig::new();
+    input_config.bindings = binding_config;
 
-    mapping_config
+    Ok((mapping_config, input_config))
+}
+
+pub fn save_mapping_config(config: &MappingConfig, path: &Path) -> Result<(), String> {
+    let pretty = PrettyConfig::default();
+    let ron_string = to_string_pretty(config, pretty)
+        .map_err(|e| format!("Cannot serialize mapping config: {}", e))?;
+    let mut file =
+        File::create(path).map_err(|e| format!("Cannot create mapping config file: {}", e))?;
+    file.write_all(ron_string.as_bytes())
+        .map_err(|e| format!("Cannot write to mapping config file: {}", e))?;
+    Ok(())
 }

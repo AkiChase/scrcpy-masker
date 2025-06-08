@@ -5,9 +5,12 @@ pub mod utils;
 use bevy::prelude::*;
 use bevy_ineffable::prelude::*;
 
-use crate::mapping::{
-    config::{ActiveMappingConfig, MappingAction},
-    tap::{handle_repeat_tap, handle_single_tap},
+use crate::{
+    mapping::{
+        config::{ActiveMappingConfig, MappingAction, default_mapping_config, save_mapping_config},
+        tap::{handle_repeat_tap, handle_single_tap},
+    },
+    utils::relate_to_root_path,
 };
 
 #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
@@ -44,12 +47,22 @@ impl Plugin for HotKeyPlugins {
 
 fn init(
     mut commands: Commands,
-    ineffable: IneffableCommands,
+    mut ineffable: IneffableCommands,
     mut next_state: ResMut<NextState<MappingState>>,
 ) {
-    let mapping_config = config::load_mapping_config(ineffable);
-    commands.insert_resource(ActiveMappingConfig(mapping_config));
-    next_state.set(MappingState::Normal);
+    let config_path = relate_to_root_path(["local", "default.ron"]);
+
+    if !config_path.exists() {
+        save_mapping_config(&default_mapping_config(), &config_path).unwrap();
+    }
+
+    if let Ok((mapping_config, input_config)) = config::load_mapping_config(&config_path) {
+        ineffable.set_config(&input_config);
+        commands.insert_resource(ActiveMappingConfig(mapping_config));
+        next_state.set(MappingState::Normal);
+    } else {
+        println!("Failed to load mapping config")
+    }
 }
 
 #[derive(Resource, Debug, Clone)]
