@@ -1,3 +1,5 @@
+/// Bevy basic plugin that creates a window with a transparent background and a border.
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use bevy::window::CompositeAlphaMode;
 use bevy::{prelude::*, window::PresentMode};

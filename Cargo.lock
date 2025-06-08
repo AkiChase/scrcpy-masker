@@ -7,6 +7,10 @@ name = "accesskit"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "becf0eb5215b6ecb0a739c31c21bd83c4f326524c9b46b7e882d77559b60a529"
+dependencies = [
+ "enumn",
+ "serde",
+]
 
 [[package]]
 name = "accesskit_consumer"
@@ -314,6 +318,7 @@ dependencies = [
  "bevy_derive",
  "bevy_ecs",
  "bevy_reflect",
+ "serde",
 ]
 
 [[package]]
@@ -341,7 +346,7 @@ dependencies = [
  "downcast-rs",
  "either",
  "petgraph",
- "ron",
+ "ron 0.8.1",
  "serde",
  "smallvec",
  "thiserror 2.0.12",
@@ -402,7 +407,7 @@ dependencies = [
  "futures-lite",
  "js-sys",
  "parking_lot",
- "ron",
+ "ron 0.8.1",
  "serde",
  "stackfuture",
  "thiserror 2.0.12",
@@ -695,6 +700,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ineffable"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f57a69a75b3653310ff845c653e9c8fab7cc6253a0efbf32e7823f0925cee694"
+dependencies = [
+ "bevy",
+ "bevy_ineffable_macros",
+ "ron 0.10.1",
+ "serde",
+]
+
+[[package]]
+name = "bevy_ineffable_macros"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d0b3214d66fc95b8036f99ba8bcd8674abb9cc7a10f7df8e36d5c26f3379de7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bevy_input"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -708,6 +736,7 @@ dependencies = [
  "bevy_utils",
  "derive_more",
  "log",
+ "serde",
  "smol_str",
  "thiserror 2.0.12",
 ]
@@ -1235,6 +1264,7 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "nonmax",
+ "serde",
  "smallvec",
  "taffy",
  "thiserror 2.0.12",
@@ -1299,6 +1329,7 @@ dependencies = [
  "cfg-if",
  "crossbeam-channel",
  "raw-window-handle",
+ "serde",
  "tracing",
  "wasm-bindgen",
  "web-sys",
@@ -1876,6 +1907,17 @@ name = "encase_derive_impl"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f97b51c5cc57ef7c5f7a0c57c250251c49ee4c28f819f87ac32f4aceabc36792"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "enumn"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f9ed6b3789237c8a0c1c505af1c7eb2c560df6186f01b098c3a1064ea532f38"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2710,7 +2752,7 @@ dependencies = [
  "pp-rs",
  "rustc-hash",
  "spirv",
- "strum",
+ "strum 0.26.3",
  "termcolor",
  "thiserror 2.0.12",
  "unicode-xid",
@@ -3566,6 +3608,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ron"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beceb6f7bf81c73e73aeef6dd1356d9a1b2b4909e1f0fc3e59b034f9572d7b7f"
+dependencies = [
+ "base64 0.22.1",
+ "bitflags 2.9.1",
+ "serde",
+ "serde_derive",
+ "unicode-ident",
+]
+
+[[package]]
 name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3661,7 +3716,14 @@ name = "scrcpy-masker"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_ineffable",
  "log",
+ "paste",
+ "ron 0.10.1",
+ "seq-macro",
+ "serde",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
 ]
 
 [[package]]
@@ -3675,6 +3737,12 @@ name = "send_wrapper"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd0b0ec5f1c1ca621c432a25813d8d60c88abe6d3e08a3eb9cf37d97a0fe3d73"
+
+[[package]]
+name = "seq-macro"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
 
 [[package]]
 name = "serde"
@@ -3762,6 +3830,9 @@ name = "smallvec"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "smol_str"
@@ -3814,14 +3885,33 @@ version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.26.4",
 ]
+
+[[package]]
+name = "strum"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f64def088c51c9510a8579e3c5d67c65349dcf755e5479ad3d010aa6454e2c32"
 
 [[package]]
 name = "strum_macros"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77a8c5abcaf0f9ce05d62342b7d298c346515365c36b673df4ebe3ced01fde8"
 dependencies = [
  "heck",
  "proc-macro2",
