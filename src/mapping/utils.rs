@@ -6,7 +6,7 @@
 // ) {
 //     if input.clear_just_pressed(KeyCode::Enter) {
 //         window.cursor_options.grab_mode = bevy::window::CursorGrabMode::Locked;
-//         println!("Locked")
+//         log::debug!("Locked")
 //     }
 // }
 
@@ -14,7 +14,7 @@
 // fn unlock(mut input: ResMut<ButtonInput<KeyCode>>, mut window: Single<&mut Window>) {
 //     if input.clear_just_pressed(KeyCode::Escape) {
 //         window.cursor_options.grab_mode = bevy::window::CursorGrabMode::None;
-//         println!("Unlocked")
+//         log::debug!("Unlocked")
 //     }
 // }
 
@@ -26,7 +26,7 @@
 // }
 
 // pub fn print_accumulated_mouse_motion(mouse_move: Res<AccumulatedMouseMotion>) {
-//     println!("acc mouse motion: {:?}", mouse_move.delta)
+//     log::debug!("acc mouse motion: {:?}", mouse_move.delta)
 // }
 
 use serde::{Deserialize, Serialize};

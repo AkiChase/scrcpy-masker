@@ -1,30 +1,16 @@
 /// Bevy basic plugin that creates a window with a transparent background and a border.
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
-use bevy::window::CompositeAlphaMode;
-use bevy::{prelude::*, window::PresentMode};
+use bevy::prelude::*;
 
 pub struct BasicPlugin;
 
 impl Plugin for BasicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                transparent: true,
-                decorations: false,
-                present_mode: PresentMode::AutoVsync,
-                visible: false,
-                #[cfg(target_os = "macos")]
-                composite_alpha_mode: CompositeAlphaMode::PostMultiplied,
-                #[cfg(target_os = "linux")]
-                composite_alpha_mode: CompositeAlphaMode::PreMultiplied,
-                ..default()
-            }),
-            ..default()
-        }))
-        // ClearColor resource: The color used to clear the screen at the beginning of each frame
-        .insert_resource(ClearColor(Color::NONE))
-        .add_systems(Startup, (setup, border.after(setup), show.after(border)));
+        app
+            // ClearColor resource: The color used to clear the screen at the beginning of each frame
+            .insert_resource(ClearColor(Color::NONE))
+            .add_systems(Startup, (setup, border.after(setup), show.after(border)));
     }
 }
 

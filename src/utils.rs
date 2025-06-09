@@ -1,4 +1,9 @@
-use std::{env, path::{Path, PathBuf}};
+use std::io::{Result as IoResult, Write};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
+use tokio::sync::mpsc::UnboundedSender;
 
 pub fn relate_to_root_path<P>(segments: P) -> PathBuf
 where
@@ -21,5 +26,24 @@ fn get_base_root() -> PathBuf {
             .parent()
             .expect("No parent directory for executable")
             .to_path_buf()
+    }
+}
+
+pub struct ChannelWriter {
+    pub sender: UnboundedSender<String>,
+}
+
+impl Write for ChannelWriter {
+    fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
+        if let Ok(s) = std::str::from_utf8(buf) {
+            for line in s.lines() {
+                let _ = self.sender.send(line.to_string());
+            }
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> IoResult<()> {
+        Ok(())
     }
 }

@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.16.1", features = ["dynamic_linking"] }
-log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+log = { version = "*", features = ["max_level_debug", "release_max_level_info"] }
 bevy_ineffable = "0.8.0"
 seq-macro = "0.3"
 paste = "1.0"
@@ -13,6 +13,11 @@ ron = "0.10"
 strum = "0.27"
 strum_macros = "0.27"
 serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "sync", "time"] }
+which = "7"
+adb_client = "*"
+tracing-appender = "0.2"
+
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
