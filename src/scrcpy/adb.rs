@@ -1,6 +1,11 @@
 use adb_client::{ADBDeviceExt, ADBServer, ADBServerDevice};
-use tokio::{sync::mpsc, task::JoinHandle};
+use serde::Serialize;
+use tokio::{
+    sync::mpsc::{self, UnboundedSender},
+    task::JoinHandle,
+};
 
+use std::io::{Result as IoResult, Write};
 use std::{
     fs::File,
     io::Cursor,
@@ -8,9 +13,7 @@ use std::{
     path::Path,
 };
 
-use crate::utils::ChannelWriter;
-
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Device {
     pub id: String,
     pub status: String,
@@ -45,29 +48,35 @@ impl Device {
             .map_err(|e| format!("Failed to forward '{}' to '{}': {}", local, remote, e))
     }
 
-    pub fn shell_process(id: &str, shell_args: &[&str]) -> JoinHandle<Result<(), String>> {
+    pub fn shell_process<S>(id: &str, shell_args: S) -> JoinHandle<Result<(), String>>
+    where
+        S: IntoIterator,
+        S::Item: Into<String>,
+    {
         let mut device = Device::new_server_device(id);
-        let shell_args: Vec<String> = shell_args.iter().map(|&s| s.to_string()).collect();
+        let shell_args: Vec<String> = shell_args.into_iter().map(|s| s.into()).collect();
 
         let (tx, mut rx) = mpsc::unbounded_channel();
         let h: JoinHandle<Result<(), String>> = tokio::task::spawn_blocking(move || {
             let mut writer = ChannelWriter { sender: tx };
             let shell_args: Vec<&str> = shell_args.iter().map(|s| s.as_str()).collect();
-            device
-                .shell_command(&shell_args, &mut writer)
-                .map_err(|e| format!("Failed to run adb shell command: {}", e))
+            device.shell_command(&shell_args, &mut writer).map_err(|e| {
+                let msg = format!("Failed to run adb shell command: {}", e);
+                log::error!("[Adb] {}", msg);
+                msg
+            })
         });
 
         tokio::spawn(async move {
             while let Some(line) = rx.recv().await {
-                log::info!("{}", line);
+                log::info!("[Adb] {}", line);
             }
         });
 
         h
     }
 
-    pub fn cmd_screen_size(id: &str) -> Result<(u32, u32), String> {
+    pub fn screen_size(id: &str) -> Result<(u32, u32), String> {
         let mut device = Device::new_server_device(id);
 
         let mut output: Vec<u8> = Vec::new();
@@ -122,8 +131,8 @@ impl Adb {
     }
 
     pub fn devices(&mut self) -> Result<Vec<Device>, String> {
-        let device = self.server.devices().map_err(|e| e.to_string())?;
-        Ok(device
+        let device_list = self.server.devices().map_err(|e| e.to_string())?;
+        Ok(device_list
             .iter()
             .map(|d| Device {
                 id: d.identifier.clone(),
@@ -146,5 +155,25 @@ impl Adb {
         self.server
             .connect_device(socket_addr)
             .map_err(|e| format!("Failed to connect to device '{}': {}", address, e))
+    }
+    // pub fn push(&mut self)
+}
+
+struct ChannelWriter {
+    pub sender: UnboundedSender<String>,
+}
+
+impl Write for ChannelWriter {
+    fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
+        if let Ok(s) = std::str::from_utf8(buf) {
+            for line in s.lines() {
+                let _ = self.sender.send(line.to_string());
+            }
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> IoResult<()> {
+        Ok(())
     }
 }

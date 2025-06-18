@@ -53,13 +53,13 @@ pub fn handle_single_tap(
                 let mapping = mapping.as_ref_singletap();
                 if ineffable.just_activated(action.ineff_continuous()) {
                     if mapping.sync {
-                        log::debug!(
+                        log::warn!(
                             "{} | Tap down sync: {:?}",
                             action.as_ref(),
                             mapping.position
                         );
                     } else {
-                        log::debug!(
+                        log::warn!(
                             "{} | Tap down: {:?}, wait {} ms, and Tap up", // waiting is handled by tokio task
                             action.as_ref(),
                             mapping.position,
@@ -67,7 +67,7 @@ pub fn handle_single_tap(
                         );
                     }
                 } else if mapping.sync && ineffable.just_deactivated(action.ineff_continuous()) {
-                    log::debug!("{} | Tap up sync: {:?}", action.as_ref(), mapping.position);
+                    log::warn!("{} | Tap up sync: {:?}", action.as_ref(), mapping.position);
                 }
             }
         }

@@ -1,9 +1,12 @@
-use std::io::{Result as IoResult, Write};
+pub mod share;
+
 use std::{
     env,
     path::{Path, PathBuf},
 };
-use tokio::sync::mpsc::UnboundedSender;
+
+use bevy::ecs::resource::Resource;
+use flume::{Receiver, Sender};
 
 pub fn relate_to_root_path<P>(segments: P) -> PathBuf
 where
@@ -29,21 +32,8 @@ fn get_base_root() -> PathBuf {
     }
 }
 
-pub struct ChannelWriter {
-    pub sender: UnboundedSender<String>,
-}
+#[derive(Resource)]
+pub struct ChannelSender<T>(pub Sender<T>);
 
-impl Write for ChannelWriter {
-    fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        if let Ok(s) = std::str::from_utf8(buf) {
-            for line in s.lines() {
-                let _ = self.sender.send(line.to_string());
-            }
-        }
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> IoResult<()> {
-        Ok(())
-    }
-}
+#[derive(Resource)]
+pub struct ChannelReceiver<T>(pub Receiver<T>);

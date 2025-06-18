@@ -1,11 +1,21 @@
-use std::{env, fs::File, process::exit, sync::OnceLock};
+use std::{env, fs::File, net::SocketAddrV4, process::exit, sync::OnceLock};
 
 use bevy::{
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
     prelude::*,
     window::{CompositeAlphaMode, PresentMode},
 };
-use scrcpy_masker::{mapping, server::Server, ui, update, utils::relate_to_root_path};
+use scrcpy_masker::{
+    mapping,
+    scrcpy::{
+        control_msg::ControlSenderMsg,
+        controller::{self, ControllerCommand},
+    },
+    ui, update,
+    utils::{ChannelReceiver, ChannelSender, relate_to_root_path},
+    web,
+};
+use tokio::sync::mpsc;
 use tracing_appender::non_blocking::WorkerGuard;
 
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
@@ -34,6 +44,8 @@ async fn main() {
         exit(0);
     }
 
+    // TODO 加载配置（包括adb路径等等）
+
     App::new()
         .add_plugins(
             DefaultPlugins
@@ -57,6 +69,22 @@ async fn main() {
                 }),
         )
         .add_plugins((ui::UiPlugins, mapping::HotKeyPlugins))
-        .add_systems(Startup, Server::start_default) // TODO move to ui button event, where we need to set adb path and check adb available and finally start server
+        .add_systems(Startup, start_servers)
         .run();
+}
+
+fn start_servers(mut commands: Commands) {
+    let web_addr: SocketAddrV4 = "127.0.0.1:27799".parse().unwrap();
+    let controller_addr: SocketAddrV4 = "127.0.0.1:27798".parse().unwrap();
+
+    let (cs_tx, cs_rx) = flume::unbounded::<ControlSenderMsg>();
+    let (v_tx, v_rx) = flume::unbounded::<Vec<u8>>();
+    let (a_tx, a_rx) = flume::unbounded::<Vec<u8>>();
+
+    let (d_tx, d_rx) = mpsc::unbounded_channel::<ControllerCommand>();
+    commands.insert_resource(ChannelSender(cs_tx.clone()));
+    commands.insert_resource(ChannelReceiver(v_rx));
+    commands.insert_resource(ChannelReceiver(a_rx));
+    web::Server::start(web_addr, cs_tx, d_tx);
+    controller::Controller::start(controller_addr, cs_rx, v_tx, a_tx, d_rx);
 }

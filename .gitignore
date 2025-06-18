@@ -4,3 +4,5 @@ scrcpy-masker.code-workspace
 .vscode
 /local
 app.log
+assets/web
+frontend

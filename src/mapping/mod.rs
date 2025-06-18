@@ -61,7 +61,7 @@ fn init(
         commands.insert_resource(ActiveMappingConfig(mapping_config));
         next_state.set(MappingState::Normal);
     } else {
-        log::error!("Failed to load mapping config")
+        log::error!("[Mapping] Failed to load mapping config")
     }
 }
 

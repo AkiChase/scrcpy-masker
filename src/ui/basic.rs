@@ -1,6 +1,4 @@
 /// Bevy basic plugin that creates a window with a transparent background and a border.
-
-#[cfg(any(target_os = "macos", target_os = "linux"))]
 use bevy::prelude::*;
 
 pub struct BasicPlugin;
@@ -10,7 +8,7 @@ impl Plugin for BasicPlugin {
         app
             // ClearColor resource: The color used to clear the screen at the beginning of each frame
             .insert_resource(ClearColor(Color::NONE))
-            .add_systems(Startup, (setup, border.after(setup), show.after(border)));
+            .add_systems(Startup, (setup, border.after(setup)));
     }
 }
 
@@ -37,8 +35,4 @@ fn border(mut commands: Commands, window: Single<&mut Window>) {
         BackgroundColor(Color::NONE),
         BorderColor(border_color),
     ));
-}
-
-fn show(mut window: Single<&mut Window>) {
-    window.visible = true;
 }
