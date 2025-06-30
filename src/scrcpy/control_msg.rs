@@ -62,7 +62,7 @@ impl Binary {
 }
 
 #[repr(u8)]
-pub enum ControlSenderMsgType {
+pub enum ScrcpyControlMsgType {
     InjectKeycode,            // 发送原始按键
     InjectText,               // 发送文本对应 keycode
     InjectTouchEvent,         // 发送触摸事件
@@ -83,7 +83,8 @@ pub enum ControlSenderMsgType {
     ResetVideo,               // 重置视频流
 }
 
-pub enum ControlSenderMsg {
+#[derive(Debug, Clone)]
+pub enum ScrcpyControlMsg {
     InjectKeycode {
         action: constant::KeyEventAction, // u8
         keycode: constant::Keycode,       // u32
@@ -131,29 +132,29 @@ pub enum ControlSenderMsg {
     ResetVideo,
 }
 
-impl From<ControlSenderMsg> for Vec<u8> {
-    fn from(msg: ControlSenderMsg) -> Self {
+impl From<ScrcpyControlMsg> for Vec<u8> {
+    fn from(msg: ScrcpyControlMsg) -> Self {
         match msg {
-            ControlSenderMsg::InjectKeycode {
+            ScrcpyControlMsg::InjectKeycode {
                 action,
                 keycode,
                 repeat,
                 metastate,
             } => {
                 let mut buf: Vec<u8> = vec![0; 14];
-                buf[0] = ControlSenderMsgType::InjectKeycode as u8;
+                buf[0] = ScrcpyControlMsgType::InjectKeycode as u8;
                 buf[1] = action as u8;
                 Binary::write_32be(&mut buf[2..6], keycode as u32);
                 Binary::write_32be(&mut buf[6..10], repeat);
                 Binary::write_32be(&mut buf[10..14], metastate.bits());
                 buf
             }
-            ControlSenderMsg::InjectText { text } => {
-                let mut buf: Vec<u8> = vec![ControlSenderMsgType::InjectText as u8];
+            ScrcpyControlMsg::InjectText { text } => {
+                let mut buf: Vec<u8> = vec![ScrcpyControlMsgType::InjectText as u8];
                 Binary::write_string(&text, SC_CONTROL_MSG_INJECT_TEXT_MAX_LENGTH, &mut buf);
                 buf
             }
-            ControlSenderMsg::InjectTouchEvent {
+            ScrcpyControlMsg::InjectTouchEvent {
                 action, // u8
                 pointer_id,
                 x,
@@ -165,7 +166,7 @@ impl From<ControlSenderMsg> for Vec<u8> {
                 buttons,       // keep the same with action_button
             } => {
                 let mut buf = vec![0; 32];
-                buf[0] = ControlSenderMsgType::InjectTouchEvent as u8;
+                buf[0] = ScrcpyControlMsgType::InjectTouchEvent as u8;
                 buf[1] = action as u8;
                 Binary::write_64be(&mut buf[2..10], pointer_id);
                 Binary::write_posion(&mut buf[10..22], x, y, w, h);
@@ -174,7 +175,7 @@ impl From<ControlSenderMsg> for Vec<u8> {
                 Binary::write_32be(&mut buf[28..32], buttons.bits());
                 buf
             }
-            ControlSenderMsg::InjectScrollEvent {
+            ScrcpyControlMsg::InjectScrollEvent {
                 x,
                 y,
                 w,
@@ -184,57 +185,73 @@ impl From<ControlSenderMsg> for Vec<u8> {
                 buttons, // the buttons pressed when scrolling, just set as 0
             } => {
                 let mut buf = vec![0; 21];
-                buf[0] = ControlSenderMsgType::InjectScrollEvent as u8;
+                buf[0] = ScrcpyControlMsgType::InjectScrollEvent as u8;
                 Binary::write_posion(&mut buf[1..13], x, y, w, h);
                 Binary::write_16be(&mut buf[13..15], hscroll);
                 Binary::write_16be(&mut buf[15..17], vscroll);
                 Binary::write_32be(&mut buf[17..21], buttons);
                 buf
             }
-            ControlSenderMsg::BackOrScreenOn { action } => {
-                vec![ControlSenderMsgType::BackOrScreenOn as u8, action as u8]
+            ScrcpyControlMsg::BackOrScreenOn { action } => {
+                vec![ScrcpyControlMsgType::BackOrScreenOn as u8, action as u8]
             }
-            ControlSenderMsg::GetClipboard { copy_key } => {
-                vec![ControlSenderMsgType::GetClipboard as u8, copy_key as u8]
+            ScrcpyControlMsg::GetClipboard { copy_key } => {
+                vec![ScrcpyControlMsgType::GetClipboard as u8, copy_key as u8]
             }
-            ControlSenderMsg::SetClipboard {
+            ScrcpyControlMsg::SetClipboard {
                 sequence,
                 paste, // u8
                 text,
             } => {
                 let mut buf: Vec<u8> = vec![0; 10];
-                buf[0] = ControlSenderMsgType::SetClipboard as u8;
+                buf[0] = ScrcpyControlMsgType::SetClipboard as u8;
                 Binary::write_64be(&mut buf[1..9], sequence);
                 buf[9] = paste as u8;
                 Binary::write_string(&text, SC_CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH, &mut buf);
                 buf
             }
-            ControlSenderMsg::SetDisplayPower { mode } => {
-                vec![ControlSenderMsgType::SetDisplayPower as u8, mode as u8]
+            ScrcpyControlMsg::SetDisplayPower { mode } => {
+                vec![ScrcpyControlMsgType::SetDisplayPower as u8, mode as u8]
             }
-            ControlSenderMsg::RotateDevice => {
-                vec![ControlSenderMsgType::RotateDevice as u8]
+            ScrcpyControlMsg::RotateDevice => {
+                vec![ScrcpyControlMsgType::RotateDevice as u8]
             }
-            ControlSenderMsg::ResetVideo => {
-                vec![ControlSenderMsgType::ResetVideo as u8]
+            ScrcpyControlMsg::ResetVideo => {
+                vec![ScrcpyControlMsgType::ResetVideo as u8]
             }
         }
     }
 }
 
-pub enum ControlReceiverMsg {
-    Clipboard { length: u32, text: String }, // 剪贴板内容
-    AckClipboard { sequence: u64 },          // 设置剪切板响应
-    UhidOutput { id: u16, size: u16, data: Vec<u8> }, // 输入设备输出
-    Unknown,                                 // 未知消息
+#[derive(Debug, Clone)]
+pub enum ScrcpyDeviceMsg {
+    Clipboard {
+        length: u32,
+        text: String,
+    }, // 剪贴板内容
+    AckClipboard {
+        sequence: u64,
+    }, // 设置剪切板响应
+    UhidOutput {
+        id: u16,
+        size: u16,
+        data: Vec<u8>,
+    }, // 输入设备输出
+    Rotation {
+        rotation: u16,
+        width: u32,
+        height: u32,
+        scid: String,
+    }, // 屏幕旋转
+    Unknown, // 未知消息
 }
 
-impl ControlReceiverMsg {
+impl ScrcpyDeviceMsg {
     fn map_read_error(e: std::io::Error) -> String {
         format!("Failed to read from scrcpy control connection: {}", e)
     }
 
-    pub async fn read_msg(read_half: &mut OwnedReadHalf) -> Result<Self, String> {
+    pub async fn read_msg(read_half: &mut OwnedReadHalf, scid: String) -> Result<Self, String> {
         let message_type = read_half.read_u8().await.map_err(Self::map_read_error)?;
 
         match message_type {
@@ -261,6 +278,17 @@ impl ControlReceiverMsg {
                     .await
                     .map_err(Self::map_read_error)?;
                 Ok(Self::UhidOutput { id, size, data })
+            }
+            3 => {
+                let rotation = read_half.read_u16().await.map_err(Self::map_read_error)?;
+                let width = read_half.read_u32().await.map_err(Self::map_read_error)?;
+                let height = read_half.read_u32().await.map_err(Self::map_read_error)?;
+                Ok(Self::Rotation {
+                    rotation,
+                    width,
+                    height,
+                    scid: scid.clone(),
+                })
             }
             _ => Ok(Self::Unknown),
         }

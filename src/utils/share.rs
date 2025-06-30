@@ -42,6 +42,16 @@ impl ControlledDevice {
             }
         }
     }
+
+    pub async fn update_device_size(scid: String, size: (u32, u32)) {
+        let mut device_list = CONTROLLED_DEVICES.write().await;
+        for device in device_list.iter_mut() {
+            if device.scid == scid {
+                device.device_size = size;
+                return;
+            }
+        }
+    }
 }
 
 static ADB_PATH: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new("adb".to_string()));

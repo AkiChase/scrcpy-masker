@@ -1,4 +1,5 @@
 pub mod device;
+pub mod mask;
 
 use std::{net::SocketAddrV4, thread};
 
@@ -10,11 +11,12 @@ use axum::{
 use flume::Sender;
 use serde::Serialize;
 use serde_json::Value;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{broadcast, mpsc::UnboundedSender};
 use tower_http::services::ServeDir;
 
 use crate::{
-    scrcpy::{control_msg::ControlSenderMsg, controller::ControllerCommand},
+    mask::mask_command::MaskCommand,
+    scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
     utils::relate_to_root_path,
 };
 
@@ -23,8 +25,9 @@ pub struct Server;
 impl Server {
     pub fn start(
         addr: SocketAddrV4,
-        cs_tx: Sender<ControlSenderMsg>,
+        cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
+        m_tx: Sender<MaskCommand>,
     ) {
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -32,15 +35,16 @@ impl Server {
                 .build()
                 .unwrap()
                 .block_on(async move {
-                    Server::run_server(addr, cs_tx, d_tx).await;
+                    Server::run_server(addr, cs_tx, d_tx, m_tx).await;
                 });
         });
     }
 
     async fn run_server(
         addr: SocketAddrV4,
-        cs_tx: Sender<ControlSenderMsg>,
+        cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
+        m_tx: Sender<MaskCommand>,
     ) {
         log::info!("[WebServe] Starting web server on: {}", addr);
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -52,15 +56,24 @@ impl Server {
         };
         let url = format!("http://{}:{}", ip_str, addr.port());
         log::info!("[WebServe] Web server is accessible at: {}", url);
-        opener::open(url).unwrap_or_else(|e| log::error!("[WebServe] Failed to open browser: {}", e));
+        // TODO 启动网页
+        //opener::open(url)
+        //     .unwrap_or_else(|e| log::error!("[WebServe] Failed to open browser: {}", e));
 
-        axum::serve(listener, Self::app(cs_tx, d_tx)).await.unwrap();
+        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx))
+            .await
+            .unwrap();
     }
 
-    fn app(cs_tx: Sender<ControlSenderMsg>, d_tx: UnboundedSender<ControllerCommand>) -> Router {
+    fn app(
+        cs_tx: broadcast::Sender<ScrcpyControlMsg>,
+        d_tx: UnboundedSender<ControllerCommand>,
+        m_tx: Sender<MaskCommand>,
+    ) -> Router {
         Router::new()
             .fallback_service(ServeDir::new(relate_to_root_path(["assets", "web"])))
             .nest("/api/device", device::routers(cs_tx, d_tx))
+            .nest("/api/mask", mask::routers(m_tx))
     }
 }
 

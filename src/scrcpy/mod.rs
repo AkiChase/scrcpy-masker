@@ -13,6 +13,7 @@ pub struct ScrcpyDevice {
     pub socket_ids: Vec<String>,
     pub name: String,
     pub main: bool,
+    pub device_size: (u32, u32),
 }
 
 impl ScrcpyDevice {
@@ -23,6 +24,7 @@ impl ScrcpyDevice {
             socket_ids,
             name: "Unknow".to_string(),
             main,
+            device_size: (0, 0),
         }
     }
 }

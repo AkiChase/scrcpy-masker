@@ -6,7 +6,10 @@ use std::{
 };
 
 use bevy::ecs::resource::Resource;
-use flume::{Receiver, Sender};
+use flume::Receiver;
+use tokio::sync::broadcast;
+
+use crate::{mask::mask_command::MaskCommand, scrcpy::control_msg::ScrcpyControlMsg};
 
 pub fn relate_to_root_path<P>(segments: P) -> PathBuf
 where
@@ -33,7 +36,13 @@ fn get_base_root() -> PathBuf {
 }
 
 #[derive(Resource)]
-pub struct ChannelSender<T>(pub Sender<T>);
+pub struct ChannelSenderCS(pub broadcast::Sender<ScrcpyControlMsg>);
 
 #[derive(Resource)]
-pub struct ChannelReceiver<T>(pub Receiver<T>);
+pub struct ChannelReceiverV(pub Receiver<Vec<u8>>);
+
+#[derive(Resource)]
+pub struct ChannelReceiverA(pub Receiver<Vec<u8>>);
+
+#[derive(Resource)]
+pub struct ChannelReceiverM(pub Receiver<MaskCommand>);

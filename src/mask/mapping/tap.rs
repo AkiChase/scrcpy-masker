@@ -2,9 +2,9 @@ use bevy::ecs::system::Res;
 use bevy_ineffable::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::mapping::{config::ActiveMappingConfig, utils::Position};
+use crate::mask::mapping::{config::ActiveMappingConfig, utils::Position};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingSingleTap {
     pub position: Position,
     pub note: String,
@@ -74,7 +74,7 @@ pub fn handle_single_tap(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingRepeatTap {
     pub position: Position,
     pub note: String,

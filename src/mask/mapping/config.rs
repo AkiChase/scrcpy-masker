@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{File, create_dir_all},
     io::{BufReader, Write},
     path::Path,
 };
@@ -17,9 +17,12 @@ use seq_macro::seq;
 use serde::{Deserialize, Serialize};
 use strum_macros::{AsRefStr, Display};
 
-use crate::mapping::{
-    tap::{MappingRepeatTap, MappingSingleTap},
-    utils::Size,
+use crate::{
+    mask::mapping::{
+        tap::{MappingRepeatTap, MappingSingleTap},
+        utils::Size,
+    },
+    utils::relate_to_root_path,
 };
 
 // declare 32 actions for each kind of key mapping
@@ -101,7 +104,7 @@ macro_rules! impl_mapping_type_methods {
     };
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MappingType {
     SingleTap(MappingSingleTap),
     RepeatTap(MappingRepeatTap),
@@ -118,7 +121,7 @@ impl_mapping_type_methods! {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MappingConfig {
     pub version: String,
     pub title: String,
@@ -126,7 +129,23 @@ pub struct MappingConfig {
     pub mappings: HashMap<MappingAction, MappingType>,
 }
 
-#[derive(Resource)]
+impl From<&MappingConfig> for InputConfig {
+    fn from(mapping_config: &MappingConfig) -> Self {
+        let mut all_bindings: HashMap<String, Vec<InputBinding>> = HashMap::new();
+
+        for (action, mapping) in &mapping_config.mappings {
+            all_bindings.insert(action.to_string(), vec![mapping.get_bind()]);
+        }
+
+        let binding_config: HashMap<String, HashMap<String, Vec<InputBinding>>> =
+            HashMap::from([("MappingAction".to_string(), all_bindings)]);
+        let mut input_config = InputConfig::new();
+        input_config.bindings = binding_config;
+        input_config
+    }
+}
+
+#[derive(Resource, Debug, Clone, Default)]
 pub struct ActiveMappingConfig(pub MappingConfig);
 
 pub fn default_mapping_config() -> MappingConfig {
@@ -170,25 +189,24 @@ pub fn default_mapping_config() -> MappingConfig {
     }
 }
 
-pub fn load_mapping_config(path: &Path) -> Result<(MappingConfig, InputConfig), String> {
+pub fn load_mapping_config(
+    file_name: impl AsRef<str>,
+) -> Result<(MappingConfig, InputConfig), String> {
+    let path = relate_to_root_path(["local", "config", file_name.as_ref()]);
+
     // load from file
-    let file = File::open(path).map_err(|e| format!("Cannot open mapping config file: {}", e))?;
+    let file = File::open(&path).map_err(|e| {
+        format!(
+            "Cannot open mapping config file {}: {}",
+            path.to_str().unwrap_or(""),
+            e
+        )
+    })?;
     let reader = BufReader::new(file);
     let mapping_config: MappingConfig = ron::de::from_reader(reader)
         .map_err(|e| format!("Cannot parse mapping config file: {}", e))?;
 
-    // apply config
-    let mut all_bindings: HashMap<String, Vec<InputBinding>> = HashMap::new();
-
-    for (action, mapping) in &mapping_config.mappings {
-        all_bindings.insert(action.to_string(), vec![mapping.get_bind()]);
-    }
-
-    let binding_config: HashMap<String, HashMap<String, Vec<InputBinding>>> =
-        HashMap::from([("MappingAction".to_string(), all_bindings)]);
-
-    let mut input_config = InputConfig::new();
-    input_config.bindings = binding_config;
+    let input_config: InputConfig = InputConfig::from(&mapping_config);
 
     Ok((mapping_config, input_config))
 }
@@ -197,6 +215,10 @@ pub fn save_mapping_config(config: &MappingConfig, path: &Path) -> Result<(), St
     let pretty = PrettyConfig::default();
     let ron_string = to_string_pretty(config, pretty)
         .map_err(|e| format!("Cannot serialize mapping config: {}", e))?;
+    if let Some(parent) = path.parent() {
+        create_dir_all(parent)
+            .map_err(|e| format!("Cannot create directory for config file: {}", e))?;
+    }
     let mut file =
         File::create(path).map_err(|e| format!("Cannot create mapping config file: {}", e))?;
     file.write_all(ron_string.as_bytes())

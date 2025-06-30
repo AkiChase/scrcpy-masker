@@ -1,6 +1,7 @@
 use bitflags::bitflags;
 
 bitflags! {
+    #[derive(Debug, Clone)]
     pub struct MetaState: u32 {
         const NONE               = 0x000000;
         const SHIFT_ON           = 0x000001;
@@ -29,6 +30,7 @@ bitflags! {
 }
 
 #[repr(u8)]
+#[derive(Debug, Clone)]
 pub enum KeyEventAction {
     /** The key has been pressed down. */
     Down = 0,
@@ -46,6 +48,7 @@ pub enum KeyEventAction {
 }
 
 #[repr(u32)]
+#[derive(Debug, Clone)]
 pub enum Keycode {
     Unknown = 0,
     SoftLeft = 1,
@@ -348,6 +351,7 @@ pub enum MotionEventAction {
 }
 
 bitflags! {
+    #[derive(Debug, Clone)]
     pub struct MotionEventButtons: u32 {
         /// Primary button (e.g. left mouse)
         const PRIMARY = 1 << 0;
@@ -367,6 +371,7 @@ bitflags! {
 }
 
 #[repr(u8)]
+#[derive(Debug, Clone)]
 pub enum CopyKey {
     None = 0,
     Copy = 1,

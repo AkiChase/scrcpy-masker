@@ -3,16 +3,16 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
-use flume::Sender;
 use rand::Rng;
 use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::{broadcast, mpsc::UnboundedSender};
 
 use crate::{
+    config::LocalConfig,
     scrcpy::{
         adb::{Adb, Device},
-        control_msg::ControlSenderMsg,
+        control_msg::ScrcpyControlMsg,
         controller::ControllerCommand,
     },
     utils::{
@@ -22,14 +22,14 @@ use crate::{
     web::{JsonResponse, WebServerError},
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AppStateDevice {
-    cs_tx: Sender<ControlSenderMsg>,
+    cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
 }
 
 pub fn routers(
-    cs_tx: Sender<ControlSenderMsg>,
+    cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
 ) -> Router {
     Router::new()
@@ -91,23 +91,23 @@ async fn control_device(
 
     // prepare for scrcpy app
     let scid = gen_scid();
-    let version = "3.2";
-    let scrcpy_path = relate_to_root_path(["assets", &format!("scrcpy-server-v{}", version)]);
+    let version = "2.4";
+    let scrcpy_path = relate_to_root_path(["assets", &format!("scrcpy-mask-server-v{}", version)]);
     Device::push(
         &device_id,
         scrcpy_path.to_str().unwrap(),
         "/data/local/tmp/scrcpy-server.jar",
     )
     .map_err(|e| WebServerError(500, e))?;
-    log::info!("[WebServe] push scrcpy server to device successfully");
+    log::info!("[WebServe] Push scrcpy server to device successfully");
 
     Device::reverse(
         &device_id,
         &format!("localabstract:scrcpy_{}", scid),
-        "tcp:27798",
+        &format!("tcp:{}", LocalConfig::get_controller_port()),
     )
     .map_err(|e| WebServerError(500, e))?;
-    log::info!("[WebServe] reverse local port to device successfully");
+    log::info!("[WebServe] Reverse local port to device successfully");
 
     // create device
     let main = device_list.len() == 0;
@@ -215,8 +215,8 @@ async fn set_display_power(
 
     state
         .cs_tx
-        .send(ControlSenderMsg::SetDisplayPower { mode: payload.mode })
-        .map_err(|e| WebServerError(500, e.to_string()))?;
+        .send(ScrcpyControlMsg::SetDisplayPower { mode: payload.mode })
+        .unwrap();
     Ok(JsonResponse::success(
         "Set display power successfully",
         None,

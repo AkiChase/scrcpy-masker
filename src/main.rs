@@ -6,16 +6,19 @@ use bevy::{
     window::{CompositeAlphaMode, PresentMode},
 };
 use scrcpy_masker::{
-    mapping,
+    config::LocalConfig,
+    mask::{MaskPlugins, mask_command::MaskCommand},
     scrcpy::{
-        control_msg::ControlSenderMsg,
+        control_msg::ScrcpyControlMsg,
         controller::{self, ControllerCommand},
     },
-    ui, update,
-    utils::{ChannelReceiver, ChannelSender, relate_to_root_path},
+    update,
+    utils::{
+        ChannelReceiverA, ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, relate_to_root_path,
+    },
     web,
 };
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 use tracing_appender::non_blocking::WorkerGuard;
 
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
@@ -44,7 +47,7 @@ async fn main() {
         exit(0);
     }
 
-    // TODO 加载配置（包括adb路径等等）
+    LocalConfig::load();
 
     App::new()
         .add_plugins(
@@ -68,23 +71,28 @@ async fn main() {
                     ..default()
                 }),
         )
-        .add_plugins((ui::UiPlugins, mapping::HotKeyPlugins))
+        .add_plugins(MaskPlugins)
         .add_systems(Startup, start_servers)
         .run();
 }
 
 fn start_servers(mut commands: Commands) {
-    let web_addr: SocketAddrV4 = "127.0.0.1:27799".parse().unwrap();
-    let controller_addr: SocketAddrV4 = "127.0.0.1:27798".parse().unwrap();
+    let config = LocalConfig::get();
+    let web_addr: SocketAddrV4 = format!("127.0.0.1:{}", config.web_port).parse().unwrap();
+    let controller_addr: SocketAddrV4 = format!("127.0.0.1:{}", config.controller_port)
+        .parse()
+        .unwrap();
 
-    let (cs_tx, cs_rx) = flume::unbounded::<ControlSenderMsg>();
+    let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(300);
     let (v_tx, v_rx) = flume::unbounded::<Vec<u8>>();
     let (a_tx, a_rx) = flume::unbounded::<Vec<u8>>();
-
+    let (m_tx, m_rx) = flume::unbounded::<MaskCommand>();
     let (d_tx, d_rx) = mpsc::unbounded_channel::<ControllerCommand>();
-    commands.insert_resource(ChannelSender(cs_tx.clone()));
-    commands.insert_resource(ChannelReceiver(v_rx));
-    commands.insert_resource(ChannelReceiver(a_rx));
-    web::Server::start(web_addr, cs_tx, d_tx);
-    controller::Controller::start(controller_addr, cs_rx, v_tx, a_tx, d_rx);
+
+    commands.insert_resource(ChannelSenderCS(cs_tx.clone()));
+    commands.insert_resource(ChannelReceiverV(v_rx));
+    commands.insert_resource(ChannelReceiverA(a_rx));
+    commands.insert_resource(ChannelReceiverM(m_rx));
+    web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone());
+    controller::Controller::start(controller_addr, cs_tx, v_tx, a_tx, d_rx, m_tx);
 }
