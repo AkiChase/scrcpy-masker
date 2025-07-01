@@ -8,12 +8,13 @@ use tokio::{
     sync::{
         broadcast::{self, error::RecvError},
         mpsc::UnboundedSender,
-        watch,
+        oneshot, watch,
     },
 };
 use tokio_util::sync::CancellationToken;
 
 use crate::{
+    mask::mask_command::MaskCommand,
     scrcpy::control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
     utils::share::ControlledDevice,
 };
@@ -191,6 +192,7 @@ impl ScrcpyConnection {
         self,
         cs_rx: broadcast::Receiver<ScrcpyControlMsg>,
         cr_tx: UnboundedSender<ScrcpyDeviceMsg>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         scid: String,
         main: bool,
         token: CancellationToken,
@@ -199,10 +201,30 @@ impl ScrcpyConnection {
         let (read_half, write_half) = self.socket.into_split();
         let token_copy = token.clone();
         let (watch_tx, watch_rx) = watch::channel::<(u32, u32)>((0, 0)); // share device size with writer
+        if main {
+            let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+            m_tx.send_async((
+                MaskCommand::DeviceConnectionChange { connect: true },
+                oneshot_tx,
+            ))
+            .await
+            .unwrap();
+            oneshot_rx.await.unwrap().unwrap();
+        }
         tokio::join!(
             Self::control_writer(write_half, token, cs_rx, watch_rx),
             Self::control_reader(read_half, token_copy, cr_tx, watch_tx, &scid, main)
         );
+        if main {
+            let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+            m_tx.send_async((
+                MaskCommand::DeviceConnectionChange { connect: false },
+                oneshot_tx,
+            ))
+            .await
+            .unwrap();
+            oneshot_rx.await.unwrap().unwrap();
+        }
     }
 
     pub async fn handle_video(&mut self, token: CancellationToken, _v_tx: Sender<Vec<u8>>) {

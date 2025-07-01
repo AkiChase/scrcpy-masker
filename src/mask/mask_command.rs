@@ -37,7 +37,7 @@ pub fn handle_mask_command(
     mut active_mapping: ResMut<ActiveMappingConfig>,
     mut mask_size: ResMut<MaskSize>,
 ) {
-    for msg in m_rx.0.try_iter() {
+    for (msg, oneshot_tx) in m_rx.0.try_iter() {
         match msg {
             MaskCommand::WinMove {
                 left,
@@ -59,24 +59,37 @@ pub fn handle_mask_command(
                 mask_size.0 = mask_w;
                 mask_size.1 = mask_h;
 
-                log::info!(
-                    "[Mask] Window moved to {:?} and resize to {}x{}",
-                    window.position,
-                    mask_w,
-                    mask_h
-                )
+                let msg = format!(
+                    "Window moved to ({},{}) and resize to {}x{}",
+                    left, top, mask_w, mask_h
+                );
+
+                log::info!("[Mask] {}", msg);
+                oneshot_tx.send(Ok(msg)).unwrap();
             }
             MaskCommand::DeviceConnectionChange { connect } => {
-                next_state.set(if connect {
-                    MappingState::Normal
+                let msg = if connect {
+                    next_state.set(MappingState::Normal);
+                    format!("main device connection connected")
                 } else {
-                    MappingState::Stop
-                });
-                log::info!("[Mask] Device connection changed to {}", connect);
+                    next_state.set(MappingState::Stop);
+                    format!("main device connection disconnected")
+                };
+                log::info!("[Mask] {}", msg);
+                oneshot_tx.send(Ok(msg)).unwrap();
             }
             MaskCommand::ActiveMappingChange { mapping, input } => {
-                ineffable.set_config(&input);
-                active_mapping.0 = mapping;
+                let report = ineffable.validate(&input);
+                if !report.is_empty() {
+                    report.dump_to_log();
+                    oneshot_tx.send(Err("Key mapping configuration failed validation. Please check the logs for details.".to_string())).unwrap();
+                } else {
+                    ineffable.set_config(&input);
+                    active_mapping.0 = mapping;
+                    oneshot_tx
+                        .send(Ok("Successfully change active mapping".to_string()))
+                        .unwrap();
+                }
             }
         }
     }

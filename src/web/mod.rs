@@ -1,7 +1,6 @@
+pub mod config;
 pub mod device;
-pub mod mask;
-
-use std::{net::SocketAddrV4, thread};
+pub mod mapping;
 
 use axum::{
     Json, Router,
@@ -11,7 +10,8 @@ use axum::{
 use flume::Sender;
 use serde::Serialize;
 use serde_json::Value;
-use tokio::sync::{broadcast, mpsc::UnboundedSender};
+use std::{net::SocketAddrV4, thread};
+use tokio::sync::{broadcast, mpsc::UnboundedSender, oneshot};
 use tower_http::services::ServeDir;
 
 use crate::{
@@ -27,7 +27,7 @@ impl Server {
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
-        m_tx: Sender<MaskCommand>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ) {
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -44,7 +44,7 @@ impl Server {
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
-        m_tx: Sender<MaskCommand>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ) {
         log::info!("[WebServe] Starting web server on: {}", addr);
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -68,12 +68,28 @@ impl Server {
     fn app(
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
-        m_tx: Sender<MaskCommand>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ) -> Router {
-        Router::new()
+        let router = Router::new()
             .fallback_service(ServeDir::new(relate_to_root_path(["assets", "web"])))
             .nest("/api/device", device::routers(cs_tx, d_tx))
-            .nest("/api/mask", mask::routers(m_tx))
+            .nest("/api/mapping", mapping::routers(m_tx.clone()))
+            .nest("/api/config", config::routers(m_tx));
+
+        #[cfg(debug_assertions)]
+        {
+            // allow CORS for development
+            use tower_http::cors::{Any, CorsLayer};
+
+            let cors = CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any);
+
+            return router.layer(cors);
+        }
+        #[cfg(not(debug_assertions))]
+        return router;
     }
 }
 

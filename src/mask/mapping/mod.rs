@@ -24,7 +24,7 @@ pub enum MappingState {
     #[default]
     Stop,
     Normal,
-    // RawInput, // convert all keys to keycodes
+    // TODO RawInput, // convert all keys to keycodes
 }
 
 pub struct MappingPlugins;
@@ -45,7 +45,7 @@ impl Plugin for MappingPlugins {
     }
 }
 
-fn init(mut ineffable: IneffableCommands) {
+fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappingConfig>) {
     let config = LocalConfig::get();
 
     match load_mapping_config(&config.active_mapping_file) {
@@ -62,13 +62,15 @@ fn init(mut ineffable: IneffableCommands) {
     };
 
     log::info!("[Mask] Using default mapping config");
-    let config_path = relate_to_root_path(["local", "config", "default.ron"]);
+    let config_path = relate_to_root_path(["local", "mapping", "default.ron"]);
     let default_mapping = default_mapping_config();
     if !config_path.exists() {
         save_mapping_config(&default_mapping, &config_path).unwrap();
     }
+
+    active_mapping.0 = default_mapping;
     LocalConfig::set_active_mapping_file("default.ron".to_string());
 
-    let input_config: InputConfig = InputConfig::from(&default_mapping);
+    let input_config: InputConfig = InputConfig::from(&active_mapping.0);
     ineffable.set_config(&input_config);
 }

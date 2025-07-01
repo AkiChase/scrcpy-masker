@@ -13,6 +13,11 @@ impl ControlledDevice {
         device_list.clone()
     }
 
+    pub async fn get_main_device() -> Option<ScrcpyDevice> {
+        let device_list = CONTROLLED_DEVICES.read().await;
+        device_list.iter().find(|device| device.main).cloned()
+    }
+
     pub async fn is_any_device_controlled() -> bool {
         let device_list = CONTROLLED_DEVICES.read().await;
         !device_list.is_empty()
@@ -51,17 +56,5 @@ impl ControlledDevice {
                 return;
             }
         }
-    }
-}
-
-static ADB_PATH: Lazy<RwLock<String>> = Lazy::new(|| RwLock::new("adb".to_string()));
-
-pub struct AdbPath;
-impl AdbPath {
-    pub async fn get() -> String {
-        ADB_PATH.read().await.clone()
-    }
-    pub async fn set(path: String) {
-        *ADB_PATH.write().await = path;
     }
 }

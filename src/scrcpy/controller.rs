@@ -8,18 +8,18 @@ use tokio::{
     sync::{
         broadcast,
         mpsc::{self, UnboundedReceiver},
+        oneshot,
     },
 };
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    config::LocalConfig,
     mask::mask_command::MaskCommand,
     scrcpy::{
         connection::ScrcpyConnection,
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
     },
-    utils::share::ControlledDevice,
+    utils::{mask_win_move_helper, share::ControlledDevice},
 };
 
 #[derive(Debug)]
@@ -42,7 +42,7 @@ impl Controller {
         v_tx: Sender<Vec<u8>>,
         a_tx: Sender<Vec<u8>>,
         d_rx: UnboundedReceiver<ControllerCommand>,
-        m_tx: Sender<MaskCommand>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ) {
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -57,7 +57,7 @@ impl Controller {
 
     async fn cr_msg_handler(
         mut cr_rx: UnboundedReceiver<ScrcpyDeviceMsg>,
-        m_tx: Sender<MaskCommand>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ) {
         loop {
             match cr_rx.recv().await {
@@ -74,39 +74,12 @@ impl Controller {
                         height,
                         scid,
                     } => {
-                        let config = LocalConfig::get();
-                        let (left, top, right, bottom) = if width >= height {
-                            // horizontal
-                            let left = config.horizontal_position.0;
-                            let top = config.horizontal_position.1;
-                            let mask_w = config.horizontal_screen_width;
-                            let mask_h =
-                                ((height as f32) * (mask_w as f32) / (width as f32)).round() as u32;
-                            (left, top, left + mask_w as i32, top + mask_h as i32)
-                        } else {
-                            // vertical
-                            let left = config.vertical_position.0;
-                            let top = config.vertical_position.1;
-                            let mask_h = config.vertical_screen_height;
-                            let mask_w =
-                                ((width as f32) * (mask_h as f32) / (height as f32)).round() as u32;
-                            (left, top, left + mask_w as i32, top + mask_h as i32)
-                        };
-
-                        m_tx.send(MaskCommand::WinMove {
-                            left,
-                            top,
-                            right,
-                            bottom,
-                        })
-                        .unwrap();
-
+                        let msg = mask_win_move_helper(width, height, &m_tx).await;
                         log::info!(
-                            "[Controller] device {} rotation {}° with size of {}x{}",
+                            "[Controller] Device {} rotation {}°. {}",
                             scid,
                             rotation * 90,
-                            width,
-                            height,
+                            msg
                         );
                     }
                     ScrcpyDeviceMsg::Unknown => {
@@ -127,14 +100,15 @@ impl Controller {
         v_tx: Sender<Vec<u8>>,
         a_tx: Sender<Vec<u8>>,
         mut d_rx: UnboundedReceiver<ControllerCommand>,
-        m_tx: Sender<MaskCommand>,
+        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     ) {
         log::info!("[Controller] Starting scrcpy controller on: {}", addr);
         let listener = TcpListener::bind(addr).await.unwrap();
 
         // scrcpy device msg handler
         let (cr_tx, cr_rx) = mpsc::unbounded_channel::<ScrcpyDeviceMsg>();
-        tokio::spawn(async move { Self::cr_msg_handler(cr_rx, m_tx).await });
+        let m_tx_copy = m_tx.clone();
+        tokio::spawn(async move { Self::cr_msg_handler(cr_rx, m_tx_copy).await });
 
         // receive command from web server to accept and shutdown scrcpy connection
         log::info!("[Controller] Starting to receive command from web server");
@@ -158,11 +132,14 @@ impl Controller {
                         );
                         let cs_rx = cs_tx.subscribe();
                         let cr_tx_copy = cr_tx.clone();
+                        let m_tx_copy = m_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
-                                        .handle_control(cs_rx, cr_tx_copy, scid, true, token)
+                                        .handle_control(
+                                            cs_rx, cr_tx_copy, m_tx_copy, scid, true, token,
+                                        )
                                         .await;
                                 });
                             }
@@ -249,11 +226,14 @@ impl Controller {
                         );
                         let sc_rx = cs_tx.subscribe();
                         let cr_tx_copy = cr_tx.clone();
+                        let m_tx_copy = m_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
-                                        .handle_control(sc_rx, cr_tx_copy, scid, false, token)
+                                        .handle_control(
+                                            sc_rx, cr_tx_copy, m_tx_copy, scid, false, token,
+                                        )
                                         .await;
                                 });
                             }

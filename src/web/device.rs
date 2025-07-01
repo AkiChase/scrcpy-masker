@@ -15,10 +15,7 @@ use crate::{
         control_msg::ScrcpyControlMsg,
         controller::ControllerCommand,
     },
-    utils::{
-        relate_to_root_path,
-        share::{AdbPath, ControlledDevice},
-    },
+    utils::{relate_to_root_path, share::ControlledDevice},
     web::{JsonResponse, WebServerError},
 };
 
@@ -42,7 +39,8 @@ pub fn routers(
 
 async fn device_list() -> Result<JsonResponse, WebServerError> {
     let controlled_devices = ControlledDevice::get_device_list().await;
-    let all_devices = Adb::new(AdbPath::get().await)
+    let config = LocalConfig::get();
+    let all_devices = Adb::new(config.adb_path)
         .devices()
         .map_err(|e| WebServerError::internal_error(e))?;
 
@@ -104,7 +102,7 @@ async fn control_device(
     Device::reverse(
         &device_id,
         &format!("localabstract:scrcpy_{}", scid),
-        &format!("tcp:{}", LocalConfig::get_controller_port()),
+        &format!("tcp:{}", LocalConfig::get().controller_port),
     )
     .map_err(|e| WebServerError(500, e))?;
     log::info!("[WebServe] Reverse local port to device successfully");

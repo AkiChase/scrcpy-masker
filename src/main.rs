@@ -18,7 +18,7 @@ use scrcpy_masker::{
     },
     web,
 };
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot};
 use tracing_appender::non_blocking::WorkerGuard;
 
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
@@ -47,7 +47,9 @@ async fn main() {
         exit(0);
     }
 
-    LocalConfig::load();
+    if let Err(_) = LocalConfig::load() {
+        LocalConfig::save().unwrap();
+    }
 
     App::new()
         .add_plugins(
@@ -86,7 +88,7 @@ fn start_servers(mut commands: Commands) {
     let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(300);
     let (v_tx, v_rx) = flume::unbounded::<Vec<u8>>();
     let (a_tx, a_rx) = flume::unbounded::<Vec<u8>>();
-    let (m_tx, m_rx) = flume::unbounded::<MaskCommand>();
+    let (m_tx, m_rx) = flume::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();
     let (d_tx, d_rx) = mpsc::unbounded_channel::<ControllerCommand>();
 
     commands.insert_resource(ChannelSenderCS(cs_tx.clone()));

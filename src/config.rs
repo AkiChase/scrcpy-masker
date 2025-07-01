@@ -1,9 +1,18 @@
-use std::sync::RwLock;
+use std::{
+    fs::{File, create_dir_all},
+    io::Write,
+    sync::RwLock,
+};
 
+use crate::utils::relate_to_root_path;
 use once_cell::sync::Lazy;
+use paste::paste;
+use ron::ser::{PrettyConfig, to_string_pretty};
 use serde::{Deserialize, Serialize};
 
 static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
+
+// TODO 允许使用窗口追踪 + 基于高度和宽度compensation来自动调整mask区域
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalConfig {
@@ -13,8 +22,8 @@ pub struct LocalConfig {
     // adb
     pub adb_path: String,
     // mask area
-    pub vertical_screen_height: u32,
-    pub horizontal_screen_width: u32,
+    pub vertical_mask_height: u32,
+    pub horizontal_mask_width: u32,
     pub vertical_position: (i32, i32),
     pub horizontal_position: (i32, i32),
     // mapping
@@ -27,8 +36,8 @@ impl Default for LocalConfig {
             adb_path: "adb".to_string(),
             web_port: 27799,
             controller_port: 27798,
-            vertical_screen_height: 1280,
-            horizontal_screen_width: 720,
+            vertical_mask_height: 1280,
+            horizontal_mask_width: 720,
             vertical_position: (300, 300),
             horizontal_position: (300, 300),
             active_mapping_file: "default.ron".to_string(),
@@ -36,30 +45,59 @@ impl Default for LocalConfig {
     }
 }
 
+macro_rules! define_setter {
+    ($(($field:ident, $typ:ty)),* $(,)?) => {
+        paste! {
+            $(
+                pub fn [<set_ $field>] (value: $typ) {
+                    CONFIG.write().unwrap().$field = value;
+                    Self::save().unwrap();
+                }
+            )*
+        }
+    };
+}
+
 impl LocalConfig {
-    fn save() {
-        // TODO 保存到文件，注意其他函数做出修改后都要立即保存到文件
+    pub fn save() -> Result<(), String> {
+        let pretty = PrettyConfig::default();
+        let ron_string = to_string_pretty(&Self::get(), pretty)
+            .map_err(|e| format!("Cannot serialize config: {}", e))?;
+
+        let path = relate_to_root_path(["local", "config.ron"]);
+        if let Some(parent) = path.parent() {
+            create_dir_all(parent)
+                .map_err(|e| format!("Cannot create directory for config file: {}", e))?;
+        }
+        let mut file =
+            File::create(path).map_err(|e| format!("Cannot create mapping config file: {}", e))?;
+        file.write_all(ron_string.as_bytes())
+            .map_err(|e| format!("Cannot write to mapping config file: {}", e))?;
+        Ok(())
     }
 
-    pub fn load() {
-        // TODO 从文件加载
+    pub fn load() -> Result<(), String> {
+        let path = relate_to_root_path(["local", "config.ron"]);
+        let ron_string = std::fs::read_to_string(&path)
+            .map_err(|e| format!("Cannot read config file {}: {}", path.to_str().unwrap(), e))?;
+        let config: LocalConfig = ron::from_str(&ron_string)
+            .map_err(|e| format!("Cannot deserialize mapping config: {}", e))?;
+        *CONFIG.write().unwrap() = config;
+        Ok(())
     }
 
     pub fn get() -> LocalConfig {
         CONFIG.read().unwrap().clone()
     }
 
-    pub fn get_controller_port() -> u16 {
-        CONFIG.read().unwrap().controller_port
-    }
-
-    pub fn set_adb_path(path: String) {
-        CONFIG.write().unwrap().adb_path = path;
-        Self::save();
-    }
-
-    pub fn set_active_mapping_file(file_name: String) {
-        CONFIG.write().unwrap().active_mapping_file = file_name;
-        Self::save();
-    }
+    define_setter!(
+        (web_port, u16),
+        (controller_port, u16),
+        (adb_path, String),
+        (vertical_mask_height, u32),
+        (horizontal_mask_width, u32),
+        (vertical_position, (i32, i32)),
+        (horizontal_position, (i32, i32)),
+        (active_mapping_file, String),
+    );
 }

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs::{File, create_dir_all},
-    io::{BufReader, Write},
+    io::Write,
     path::Path,
 };
 
@@ -192,19 +192,12 @@ pub fn default_mapping_config() -> MappingConfig {
 pub fn load_mapping_config(
     file_name: impl AsRef<str>,
 ) -> Result<(MappingConfig, InputConfig), String> {
-    let path = relate_to_root_path(["local", "config", file_name.as_ref()]);
-
     // load from file
-    let file = File::open(&path).map_err(|e| {
-        format!(
-            "Cannot open mapping config file {}: {}",
-            path.to_str().unwrap_or(""),
-            e
-        )
-    })?;
-    let reader = BufReader::new(file);
-    let mapping_config: MappingConfig = ron::de::from_reader(reader)
-        .map_err(|e| format!("Cannot parse mapping config file: {}", e))?;
+    let path = relate_to_root_path(["local", "mapping", file_name.as_ref()]);
+    let ron_string = std::fs::read_to_string(path)
+        .map_err(|e| format!("Cannot read mapping config file: {}", e))?;
+    let mapping_config: MappingConfig = ron::from_str(&ron_string)
+        .map_err(|e| format!("Cannot deserialize mapping config: {}", e))?;
 
     let input_config: InputConfig = InputConfig::from(&mapping_config);
 
