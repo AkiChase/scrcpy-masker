@@ -86,7 +86,7 @@ fn start_servers(mut commands: Commands) {
         .parse()
         .unwrap();
 
-    let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(300);
+    let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(1000);
     let (v_tx, v_rx) = flume::unbounded::<Vec<u8>>();
     let (a_tx, a_rx) = flume::unbounded::<Vec<u8>>();
     let (m_tx, m_rx) = flume::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();

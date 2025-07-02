@@ -164,7 +164,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         (100, 100).into(),
                         "SingleTap (duration)",
                         0,
-                        3000,
+                        1000,
                         false,
                         ContinuousBinding::hold(KeyCode::Digit1).0,
                     )

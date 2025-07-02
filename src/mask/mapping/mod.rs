@@ -13,7 +13,7 @@ use crate::{
             ActiveMappingConfig, MappingAction, default_mapping_config, load_mapping_config,
             save_mapping_config,
         },
-        cursor::CursorState,
+        cursor::{CursorPlugins, CursorState},
         tap::{handle_repeat_tap, handle_single_tap},
     },
     utils::relate_to_root_path,
@@ -31,7 +31,7 @@ pub struct MappingPlugins;
 
 impl Plugin for MappingPlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(IneffablePlugin)
+        app.add_plugins((IneffablePlugin, CursorPlugins))
             .insert_state(MappingState::Stop)
             .insert_state(CursorState::Normal)
             .insert_resource(ActiveMappingConfig(None))
