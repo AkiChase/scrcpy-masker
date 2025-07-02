@@ -457,6 +457,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-tokio-tasks"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8bc6d56d7d8e0ff9391db5aae435b61e056e4b674514de56cd47cf8911f697a"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "tokio",
+]
+
+[[package]]
 name = "bevy_a11y"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4601,6 +4612,7 @@ dependencies = [
  "adb_client",
  "axum",
  "bevy",
+ "bevy-tokio-tasks",
  "bevy_ineffable",
  "bitflags 2.9.1",
  "copypasta",

@@ -29,6 +29,12 @@ pub enum MaskCommand {
 #[derive(Resource)]
 pub struct MaskSize(pub u32, pub u32);
 
+impl MaskSize {
+    pub fn into_u32_pair(&self) -> (u32, u32) {
+        (self.0, self.1)
+    }
+}
+
 pub fn handle_mask_command(
     m_rx: Res<ChannelReceiverM>,
     mut window: Single<&mut Window>,
@@ -70,9 +76,11 @@ pub fn handle_mask_command(
             MaskCommand::DeviceConnectionChange { connect } => {
                 let msg = if connect {
                     next_state.set(MappingState::Normal);
+                    window.visible = true;
                     format!("main device connection connected")
                 } else {
                     next_state.set(MappingState::Stop);
+                    window.visible = false;
                     format!("main device connection disconnected")
                 };
                 log::info!("[Mask] {}", msg);
@@ -85,7 +93,7 @@ pub fn handle_mask_command(
                     oneshot_tx.send(Err("Key mapping configuration failed validation. Please check the logs for details.".to_string())).unwrap();
                 } else {
                     ineffable.set_config(&input);
-                    active_mapping.0 = mapping;
+                    active_mapping.0 = Some(mapping);
                     oneshot_tx
                         .send(Ok("Successfully change active mapping".to_string()))
                         .unwrap();

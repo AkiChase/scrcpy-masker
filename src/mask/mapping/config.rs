@@ -121,7 +121,7 @@ impl_mapping_type_methods! {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingConfig {
     pub version: String,
     pub title: String,
@@ -146,7 +146,7 @@ impl From<&MappingConfig> for InputConfig {
 }
 
 #[derive(Resource, Debug, Clone, Default)]
-pub struct ActiveMappingConfig(pub MappingConfig);
+pub struct ActiveMappingConfig(pub Option<MappingConfig>);
 
 pub fn default_mapping_config() -> MappingConfig {
     MappingConfig {

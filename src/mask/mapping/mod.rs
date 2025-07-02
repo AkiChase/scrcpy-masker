@@ -32,15 +32,14 @@ pub struct MappingPlugins;
 impl Plugin for MappingPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins(IneffablePlugin)
-            .insert_state(MappingState::Normal)
+            .insert_state(MappingState::Stop)
             .insert_state(CursorState::Normal)
-            .insert_resource(ActiveMappingConfig::default())
+            .insert_resource(ActiveMappingConfig(None))
             .register_input_action::<MappingAction>()
             .add_systems(Startup, init)
             .add_systems(
                 Update,
-                (handle_repeat_tap, handle_single_tap)
-                    .distributive_run_if(in_state(MappingState::Normal)), // mapping
+                (handle_single_tap, handle_repeat_tap).run_if(in_state(MappingState::Normal)), // mapping
             );
     }
 }
@@ -48,29 +47,29 @@ impl Plugin for MappingPlugins {
 fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappingConfig>) {
     let config = LocalConfig::get();
 
-    match load_mapping_config(&config.active_mapping_file) {
+    let (mapping_config, input_config) = match load_mapping_config(&config.active_mapping_file) {
         Ok((mapping_config, input_config)) => {
             log::info!(
                 "[Mask] Using mapping config {}: {}",
                 config.active_mapping_file,
                 mapping_config.title
             );
-            ineffable.set_config(&input_config);
-            return;
+            (mapping_config, input_config)
         }
-        Err(e) => log::error!("{}", e),
+        Err(e) => {
+            log::error!("{}", e);
+            log::info!("[Mask] Using default mapping config");
+            let config_path = relate_to_root_path(["local", "mapping", "default.ron"]);
+            let default_mapping = default_mapping_config();
+            if !config_path.exists() {
+                save_mapping_config(&default_mapping, &config_path).unwrap();
+            }
+            LocalConfig::set_active_mapping_file("default.ron".to_string());
+            let input_config: InputConfig = InputConfig::from(&default_mapping);
+            (default_mapping, input_config)
+        }
     };
 
-    log::info!("[Mask] Using default mapping config");
-    let config_path = relate_to_root_path(["local", "mapping", "default.ron"]);
-    let default_mapping = default_mapping_config();
-    if !config_path.exists() {
-        save_mapping_config(&default_mapping, &config_path).unwrap();
-    }
-
-    active_mapping.0 = default_mapping;
-    LocalConfig::set_active_mapping_file("default.ron".to_string());
-
-    let input_config: InputConfig = InputConfig::from(&active_mapping.0);
+    active_mapping.0 = Some(mapping_config);
     ineffable.set_config(&input_config);
 }

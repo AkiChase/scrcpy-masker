@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use axum::{
     Json, Router,
     extract::State,
@@ -6,7 +8,10 @@ use axum::{
 use rand::Rng;
 use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::{broadcast, mpsc::UnboundedSender};
+use tokio::{
+    sync::{broadcast, mpsc::UnboundedSender},
+    time::sleep,
+};
 
 use crate::{
     config::LocalConfig,
@@ -55,9 +60,10 @@ async fn device_list() -> Result<JsonResponse, WebServerError> {
 
 fn gen_scid() -> String {
     let mut rng = rand::rng();
-    (0..8)
+    let suffix: String = (0..6)
         .map(|_| rng.random_range(1..=9).to_string())
-        .collect()
+        .collect();
+    format!("10{}", suffix) // ensure 8 digits(HEX) and less than MAX_INT32
 }
 
 #[derive(Deserialize)]
@@ -99,21 +105,16 @@ async fn control_device(
     .map_err(|e| WebServerError(500, e))?;
     log::info!("[WebServe] Push scrcpy server to device successfully");
 
-    Device::reverse(
-        &device_id,
-        &format!("localabstract:scrcpy_{}", scid),
-        &format!("tcp:{}", LocalConfig::get().controller_port),
-    )
-    .map_err(|e| WebServerError(500, e))?;
-    log::info!("[WebServe] Reverse local port to device successfully");
+    let remote = format!("localabstract:scrcpy_{}", scid);
+    let local = format!("tcp:{}", LocalConfig::get().controller_port);
+    Device::reverse(&device_id, &remote, &local).map_err(|e| WebServerError(500, e))?;
+    log::info!("[WebServe] Reverse {} to {} successfully", remote, local);
 
     // create device
     let main = device_list.len() == 0;
     let mut socket_id: Vec<String> = Vec::new();
     let mut commands: Vec<ControllerCommand> = Vec::new();
     if main {
-        socket_id.push("main_control".to_string());
-        commands.push(ControllerCommand::ConnectMainControl(scid.clone()));
         if vedio {
             socket_id.push("main_video".to_string());
             commands.push(ControllerCommand::ConnectMainVideo(scid.clone()));
@@ -122,6 +123,8 @@ async fn control_device(
             socket_id.push("main_audio".to_string());
             commands.push(ControllerCommand::ConnectMainAudio(scid.clone()));
         }
+        socket_id.push("main_control".to_string());
+        commands.push(ControllerCommand::ConnectMainControl(scid.clone()));
     } else {
         socket_id.push(format!("sub_control_{}", scid));
         commands.push(ControllerCommand::ConnectSubControl(scid.clone()));
@@ -134,6 +137,8 @@ async fn control_device(
     }
 
     // run scrcpy app
+    sleep(Duration::from_millis(500)).await;
+    log::info!("[WebServe] Start scrcpy app...");
     let h = Device::shell_process(
         &device_id,
         [

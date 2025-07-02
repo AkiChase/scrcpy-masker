@@ -1,5 +1,5 @@
-use flume::Sender;
 use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast;
 
 use crate::scrcpy::{
     constant::{MotionEventAction, MotionEventButtons},
@@ -30,11 +30,17 @@ impl From<(i32, i32)> for Position {
     }
 }
 
+impl Position {
+    pub fn into_f32_pair(&self) -> (f32, f32) {
+        (self.x as f32, self.y as f32)
+    }
+}
+
 pub struct ControlMsgHelper;
 
 impl ControlMsgHelper {
     pub fn send_touch(
-        cs_tx: &Sender<ScrcpyControlMsg>,
+        cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
         action: MotionEventAction,
         pointer_id: u64,
         mask_size: (u32, u32),

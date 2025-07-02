@@ -39,8 +39,7 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
     )
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let args: Vec<String> = env::args().collect();
     if args.contains(&"--self_update".to_string()) {
         update::self_update();
@@ -63,6 +62,7 @@ async fn main() {
                         transparent: true,
                         decorations: false,
                         present_mode: PresentMode::AutoVsync,
+                        resizable: false,
                         visible: false,
                         #[cfg(target_os = "macos")]
                         composite_alpha_mode: CompositeAlphaMode::PostMultiplied,
@@ -73,6 +73,7 @@ async fn main() {
                     ..default()
                 }),
         )
+        .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default())
         .add_plugins(MaskPlugins)
         .add_systems(Startup, start_servers)
         .run();
