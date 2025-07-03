@@ -1,5 +1,6 @@
 pub mod config;
 pub mod cursor;
+pub mod joystick;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
@@ -32,7 +33,7 @@ impl Plugin for MappingPlugins {
             .insert_state(CursorState::Normal)
             .insert_resource(ActiveMappingConfig(None))
             .register_input_action::<MappingAction>()
-            .add_systems(Startup, (init, tap::tap_init))
+            .add_systems(Startup, (init, tap::tap_init, joystick::joystick_init))
             .add_systems(
                 Update,
                 (
@@ -41,6 +42,7 @@ impl Plugin for MappingPlugins {
                     tap::handle_repeat_tap_trigger,
                     tap::handle_multiple_tap,
                     swipe::handle_swipe,
+                    joystick::handle_joystick,
                 )
                     .run_if(in_state(MappingState::Normal)), // mapping
             );

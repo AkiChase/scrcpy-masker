@@ -5,11 +5,18 @@ use std::{
     path::Path,
 };
 
-use bevy::{ecs::resource::Resource, input::keyboard::KeyCode};
+use bevy::{
+    ecs::resource::Resource,
+    input::{gamepad::GamepadAxis, keyboard::KeyCode},
+};
 use bevy_ineffable::{
+    bindings::AnalogInput,
     config::InputConfig,
     phantom::IAWrp,
-    prelude::{ContinuousBinding, InputAction, InputBinding, InputKind, PulseBinding},
+    prelude::{
+        ContinuousBinding, DualAxisBinding, InputAction, InputBinding, InputKind, PulseBinding,
+        SingleAxisBinding,
+    },
 };
 use paste::paste;
 use ron::ser::{PrettyConfig, to_string_pretty};
@@ -19,6 +26,7 @@ use strum_macros::{AsRefStr, Display};
 
 use crate::{
     mask::mapping::{
+        joystick::MappingJoystick,
         swipe::MappingSwipe,
         tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
         utils::Size,
@@ -39,6 +47,8 @@ seq!(N in 1..=32 {
             MultipleTap~N,
             #[ineffable(pulse)]
             Swipe~N,
+            #[ineffable(dual_axis)]
+            Joystick~N,
         )*
     }
 
@@ -50,6 +60,7 @@ seq!(N in 1..=32 {
                     MappingAction::RepeatTap~N => InputKind::Continuous,
                     MappingAction::MultipleTap~N => InputKind::Pulse,
                     MappingAction::Swipe~N => InputKind::Pulse,
+                    MappingAction::Joystick~N => InputKind::DualAxis,
                 )*
             }
         }
@@ -71,6 +82,15 @@ seq!(N in 1..=32 {
                     MappingAction::Swipe~N => self.clone()._swipe~N(),
                 )*
                 _ => panic!("ineff_pulse called on non-pulse variant"),
+            }
+        }
+
+        pub fn ineff_dual_axis(&self) -> IAWrp<MappingAction, bevy_ineffable::phantom::DualAxis> {
+            match self {
+                #(
+                    MappingAction::Joystick~N => self.clone()._joystick~N(),
+                )*
+                _ => panic!("ineff_dual_axis called on non-dual_axis variant"),
             }
         }
     }
@@ -111,6 +131,7 @@ pub enum MappingType {
     RepeatTap(MappingRepeatTap),
     MultipleTap(MappingMultipleTap),
     Swipe(MappingSwipe),
+    Joystick(MappingJoystick),
 }
 
 impl_mapping_type_methods! {
@@ -119,6 +140,7 @@ impl_mapping_type_methods! {
         RepeatTap => MappingRepeatTap,
         MultipleTap => MappingMultipleTap,
         Swipe => MappingSwipe,
+        Joystick => MappingJoystick,
     }
 }
 
@@ -251,6 +273,66 @@ pub fn default_mapping_config() -> MappingConfig {
                         vec![(100, 100).into(), (200, 200).into(), (300, 300).into()],
                         1000,
                         PulseBinding::just_pressed(KeyCode::Digit5).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Joystick1,
+                MappingType::Joystick(
+                    MappingJoystick::new(
+                        "Joystick",
+                        9,
+                        (300, 300).into(),
+                        100,
+                        100,
+                        100,
+                        DualAxisBinding::builder()
+                            .set_x(
+                                SingleAxisBinding::hold()
+                                    .set_negative(KeyCode::KeyA)
+                                    .set_positive(KeyCode::KeyD)
+                                    .build(),
+                            )
+                            .set_y(
+                                SingleAxisBinding::hold()
+                                    .set_negative(KeyCode::KeyW)
+                                    .set_positive(KeyCode::KeyS)
+                                    .build(),
+                            )
+                            .build()
+                            .0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Joystick2,
+                MappingType::Joystick(
+                    MappingJoystick::new(
+                        "Joystick gamepad",
+                        9,
+                        (300, 300).into(),
+                        300,
+                        100,
+                        100,
+                        DualAxisBinding::builder()
+                            .set_x(
+                                SingleAxisBinding::analog(AnalogInput::GamePad(
+                                    GamepadAxis::LeftStickX,
+                                ))
+                                .set_sensitivity(1.0)
+                                .build(),
+                            )
+                            .set_y(
+                                SingleAxisBinding::analog(AnalogInput::GamePad(
+                                    GamepadAxis::LeftStickY,
+                                ))
+                                .set_sensitivity(1.0)
+                                .build(),
+                            )
+                            .build()
+                            .0,
                     )
                     .unwrap(),
                 ),

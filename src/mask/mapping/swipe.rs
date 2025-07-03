@@ -9,7 +9,7 @@ use tokio::time::sleep;
 use crate::{
     mask::mapping::{
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, Position},
+        utils::{ease_sigmoid_like, ControlMsgHelper, Position},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -47,9 +47,7 @@ impl MappingSwipe {
     }
 }
 
-fn ease_sigmoid_like(t: f32) -> f32 {
-    1.0 / (1.0 + (-12.0 * (t - 0.5)).exp())
-}
+const MIN_INTERVAL: u64 = 50; // 50ms is the minimum interval
 
 pub fn handle_swipe(
     ineffable: Res<Ineffable>,
@@ -60,8 +58,8 @@ pub fn handle_swipe(
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("Swipe") {
-                let original_size_pair = active_mapping.original_size.into_u32_pair();
                 let mapping = mapping.as_ref_swipe();
+                let original_size_pair = active_mapping.original_size.into_u32_pair();
                 if ineffable.just_pulsed(action.ineff_pulse()) {
                     let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
@@ -76,12 +74,11 @@ pub fn handle_swipe(
                             potions[0].into_f32_pair(),
                         );
                         let mut cur_pos = &potions[0];
-                        let min_interval = 50; // 50ms is the minimum interval
                         for i in 1..potions.len() {
                             let next_pos = &potions[i];
 
                             let (dx, dy) = (next_pos.sub(cur_pos)).into_f32_pair();
-                            let steps = std::cmp::max(1, interval / min_interval);
+                            let steps = std::cmp::max(1, interval / MIN_INTERVAL);
                             let step_duration = interval / steps;
 
                             for step in 1..=steps {

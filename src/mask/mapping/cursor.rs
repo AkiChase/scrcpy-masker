@@ -59,7 +59,6 @@ fn cursor_position_bounded(
         println!("{:?}", cursor_pos.0);
     }
 }
-
 fn cursor_position_fire(
     mut mouse_motion_events: EventReader<MouseMotion>,
     mut cursor_pos: ResMut<CursorPosition>,

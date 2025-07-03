@@ -74,3 +74,8 @@ impl ControlMsgHelper {
             .unwrap();
     }
 }
+
+
+pub fn ease_sigmoid_like(t: f32) -> f32 {
+    1.0 / (1.0 + (-12.0 * (t - 0.5)).exp())
+}
