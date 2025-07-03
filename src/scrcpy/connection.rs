@@ -8,7 +8,7 @@ use tokio::{
     sync::{
         broadcast::{self, error::RecvError},
         mpsc::UnboundedSender,
-        oneshot,
+        oneshot, watch,
     },
 };
 use tokio_util::sync::CancellationToken;
@@ -32,6 +32,7 @@ impl ScrcpyConnection {
         mut write_half: OwnedWriteHalf,
         token: CancellationToken,
         mut cs_rx: broadcast::Receiver<ScrcpyControlMsg>,
+        mut watch_rx: watch::Receiver<(u32, u32)>,
     ) {
         tokio::select! {
             _ = token.cancelled()=>{
@@ -40,7 +41,47 @@ impl ScrcpyConnection {
             _ = async {
                 loop {
                     match cs_rx.recv().await {
-                        Ok(msg) => {
+                        Ok(mut msg) => {
+                                // scale position
+                                match &mut msg {
+                                    ScrcpyControlMsg::InjectTouchEvent {
+                                        x,
+                                        y,
+                                        w,
+                                        h,
+                                        action: _,
+                                        pointer_id: _,
+                                        pressure: _,
+                                        action_button: _,
+                                        buttons: _,
+                                    } => {
+                                        let (device_w, device_h) = watch_rx.borrow_and_update().clone();
+                                        let (old_x, old_y) = (*x, *y);
+                                        let (old_w, old_h) = (*w, *h);
+                                        *x = old_x * device_w as i32 / old_w as i32;
+                                        *y = old_y * device_h as i32 / old_h as i32;
+                                        *w = device_w as u16;
+                                        *h = device_h as u16;
+                                    }
+                                    ScrcpyControlMsg::InjectScrollEvent {
+                                        x,
+                                        y,
+                                        w,
+                                        h,
+                                        hscroll: _,
+                                        vscroll: _,
+                                        buttons: _,
+                                    } => {
+                                        let (device_w, device_h) = watch_rx.borrow_and_update().clone();
+                                        let (old_x, old_y) = (*x, *y);
+                                        let (old_w, old_h) = (*w, *h);
+                                        *x = old_x * device_w as i32 / old_w as i32;
+                                        *y = old_y * device_h as i32 / old_h as i32;
+                                        *w = device_w as u16;
+                                        *h = device_h as u16;
+                                    }
+                                    _ => {}
+                                };
                                 let data:Vec<u8> = msg.into();
                                 if let Err(e) = write_half.write_all(&data).await {
                                     log::error!("[Controller] Failed to write to socket: {}", e);
@@ -65,6 +106,7 @@ impl ScrcpyConnection {
     async fn control_reader_handler(
         mut read_half: OwnedReadHalf,
         cr_tx: UnboundedSender<ScrcpyDeviceMsg>,
+        watch_tx: watch::Sender<(u32, u32)>,
         scid: &str,
         main: bool,
     ) {
@@ -111,6 +153,7 @@ impl ScrcpyConnection {
                     } = msg.clone()
                     {
                         ControlledDevice::update_device_size(scid, (width, height)).await;
+                        watch_tx.send((width, height)).unwrap();
                     }
 
                     // only forward other message from main device
@@ -130,6 +173,7 @@ impl ScrcpyConnection {
         read_half: OwnedReadHalf,
         token: CancellationToken,
         cr_tx: UnboundedSender<ScrcpyDeviceMsg>,
+        watch_tx: watch::Sender<(u32, u32)>,
         scid: &str,
         main: bool,
     ) {
@@ -137,7 +181,7 @@ impl ScrcpyConnection {
             _ = token.cancelled()=>{
                 log::info!("[Controller] Scrcpy control connection reader half cancelled manually");
             }
-            _ = Self::control_reader_handler(read_half, cr_tx, scid, main)=>{
+            _ = Self::control_reader_handler(read_half, cr_tx, watch_tx, scid, main)=>{
                 log::error!("[Controller] Scrcpy control connection shutdown unexpectedly");
             }
         }
@@ -156,6 +200,7 @@ impl ScrcpyConnection {
         log::debug!("[Controller] handle scrcpy control connection...");
         let (read_half, write_half) = self.socket.into_split();
         let token_copy = token.clone();
+        let (watch_tx, watch_rx) = watch::channel::<(u32, u32)>((0, 0)); // share device size with writer
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
             m_tx.send_async((
@@ -167,8 +212,8 @@ impl ScrcpyConnection {
             oneshot_rx.await.unwrap().unwrap();
         }
         tokio::join!(
-            Self::control_writer(write_half, token, cs_rx),
-            Self::control_reader(read_half, token_copy, cr_tx, &scid, main)
+            Self::control_writer(write_half, token, cs_rx, watch_rx),
+            Self::control_reader(read_half, token_copy, cr_tx, watch_tx, &scid, main)
         );
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();

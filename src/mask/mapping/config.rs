@@ -163,7 +163,7 @@ pub fn default_mapping_config() -> MappingConfig {
                     MappingSingleTap::new(
                         (100, 100).into(),
                         "SingleTap (duration)",
-                        0,
+                        1,
                         1000,
                         false,
                         ContinuousBinding::hold(KeyCode::Digit1).0,
@@ -177,10 +177,24 @@ pub fn default_mapping_config() -> MappingConfig {
                     MappingSingleTap::new(
                         (200, 100).into(),
                         "SingleTap (sync)",
-                        0,
+                        1,
                         0,
                         true,
                         ContinuousBinding::hold(KeyCode::Digit2).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::RepeatTap1,
+                MappingType::RepeatTap(
+                    MappingRepeatTap::new(
+                        (250, 200).into(),
+                        "RepeatTap (sync)",
+                        0,
+                        30,
+                        100,
+                        ContinuousBinding::hold(KeyCode::Digit3).0,
                     )
                     .unwrap(),
                 ),

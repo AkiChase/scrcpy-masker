@@ -14,7 +14,6 @@ use crate::{
             save_mapping_config,
         },
         cursor::{CursorPlugins, CursorState},
-        tap::{handle_repeat_tap, handle_single_tap},
     },
     utils::relate_to_root_path,
 };
@@ -36,10 +35,15 @@ impl Plugin for MappingPlugins {
             .insert_state(CursorState::Normal)
             .insert_resource(ActiveMappingConfig(None))
             .register_input_action::<MappingAction>()
-            .add_systems(Startup, init)
+            .add_systems(Startup, (init, tap::tap_init))
             .add_systems(
                 Update,
-                (handle_single_tap, handle_repeat_tap).run_if(in_state(MappingState::Normal)), // mapping
+                (
+                    tap::handle_single_tap,
+                    tap::handle_repeat_tap,
+                    tap::handle_repeat_tap_trigger,
+                )
+                    .run_if(in_state(MappingState::Normal)), // mapping
             );
     }
 }

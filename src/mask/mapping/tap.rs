@@ -1,6 +1,12 @@
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 
-use bevy::ecs::system::{Res, ResMut};
+use bevy::{
+    ecs::{
+        resource::Resource,
+        system::{Commands, Res, ResMut},
+    },
+    time::{Time, Timer, TimerMode},
+};
 use bevy_ineffable::prelude::*;
 use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
@@ -17,6 +23,10 @@ use crate::{
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
+
+pub fn tap_init(mut commands: Commands) {
+    commands.insert_resource(RepeatTapTimers::default());
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingSingleTap {
@@ -51,10 +61,6 @@ impl MappingSingleTap {
             Err("SingleTap's binding must be Continuous".to_string())
         }
     }
-
-    pub fn tap_up(&self) {}
-
-    pub fn tap_down(&self) {}
 }
 
 pub fn handle_single_tap(
@@ -154,14 +160,78 @@ impl MappingRepeatTap {
     }
 }
 
-pub fn handle_repeat_tap(ineffable: Res<Ineffable>, active_mapping: Res<ActiveMappingConfig>) {
+#[derive(Resource, Default)]
+pub struct RepeatTapTimers(HashMap<String, RepeatTapTimer>);
+
+struct RepeatTapTimer {
+    timer: Timer,
+    pointer_id: u64,
+    mask_pos: (f32, f32),
+    duration: Duration,
+}
+
+pub fn handle_repeat_tap_trigger(
+    time: Res<Time>,
+    mut timers: ResMut<RepeatTapTimers>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    runtime: ResMut<TokioTasksRuntime>,
+) {
+    for (_, timer) in timers.0.iter_mut() {
+        if timer.timer.tick(time.delta()).just_finished() {
+            let cs_tx = cs_tx_res.0.clone();
+            let mask_size_pair = mask_size.into_u32_pair();
+            let pointer_id = timer.pointer_id;
+            let mask_pos = timer.mask_pos;
+            let duration = timer.duration;
+            // Tap down
+            ControlMsgHelper::send_touch(
+                &cs_tx,
+                MotionEventAction::Down,
+                pointer_id,
+                mask_size_pair,
+                mask_pos,
+            );
+            // wait and Tap up
+            runtime.spawn_background_task(move |_ctx| async move {
+                sleep(duration).await;
+                ControlMsgHelper::send_touch(
+                    &cs_tx,
+                    MotionEventAction::Up,
+                    pointer_id,
+                    mask_size_pair,
+                    mask_pos,
+                );
+            });
+        }
+    }
+}
+
+pub fn handle_repeat_tap(
+    ineffable: Res<Ineffable>,
+    active_mapping: Res<ActiveMappingConfig>,
+    mut timers: ResMut<RepeatTapTimers>,
+) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("RepeatTap") {
-                let _mapping = mapping.as_ref_repeattap();
+                let mapping = mapping.as_ref_repeattap();
+                let key = action.to_string();
                 if ineffable.just_activated(action.ineff_continuous()) {
-                    // TODO maybe we need a timmer res here, and we should also add one for handle_single_tap
+                    let interval = Duration::from_millis(mapping.interval as u64);
+                    let mut timer = Timer::new(interval, TimerMode::Repeating);
+                    timer.tick(interval);
+                    timers.0.insert(
+                        key,
+                        RepeatTapTimer {
+                            timer,
+                            pointer_id: mapping.pointer_id,
+                            mask_pos: mapping.position.into_f32_pair(),
+                            duration: Duration::from_millis(mapping.duration as u64),
+                        },
+                    );
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
+                    timers.0.remove(&key);
                 }
             }
         }
