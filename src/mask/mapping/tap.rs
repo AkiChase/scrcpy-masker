@@ -238,4 +238,80 @@ pub fn handle_repeat_tap(
     }
 }
 
-// TODO MultipleTap
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingMultipleTapItem {
+    pub position: Position,
+    pub duration: u64,
+    pub wait: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingMultipleTap {
+    pub note: String,
+    pub pointer_id: u64,
+    pub items: Vec<MappingMultipleTapItem>,
+    pub bind: InputBinding,
+}
+
+impl MappingMultipleTap {
+    pub fn new(
+        note: &str,
+        pointer_id: u64,
+        items: Vec<MappingMultipleTapItem>,
+        bind: InputBinding,
+    ) -> Result<Self, String> {
+        // check binding
+        if let InputBinding::Pulse(_) = bind {
+            Ok(Self {
+                note: note.to_string(),
+                pointer_id,
+                items,
+                bind,
+            })
+        } else {
+            Err("MultipleTap's binding must be Pulse".to_string())
+        }
+    }
+}
+
+pub fn handle_multiple_tap(
+    ineffable: Res<Ineffable>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    runtime: ResMut<TokioTasksRuntime>,
+) {
+    if let Some(active_mapping) = &active_mapping.0 {
+        for (action, mapping) in &active_mapping.mappings {
+            if action.as_ref().starts_with("MultipleTap") {
+                let mapping = mapping.as_ref_multipletap();
+                if ineffable.just_pulsed(action.ineff_pulse()) {
+                    let cs_tx = cs_tx_res.0.clone();
+                    let mask_size_pair = mask_size.into_u32_pair();
+                    let pointer_id = mapping.pointer_id;
+                    let items = mapping.items.clone();
+                    runtime.spawn_background_task(move |_ctx| async move {
+                        for item in items {
+                            sleep(Duration::from_millis(item.wait)).await;
+                            ControlMsgHelper::send_touch(
+                                &cs_tx,
+                                MotionEventAction::Down,
+                                pointer_id,
+                                mask_size_pair,
+                                item.position.into_f32_pair(),
+                            );
+                            sleep(Duration::from_millis(item.duration)).await;
+                            ControlMsgHelper::send_touch(
+                                &cs_tx,
+                                MotionEventAction::Up,
+                                pointer_id,
+                                mask_size_pair,
+                                item.position.into_f32_pair(),
+                            );
+                        }
+                    });
+                }
+            }
+        }
+    }
+}

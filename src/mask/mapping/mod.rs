@@ -9,13 +9,9 @@ use bevy_ineffable::prelude::*;
 use crate::{
     config::LocalConfig,
     mask::mapping::{
-        config::{
-            ActiveMappingConfig, MappingAction, default_mapping_config, load_mapping_config,
-            save_mapping_config,
-        },
+        config::{ActiveMappingConfig, MappingAction, default_mapping_config, load_mapping_config},
         cursor::{CursorPlugins, CursorState},
     },
-    utils::relate_to_root_path,
 };
 
 #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
@@ -42,6 +38,7 @@ impl Plugin for MappingPlugins {
                     tap::handle_single_tap,
                     tap::handle_repeat_tap,
                     tap::handle_repeat_tap_trigger,
+                    tap::handle_multiple_tap,
                 )
                     .run_if(in_state(MappingState::Normal)), // mapping
             );
@@ -63,11 +60,9 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
         Err(e) => {
             log::error!("{}", e);
             log::info!("[Mask] Using default mapping config");
-            let config_path = relate_to_root_path(["local", "mapping", "default.ron"]);
             let default_mapping = default_mapping_config();
-            if !config_path.exists() {
-                save_mapping_config(&default_mapping, &config_path).unwrap();
-            }
+            // let config_path = relate_to_root_path(["local", "mapping", "default.ron"]);
+            // save_mapping_config(&default_mapping, &config_path).unwrap(); // TODO 测试阶段不保存
             LocalConfig::set_active_mapping_file("default.ron".to_string());
             let input_config: InputConfig = InputConfig::from(&default_mapping);
             (default_mapping, input_config)

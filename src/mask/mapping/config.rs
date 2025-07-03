@@ -9,7 +9,7 @@ use bevy::{ecs::resource::Resource, input::keyboard::KeyCode};
 use bevy_ineffable::{
     config::InputConfig,
     phantom::IAWrp,
-    prelude::{ContinuousBinding, InputAction, InputBinding, InputKind},
+    prelude::{ContinuousBinding, InputAction, InputBinding, InputKind, PulseBinding},
 };
 use paste::paste;
 use ron::ser::{PrettyConfig, to_string_pretty};
@@ -19,7 +19,7 @@ use strum_macros::{AsRefStr, Display};
 
 use crate::{
     mask::mapping::{
-        tap::{MappingRepeatTap, MappingSingleTap},
+        tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
         utils::Size,
     },
     utils::relate_to_root_path,
@@ -63,7 +63,7 @@ seq!(N in 1..=32 {
             }
         }
 
-        pub fn ineff_pulse(self) -> IAWrp<MappingAction, bevy_ineffable::phantom::Pulse> {
+        pub fn ineff_pulse(&self) -> IAWrp<MappingAction, bevy_ineffable::phantom::Pulse> {
             match self {
                 #(
                     MappingAction::MultipleTap~N => self.clone()._multipletap~N(),
@@ -108,7 +108,7 @@ macro_rules! impl_mapping_type_methods {
 pub enum MappingType {
     SingleTap(MappingSingleTap),
     RepeatTap(MappingRepeatTap),
-    // MultipleTap(MappingMultipleTap),
+    MultipleTap(MappingMultipleTap),
     // Swipe(MappingSwipe),
 }
 
@@ -116,8 +116,8 @@ impl_mapping_type_methods! {
     MappingType {
         SingleTap => MappingSingleTap,
         RepeatTap => MappingRepeatTap,
+        MultipleTap => MappingMultipleTap,
         // Swipe => MappingSwipe,
-        // MultipleTap => MappingMultipleTap,
     }
 }
 
@@ -190,11 +190,53 @@ pub fn default_mapping_config() -> MappingConfig {
                 MappingType::RepeatTap(
                     MappingRepeatTap::new(
                         (250, 200).into(),
-                        "RepeatTap (sync)",
-                        0,
+                        "RepeatTap",
+                        1,
                         30,
                         100,
                         ContinuousBinding::hold(KeyCode::Digit3).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::RepeatTap2,
+                MappingType::RepeatTap(
+                    MappingRepeatTap::new(
+                        (250, 250).into(),
+                        "RepeatTap (multi-binding)",
+                        2,
+                        30,
+                        100,
+                        ContinuousBinding::hold((KeyCode::ControlLeft, KeyCode::Digit3)).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::MultipleTap1,
+                MappingType::MultipleTap(
+                    MappingMultipleTap::new(
+                        "MultipleTap",
+                        1,
+                        vec![
+                            MappingMultipleTapItem {
+                                position: (100, 100).into(),
+                                duration: 500,
+                                wait: 0,
+                            },
+                            MappingMultipleTapItem {
+                                position: (200, 200).into(),
+                                duration: 500,
+                                wait: 1000,
+                            },
+                            MappingMultipleTapItem {
+                                position: (300, 300).into(),
+                                duration: 500,
+                                wait: 1000,
+                            },
+                        ],
+                        PulseBinding::just_pressed(KeyCode::Digit4).0,
                     )
                     .unwrap(),
                 ),

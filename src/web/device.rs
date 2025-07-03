@@ -221,7 +221,9 @@ async fn set_display_power(
         .send(ScrcpyControlMsg::SetDisplayPower { mode: payload.mode })
         .unwrap();
     Ok(JsonResponse::success(
-        "Set display power successfully",
+        "Set display power of all controlled devices successfully",
         None,
     ))
 }
+
+// TODO get screenshot of one device by serial_id (for mapping setting)
