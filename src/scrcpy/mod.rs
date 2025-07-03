@@ -6,7 +6,7 @@ pub mod constant;
 pub mod control_msg;
 pub mod controller;
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 pub struct ScrcpyDevice {
     pub device_id: String,
     pub scid: String,

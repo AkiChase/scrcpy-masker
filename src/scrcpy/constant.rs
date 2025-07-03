@@ -1,7 +1,8 @@
 use bitflags::bitflags;
+use serde::Deserialize;
 
 bitflags! {
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Deserialize)]
     pub struct MetaState: u32 {
         const NONE               = 0x000000;
         const SHIFT_ON           = 0x000001;
@@ -30,7 +31,7 @@ bitflags! {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum KeyEventAction {
     /** The key has been pressed down. */
     Down = 0,
@@ -48,7 +49,7 @@ pub enum KeyEventAction {
 }
 
 #[repr(u32)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum Keycode {
     Unknown = 0,
     SoftLeft = 1,
@@ -342,7 +343,7 @@ pub enum Keycode {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum MotionEventAction {
     Down = 0,
     Up = 1,
@@ -351,7 +352,7 @@ pub enum MotionEventAction {
 }
 
 bitflags! {
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Deserialize)]
     pub struct MotionEventButtons: u32 {
         /// Primary button (e.g. left mouse)
         const PRIMARY = 1 << 0;

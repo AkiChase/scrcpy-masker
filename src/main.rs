@@ -16,7 +16,7 @@ use scrcpy_masker::{
     utils::{
         ChannelReceiverA, ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, relate_to_root_path,
     },
-    web,
+    web::{self, ws::WebSocketNotification},
 };
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -87,6 +87,7 @@ fn start_servers(mut commands: Commands) {
         .unwrap();
 
     let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(1000);
+    let (ws_tx, _) = broadcast::channel::<WebSocketNotification>(1000);
     let (v_tx, v_rx) = flume::unbounded::<Vec<u8>>();
     let (a_tx, a_rx) = flume::unbounded::<Vec<u8>>();
     let (m_tx, m_rx) = flume::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();
@@ -96,6 +97,6 @@ fn start_servers(mut commands: Commands) {
     commands.insert_resource(ChannelReceiverV(v_rx));
     commands.insert_resource(ChannelReceiverA(a_rx));
     commands.insert_resource(ChannelReceiverM(m_rx));
-    web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone());
-    controller::Controller::start(controller_addr, cs_tx, v_tx, a_tx, d_rx, m_tx);
+    web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone());
+    controller::Controller::start(controller_addr, cs_tx, v_tx, a_tx, d_rx, m_tx, ws_tx);
 }

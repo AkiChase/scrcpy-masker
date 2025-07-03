@@ -29,10 +29,14 @@ which = "7"
 adb_client = "*"
 rand = "*"
 tracing-appender = "0.2"
-axum = { version = "0.8.4", features = ["macros"] }
+axum = { version = "0.8.4", features = ["macros", "ws"] }
 opener = "0.8.2"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "cors"] }
+futures-util = { version = "0.3", default-features = false, features = [
+    "sink",
+    "std",
+] }
 flume = { version = "0.11.1", features = ["async"] }
 bitflags = "2.9.1"
 half = "2.6.0"

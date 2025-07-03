@@ -20,6 +20,7 @@ use crate::{
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
     },
     utils::{mask_win_move_helper, share::ControlledDevice},
+    web::ws::WebSocketNotification,
 };
 
 #[derive(Debug)]
@@ -43,6 +44,7 @@ impl Controller {
         a_tx: Sender<Vec<u8>>,
         d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -50,7 +52,7 @@ impl Controller {
                 .build()
                 .unwrap()
                 .block_on(async move {
-                    Controller::run_server(addr, cs_tx, v_tx, a_tx, d_rx, m_tx).await;
+                    Controller::run_server(addr, cs_tx, v_tx, a_tx, d_rx, m_tx, ws_tx).await;
                 });
         });
     }
@@ -58,6 +60,7 @@ impl Controller {
     async fn cr_msg_handler(
         mut cr_rx: UnboundedReceiver<ScrcpyDeviceMsg>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         loop {
             match cr_rx.recv().await {
@@ -74,6 +77,14 @@ impl Controller {
                         height,
                         scid,
                     } => {
+                        ws_tx
+                            .send(WebSocketNotification::ScrcpyDeviceRotation {
+                                rotation,
+                                width,
+                                height,
+                                scid: scid.clone(),
+                            })
+                            .ok();
                         let msg = mask_win_move_helper(width, height, &m_tx).await;
                         log::info!(
                             "[Controller] Device {} rotation {}°. {}",
@@ -87,7 +98,7 @@ impl Controller {
                     }
                 },
                 None => {
-                    log::info!("[Controller] C-R channel closed, exiting handler.");
+                    log::info!("[Controller] CR channel closed, exiting handler.");
                     break;
                 }
             }
@@ -101,6 +112,7 @@ impl Controller {
         a_tx: Sender<Vec<u8>>,
         mut d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[Controller] Starting scrcpy controller on: {}", addr);
         let listener = TcpListener::bind(addr).await.unwrap();
@@ -108,7 +120,8 @@ impl Controller {
         // scrcpy device msg handler
         let (cr_tx, cr_rx) = mpsc::unbounded_channel::<ScrcpyDeviceMsg>();
         let m_tx_copy = m_tx.clone();
-        tokio::spawn(async move { Self::cr_msg_handler(cr_rx, m_tx_copy).await });
+        let ws_tx_copy = ws_tx.clone();
+        tokio::spawn(async move { Self::cr_msg_handler(cr_rx, m_tx_copy, ws_tx_copy).await });
 
         // receive command from web server to accept and shutdown scrcpy connection
         log::info!("[Controller] Starting to receive command from web server");
@@ -135,12 +148,28 @@ impl Controller {
                         let m_tx_copy = m_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
+                                let ws_tx_copy = ws_tx.clone();
+                                let scid_copy = scid.clone();
+                                ws_tx_copy
+                                    .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                        scid: scid_copy.clone(),
+                                        main: true,
+                                        connected: true,
+                                    })
+                                    .ok();
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
                                         .handle_control(
                                             cs_rx, cr_tx_copy, m_tx_copy, scid, true, token,
                                         )
                                         .await;
+                                    ws_tx_copy
+                                        .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                            scid: scid_copy,
+                                            main: true,
+                                            connected: false,
+                                        })
+                                        .ok();
                                 });
                             }
                             Err(e) => {
@@ -229,12 +258,28 @@ impl Controller {
                         let m_tx_copy = m_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
+                                let ws_tx_copy = ws_tx.clone();
+                                let scid_copy = scid.clone();
+                                ws_tx_copy
+                                    .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                        scid: scid_copy.clone(),
+                                        main: true,
+                                        connected: true,
+                                    })
+                                    .ok();
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
                                         .handle_control(
                                             sc_rx, cr_tx_copy, m_tx_copy, scid, false, token,
                                         )
                                         .await;
+                                    ws_tx_copy
+                                        .send(WebSocketNotification::ScrcpyDeviceConnection {
+                                            scid: scid_copy,
+                                            main: true,
+                                            connected: false,
+                                        })
+                                        .ok();
                                 });
                             }
                             Err(e) => {
@@ -284,7 +329,7 @@ impl Controller {
                     }
                 },
                 None => {
-                    log::info!("[Controller] Controller commmand channel closed, exiting handler.");
+                    log::info!("[Controller] D channel closed, exiting handler.");
                     break;
                 }
             }

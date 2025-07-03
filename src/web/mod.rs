@@ -1,6 +1,7 @@
 pub mod config;
 pub mod device;
 pub mod mapping;
+pub mod ws;
 
 use axum::{
     Json, Router,
@@ -18,6 +19,7 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, controller::ControllerCommand},
     utils::relate_to_root_path,
+    web::ws::WebSocketNotification,
 };
 
 pub struct Server;
@@ -28,6 +30,7 @@ impl Server {
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         thread::spawn(move || {
             tokio::runtime::Builder::new_multi_thread()
@@ -35,7 +38,7 @@ impl Server {
                 .build()
                 .unwrap()
                 .block_on(async move {
-                    Server::run_server(addr, cs_tx, d_tx, m_tx).await;
+                    Server::run_server(addr, cs_tx, d_tx, m_tx, ws_tx).await;
                 });
         });
     }
@@ -45,6 +48,7 @@ impl Server {
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[WebServe] Starting web server on: {}", addr);
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -60,7 +64,7 @@ impl Server {
         //opener::open(url)
         //     .unwrap_or_else(|e| log::error!("[WebServe] Failed to open browser: {}", e));
 
-        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx))
+        axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, ws_tx))
             .await
             .unwrap();
     }
@@ -69,12 +73,14 @@ impl Server {
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        ws_tx: broadcast::Sender<WebSocketNotification>,
     ) -> Router {
         let router = Router::new()
             .fallback_service(ServeDir::new(relate_to_root_path(["assets", "web"])))
-            .nest("/api/device", device::routers(cs_tx, d_tx))
+            .nest("/api/device", device::routers(cs_tx.clone(), d_tx))
             .nest("/api/mapping", mapping::routers(m_tx.clone()))
-            .nest("/api/config", config::routers(m_tx));
+            .nest("/api/config", config::routers(m_tx.clone()))
+            .nest("/api/ws", ws::routers(cs_tx, ws_tx));
 
         #[cfg(debug_assertions)]
         {
