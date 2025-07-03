@@ -12,6 +12,12 @@ pub struct Size {
     pub height: u32,
 }
 
+impl Size {
+    pub fn into_u32_pair(&self) -> (u32, u32) {
+        (self.width, self.height)
+    }
+}
+
 impl From<(u32, u32)> for Size {
     fn from((width, height): (u32, u32)) -> Self {
         Size { width, height }
@@ -33,6 +39,13 @@ impl From<(i32, i32)> for Position {
 impl Position {
     pub fn into_f32_pair(&self) -> (f32, f32) {
         (self.x as f32, self.y as f32)
+    }
+
+    pub fn sub(&self, other: &Position) -> Position {
+        Position {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
     }
 }
 

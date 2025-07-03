@@ -67,12 +67,12 @@ pub fn handle_single_tap(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
-    mask_size: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
 ) {
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("SingleTap") {
+                let original_size_pair = active_mapping.original_size.into_u32_pair();
                 let mapping = mapping.as_ref_singletap();
                 if ineffable.just_activated(action.ineff_continuous()) {
                     if mapping.sync {
@@ -81,12 +81,11 @@ pub fn handle_single_tap(
                             &cs_tx_res.0,
                             MotionEventAction::Down,
                             mapping.pointer_id,
-                            mask_size.into_u32_pair(),
+                            original_size_pair,
                             mapping.position.into_f32_pair(),
                         );
                     } else {
                         let cs_tx = cs_tx_res.0.clone();
-                        let mask_size_pair = mask_size.into_u32_pair();
                         let pointer_id = mapping.pointer_id;
                         let mask_pos = mapping.position.into_f32_pair();
                         let duration = Duration::from_millis(mapping.duration as u64);
@@ -95,7 +94,7 @@ pub fn handle_single_tap(
                             &cs_tx,
                             MotionEventAction::Down,
                             pointer_id,
-                            mask_size_pair,
+                            original_size_pair,
                             mask_pos,
                         );
                         // wait and Tap up
@@ -105,7 +104,7 @@ pub fn handle_single_tap(
                                 &cs_tx,
                                 MotionEventAction::Up,
                                 pointer_id,
-                                mask_size_pair,
+                                original_size_pair,
                                 mask_pos,
                             );
                         });
@@ -116,7 +115,7 @@ pub fn handle_single_tap(
                         &cs_tx_res.0,
                         MotionEventAction::Up,
                         mapping.pointer_id,
-                        mask_size.into_u32_pair(),
+                        original_size_pair,
                         mapping.position.into_f32_pair(),
                     );
                 }
@@ -167,6 +166,7 @@ struct RepeatTapTimer {
     timer: Timer,
     pointer_id: u64,
     mask_pos: (f32, f32),
+    original_size: (u32, u32),
     duration: Duration,
 }
 
@@ -174,13 +174,12 @@ pub fn handle_repeat_tap_trigger(
     time: Res<Time>,
     mut timers: ResMut<RepeatTapTimers>,
     cs_tx_res: Res<ChannelSenderCS>,
-    mask_size: Res<MaskSize>,
     runtime: ResMut<TokioTasksRuntime>,
 ) {
     for (_, timer) in timers.0.iter_mut() {
         if timer.timer.tick(time.delta()).just_finished() {
             let cs_tx = cs_tx_res.0.clone();
-            let mask_size_pair = mask_size.into_u32_pair();
+            let original_size = timer.original_size;
             let pointer_id = timer.pointer_id;
             let mask_pos = timer.mask_pos;
             let duration = timer.duration;
@@ -189,7 +188,7 @@ pub fn handle_repeat_tap_trigger(
                 &cs_tx,
                 MotionEventAction::Down,
                 pointer_id,
-                mask_size_pair,
+                original_size,
                 mask_pos,
             );
             // wait and Tap up
@@ -199,7 +198,7 @@ pub fn handle_repeat_tap_trigger(
                     &cs_tx,
                     MotionEventAction::Up,
                     pointer_id,
-                    mask_size_pair,
+                    original_size,
                     mask_pos,
                 );
             });
@@ -219,6 +218,7 @@ pub fn handle_repeat_tap(
                 let key = action.to_string();
                 if ineffable.just_activated(action.ineff_continuous()) {
                     let interval = Duration::from_millis(mapping.interval as u64);
+                    let original_size_pair = active_mapping.original_size.into_u32_pair();
                     let mut timer = Timer::new(interval, TimerMode::Repeating);
                     timer.tick(interval);
                     timers.0.insert(
@@ -227,6 +227,7 @@ pub fn handle_repeat_tap(
                             timer,
                             pointer_id: mapping.pointer_id,
                             mask_pos: mapping.position.into_f32_pair(),
+                            original_size: original_size_pair,
                             duration: Duration::from_millis(mapping.duration as u64),
                         },
                     );
@@ -287,7 +288,7 @@ pub fn handle_multiple_tap(
                 let mapping = mapping.as_ref_multipletap();
                 if ineffable.just_pulsed(action.ineff_pulse()) {
                     let cs_tx = cs_tx_res.0.clone();
-                    let mask_size_pair = mask_size.into_u32_pair();
+                    let original_size_pair = mask_size.into_u32_pair();
                     let pointer_id = mapping.pointer_id;
                     let items = mapping.items.clone();
                     runtime.spawn_background_task(move |_ctx| async move {
@@ -297,7 +298,7 @@ pub fn handle_multiple_tap(
                                 &cs_tx,
                                 MotionEventAction::Down,
                                 pointer_id,
-                                mask_size_pair,
+                                original_size_pair,
                                 item.position.into_f32_pair(),
                             );
                             sleep(Duration::from_millis(item.duration)).await;
@@ -305,7 +306,7 @@ pub fn handle_multiple_tap(
                                 &cs_tx,
                                 MotionEventAction::Up,
                                 pointer_id,
-                                mask_size_pair,
+                                original_size_pair,
                                 item.position.into_f32_pair(),
                             );
                         }

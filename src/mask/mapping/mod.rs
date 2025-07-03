@@ -1,5 +1,6 @@
 pub mod config;
 pub mod cursor;
+pub mod swipe;
 pub mod tap;
 pub mod utils;
 
@@ -39,6 +40,7 @@ impl Plugin for MappingPlugins {
                     tap::handle_repeat_tap,
                     tap::handle_repeat_tap_trigger,
                     tap::handle_multiple_tap,
+                    swipe::handle_swipe,
                 )
                     .run_if(in_state(MappingState::Normal)), // mapping
             );

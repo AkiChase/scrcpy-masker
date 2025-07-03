@@ -19,6 +19,7 @@ use strum_macros::{AsRefStr, Display};
 
 use crate::{
     mask::mapping::{
+        swipe::MappingSwipe,
         tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
         utils::Size,
     },
@@ -109,7 +110,7 @@ pub enum MappingType {
     SingleTap(MappingSingleTap),
     RepeatTap(MappingRepeatTap),
     MultipleTap(MappingMultipleTap),
-    // Swipe(MappingSwipe),
+    Swipe(MappingSwipe),
 }
 
 impl_mapping_type_methods! {
@@ -117,7 +118,7 @@ impl_mapping_type_methods! {
         SingleTap => MappingSingleTap,
         RepeatTap => MappingRepeatTap,
         MultipleTap => MappingMultipleTap,
-        // Swipe => MappingSwipe,
+        Swipe => MappingSwipe,
     }
 }
 
@@ -237,6 +238,19 @@ pub fn default_mapping_config() -> MappingConfig {
                             },
                         ],
                         PulseBinding::just_pressed(KeyCode::Digit4).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Swipe1,
+                MappingType::Swipe(
+                    MappingSwipe::new(
+                        "Swipe",
+                        1,
+                        vec![(100, 100).into(), (200, 200).into(), (300, 300).into()],
+                        1000,
+                        PulseBinding::just_pressed(KeyCode::Digit5).0,
                     )
                     .unwrap(),
                 ),
