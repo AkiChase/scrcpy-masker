@@ -5,6 +5,7 @@ use crate::{
     mask::mapping::{
         MappingState,
         config::{ActiveMappingConfig, MappingConfig},
+        cursor::CursorState,
     },
     utils::ChannelReceiverM,
 };
@@ -27,18 +28,13 @@ pub enum MaskCommand {
 }
 
 #[derive(Resource)]
-pub struct MaskSize(pub u32, pub u32);
-
-impl MaskSize {
-    pub fn into_u32_pair(&self) -> (u32, u32) {
-        (self.0, self.1)
-    }
-}
+pub struct MaskSize(pub Vec2);
 
 pub fn handle_mask_command(
     m_rx: Res<ChannelReceiverM>,
     mut window: Single<&mut Window>,
-    mut next_state: ResMut<NextState<MappingState>>,
+    mut next_mapping_state: ResMut<NextState<MappingState>>,
+    mut next_cursor_state: ResMut<NextState<CursorState>>,
     mut ineffable: IneffableCommands,
     mut active_mapping: ResMut<ActiveMappingConfig>,
     mut mask_size: ResMut<MaskSize>,
@@ -56,18 +52,13 @@ pub fn handle_mask_command(
                 let height = (bottom - top) as f32;
 
                 window.resolution.set(width, height);
-                window.position.set([left, top].into());
+                window.position.set((left, top).into());
 
-                let new_size = &window.resolution;
-                let mask_w = new_size.width().round() as u32;
-                let mask_h = new_size.height().round() as u32;
-
-                mask_size.0 = mask_w;
-                mask_size.1 = mask_h;
+                mask_size.0 = window.resolution.size();
 
                 let msg = format!(
                     "Window moved to ({},{}) and resize to {}x{}",
-                    left, top, mask_w, mask_h
+                    left, top, mask_size.0.x, mask_size.0.y
                 );
 
                 log::info!("[Mask] {}", msg);
@@ -75,11 +66,12 @@ pub fn handle_mask_command(
             }
             MaskCommand::DeviceConnectionChange { connect } => {
                 let msg = if connect {
-                    next_state.set(MappingState::Normal);
+                    next_mapping_state.set(MappingState::Normal);
                     window.visible = true;
                     format!("main device connection connected")
                 } else {
-                    next_state.set(MappingState::Stop);
+                    next_cursor_state.set(CursorState::Normal);
+                    next_mapping_state.set(MappingState::Stop);
                     window.visible = false;
                     format!("main device connection disconnected")
                 };

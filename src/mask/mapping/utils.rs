@@ -1,3 +1,4 @@
+use bevy::math::Vec2;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
@@ -6,15 +7,15 @@ use crate::scrcpy::{
     control_msg::ScrcpyControlMsg,
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, Copy)]
 pub struct Size {
     pub width: u32,
     pub height: u32,
 }
 
-impl Size {
-    pub fn into_u32_pair(&self) -> (u32, u32) {
-        (self.width, self.height)
+impl From<Size> for Vec2 {
+    fn from(size: Size) -> Self {
+        Vec2::new(size.width as f32, size.height as f32)
     }
 }
 
@@ -24,7 +25,16 @@ impl From<(u32, u32)> for Size {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+impl From<Vec2> for Size {
+    fn from(vec: Vec2) -> Self {
+        Size {
+            width: vec.x as u32,
+            height: vec.y as u32,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -36,16 +46,9 @@ impl From<(i32, i32)> for Position {
     }
 }
 
-impl Position {
-    pub fn into_f32_pair(&self) -> (f32, f32) {
-        (self.x as f32, self.y as f32)
-    }
-
-    pub fn sub(&self, other: &Position) -> Position {
-        Position {
-            x: self.x - other.x,
-            y: self.y - other.y,
-        }
+impl From<Position> for Vec2 {
+    fn from(pos: Position) -> Self {
+        Vec2::new(pos.x as f32, pos.y as f32)
     }
 }
 
@@ -56,17 +59,17 @@ impl ControlMsgHelper {
         cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
         action: MotionEventAction,
         pointer_id: u64,
-        mask_size: (u32, u32),
-        mask_pos: (f32, f32),
+        size: Vec2,
+        pos: Vec2,
     ) {
         cs_tx
             .send(ScrcpyControlMsg::InjectTouchEvent {
                 action,
                 pointer_id,
-                x: mask_pos.0 as i32,
-                y: mask_pos.1 as i32,
-                w: mask_size.0 as u16,
-                h: mask_size.1 as u16,
+                x: pos.x as i32,
+                y: pos.y as i32,
+                w: size.x as u16,
+                h: size.y as u16,
                 pressure: half::f16::from_f32_const(1.0),
                 action_button: MotionEventButtons::PRIMARY,
                 buttons: MotionEventButtons::PRIMARY,
@@ -74,7 +77,6 @@ impl ControlMsgHelper {
             .unwrap();
     }
 }
-
 
 pub fn ease_sigmoid_like(t: f32) -> f32 {
     1.0 / (1.0 + (-12.0 * (t - 0.5)).exp())

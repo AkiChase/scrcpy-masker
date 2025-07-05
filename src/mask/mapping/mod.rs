@@ -1,5 +1,6 @@
 pub mod config;
 pub mod cursor;
+pub mod fire;
 pub mod joystick;
 pub mod swipe;
 pub mod tap;
@@ -30,10 +31,17 @@ impl Plugin for MappingPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((IneffablePlugin, CursorPlugins))
             .insert_state(MappingState::Stop)
-            .insert_state(CursorState::Normal)
             .insert_resource(ActiveMappingConfig(None))
             .register_input_action::<MappingAction>()
-            .add_systems(Startup, (init, tap::tap_init, joystick::joystick_init))
+            .add_systems(
+                Startup,
+                (
+                    init,
+                    tap::tap_init,
+                    joystick::joystick_init,
+                    fire::fire_init,
+                ),
+            )
             .add_systems(
                 Update,
                 (
@@ -43,6 +51,9 @@ impl Plugin for MappingPlugins {
                     tap::handle_multiple_tap,
                     swipe::handle_swipe,
                     joystick::handle_joystick,
+                    fire::handle_fps,
+                    (fire::handle_fire, fire::handle_fire_trigger)
+                        .run_if(in_state(CursorState::Fps)),
                 )
                     .run_if(in_state(MappingState::Normal)), // mapping
             );

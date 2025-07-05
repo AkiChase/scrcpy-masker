@@ -14,7 +14,7 @@ impl Plugin for BasicPlugin {
 
 fn setup(mut commands: Commands, mut window: Single<&mut Window>) {
     window.resolution.set(800., 600.);
-    commands.spawn(Camera2d);
+    commands.spawn(Camera2d::default());
 }
 
 fn border(mut commands: Commands) {

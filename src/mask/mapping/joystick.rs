@@ -31,8 +31,8 @@ pub struct MappingJoystick {
     pub pointer_id: u64,
     pub position: Position,
     pub initial_duration: u64,
-    pub max_offset_x: u32,
-    pub max_offset_y: u32,
+    pub max_offset_x: f32,
+    pub max_offset_y: f32,
     pub bind: InputBinding,
 }
 
@@ -42,8 +42,8 @@ impl MappingJoystick {
         pointer_id: u64,
         position: Position,
         initial_duration: u64,
-        max_offset_x: u32,
-        max_offset_y: u32,
+        max_offset_x: f32,
+        max_offset_y: f32,
         bind: InputBinding,
     ) -> Result<Self, String> {
         // check binding
@@ -71,8 +71,8 @@ fn scale_direction_2d_state(d_state: Vec2, mapping: &MappingJoystick) -> Vec2 {
         return d_state;
     }
 
-    let max_x = mapping.max_offset_x as f32;
-    let max_y = mapping.max_offset_y as f32;
+    let max_x = mapping.max_offset_x;
+    let max_y = mapping.max_offset_y;
 
     let scaled = Vec2 {
         x: d_state.x * max_x,
@@ -117,35 +117,33 @@ pub fn handle_joystick(
                 );
                 if joystick_states.0.contains_key(&key) {
                     let last_state = joystick_states.0.get(&key).unwrap().clone();
-                    let position = mapping.position.into_f32_pair();
+                    let position: Vec2 = mapping.position.into();
                     if state.x == 0.0 && state.y == 0.0 {
                         // touch up and remove state
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
                             MotionEventAction::Up,
                             mapping.pointer_id,
-                            active_mapping.original_size.into_u32_pair(),
-                            (position.0 + last_state.x, position.1 + last_state.y),
+                            active_mapping.original_size.into(),
+                            position + last_state,
                         );
                         joystick_states.0.remove(&key);
                     } else if state != last_state {
                         // record new state
                         joystick_states.0.insert(key, state);
                         // move to new state
-                        let (dx, dy) = (state.x - last_state.x, state.y - last_state.y);
-                        let steps = std::cmp::max(1, f32::max(dx, dy) as u64 / MIN_STEP);
+                        let delta = state - last_state;
+                        let steps = std::cmp::max(1, f32::max(delta.x, delta.y) as u64 / MIN_STEP);
                         for step in 1..=steps {
                             let linear_t = step as f32 / steps as f32;
-                            let (interp_x, interp_y) = (
-                                position.0 + last_state.x + dx * linear_t,
-                                position.1 + last_state.y + dy * linear_t,
-                            );
+                            let interp_x = position.x + last_state.x + delta.x * linear_t;
+                            let interp_y = position.y + last_state.y + delta.y * linear_t;
                             ControlMsgHelper::send_touch(
                                 &cs_tx_res.0,
                                 MotionEventAction::Move,
                                 mapping.pointer_id,
-                                active_mapping.original_size.into_u32_pair(),
-                                (interp_x, interp_y),
+                                active_mapping.original_size.into(),
+                                (interp_x, interp_y).into(),
                             );
                         }
                     }
@@ -155,17 +153,17 @@ pub fn handle_joystick(
                     // touch down
                     let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
-                    let original_size_pair = active_mapping.original_size.into_u32_pair();
-                    let position = mapping.position.into_f32_pair();
+                    let original_size: Vec2 = active_mapping.original_size.into();
+                    let position: Vec2 = mapping.position.into();
                     ControlMsgHelper::send_touch(
                         &cs_tx,
                         MotionEventAction::Down,
                         pointer_id,
-                        original_size_pair,
+                        original_size,
                         position,
                     );
                     // move to state
-                    let (dx, dy) = (state.x, state.y);
+                    let delta = state.clone();
                     let steps: u64 = std::cmp::max(1, mapping.initial_duration / MIN_INTERVAL);
 
                     runtime.spawn_background_task(move |_ctx| async move {
@@ -173,14 +171,14 @@ pub fn handle_joystick(
                             let linear_t = step as f32 / steps as f32;
                             let eased_t = ease_sigmoid_like(linear_t);
 
-                            let interp_x = position.0 + eased_t * dx;
-                            let interp_y = position.1 + eased_t * dy;
+                            let interp_x = position.x + eased_t * delta.x;
+                            let interp_y = position.y + eased_t * delta.y;
                             ControlMsgHelper::send_touch(
                                 &cs_tx,
                                 MotionEventAction::Move,
                                 pointer_id,
-                                original_size_pair,
-                                (interp_x, interp_y),
+                                original_size,
+                                (interp_x, interp_y).into(),
                             );
                             sleep(Duration::from_millis(MIN_INTERVAL)).await;
                         }

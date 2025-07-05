@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use bevy::ecs::system::{Res, ResMut};
+use bevy::{
+    ecs::system::{Res, ResMut},
+    math::Vec2,
+};
 use bevy_ineffable::prelude::*;
 use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
@@ -9,7 +12,7 @@ use tokio::time::sleep;
 use crate::{
     mask::mapping::{
         config::ActiveMappingConfig,
-        utils::{ease_sigmoid_like, ControlMsgHelper, Position},
+        utils::{ControlMsgHelper, Position, ease_sigmoid_like},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -59,7 +62,7 @@ pub fn handle_swipe(
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("Swipe") {
                 let mapping = mapping.as_ref_swipe();
-                let original_size_pair = active_mapping.original_size.into_u32_pair();
+                let original_size: Vec2 = active_mapping.original_size.into();
                 if ineffable.just_pulsed(action.ineff_pulse()) {
                     let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
@@ -70,14 +73,14 @@ pub fn handle_swipe(
                             &cs_tx,
                             MotionEventAction::Down,
                             pointer_id,
-                            original_size_pair,
-                            potions[0].into_f32_pair(),
+                            original_size,
+                            potions[0].into(),
                         );
-                        let mut cur_pos = &potions[0];
+                        let mut cur_pos: Vec2 = potions[0].into();
                         for i in 1..potions.len() {
-                            let next_pos = &potions[i];
+                            let next_pos: Vec2 = potions[i].into();
 
-                            let (dx, dy) = (next_pos.sub(cur_pos)).into_f32_pair();
+                            let delta = next_pos - cur_pos;
                             let steps = std::cmp::max(1, interval / MIN_INTERVAL);
                             let step_duration = interval / steps;
 
@@ -85,14 +88,14 @@ pub fn handle_swipe(
                                 let linear_t = step as f32 / steps as f32;
                                 let eased_t = ease_sigmoid_like(linear_t);
 
-                                let interp_x = cur_pos.x as f32 + eased_t * dx;
-                                let interp_y = cur_pos.y as f32 + eased_t * dy;
+                                let interp_x = cur_pos.x + eased_t * delta.x;
+                                let interp_y = cur_pos.y + eased_t * delta.y;
                                 ControlMsgHelper::send_touch(
                                     &cs_tx,
                                     MotionEventAction::Move,
                                     pointer_id,
-                                    original_size_pair,
-                                    (interp_x, interp_y),
+                                    original_size,
+                                    (interp_x, interp_y).into(),
                                 );
                                 sleep(Duration::from_millis(step_duration as u64)).await;
                             }
@@ -103,8 +106,8 @@ pub fn handle_swipe(
                             &cs_tx,
                             MotionEventAction::Up,
                             pointer_id,
-                            original_size_pair,
-                            cur_pos.into_f32_pair(),
+                            original_size,
+                            cur_pos.into(),
                         );
                     });
                 }

@@ -7,7 +7,7 @@ use std::{
 
 use bevy::{
     ecs::resource::Resource,
-    input::{gamepad::GamepadAxis, keyboard::KeyCode},
+    input::{gamepad::GamepadAxis, keyboard::KeyCode, mouse::MouseButton},
 };
 use bevy_ineffable::{
     bindings::AnalogInput,
@@ -26,6 +26,7 @@ use strum_macros::{AsRefStr, Display};
 
 use crate::{
     mask::mapping::{
+        fire::{MappingFire, MappingFps},
         joystick::MappingJoystick,
         swipe::MappingSwipe,
         tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
@@ -49,6 +50,10 @@ seq!(N in 1..=32 {
             Swipe~N,
             #[ineffable(dual_axis)]
             Joystick~N,
+            #[ineffable(pulse)]
+            Fps~N,
+            #[ineffable(continuous)]
+            Fire~N,
         )*
     }
 
@@ -61,6 +66,9 @@ seq!(N in 1..=32 {
                     MappingAction::MultipleTap~N => InputKind::Pulse,
                     MappingAction::Swipe~N => InputKind::Pulse,
                     MappingAction::Joystick~N => InputKind::DualAxis,
+                    MappingAction::Fps~N => InputKind::Pulse,
+                    MappingAction::Fire~N => InputKind::Continuous,
+
                 )*
             }
         }
@@ -70,6 +78,7 @@ seq!(N in 1..=32 {
                 #(
                     MappingAction::SingleTap~N => self.clone()._singletap~N(),
                     MappingAction::RepeatTap~N => self.clone()._repeattap~N(),
+                    MappingAction::Fire~N => self.clone()._fire~N(),
                 )*
                 _ => panic!("ineff_continuous called on non-continuous variant"),
             }
@@ -80,6 +89,7 @@ seq!(N in 1..=32 {
                 #(
                     MappingAction::MultipleTap~N => self.clone()._multipletap~N(),
                     MappingAction::Swipe~N => self.clone()._swipe~N(),
+                    MappingAction::Fps~N => self.clone()._fps~N(),
                 )*
                 _ => panic!("ineff_pulse called on non-pulse variant"),
             }
@@ -132,6 +142,8 @@ pub enum MappingType {
     MultipleTap(MappingMultipleTap),
     Swipe(MappingSwipe),
     Joystick(MappingJoystick),
+    Fps(MappingFps),
+    Fire(MappingFire),
 }
 
 impl_mapping_type_methods! {
@@ -141,6 +153,8 @@ impl_mapping_type_methods! {
         MultipleTap => MappingMultipleTap,
         Swipe => MappingSwipe,
         Joystick => MappingJoystick,
+        Fps => MappingFps,
+        Fire => MappingFire,
     }
 }
 
@@ -176,8 +190,8 @@ pub fn default_mapping_config() -> MappingConfig {
         version: "0.0.1".to_string(),
         title: "Default".to_string(),
         original_size: Size {
-            width: 1280,
-            height: 720,
+            width: 2560,
+            height: 1440,
         },
         mappings: HashMap::from([
             (
@@ -283,10 +297,10 @@ pub fn default_mapping_config() -> MappingConfig {
                     MappingJoystick::new(
                         "Joystick",
                         9,
-                        (300, 300).into(),
+                        (300, 1000).into(),
                         100,
-                        100,
-                        100,
+                        200.,
+                        100.,
                         DualAxisBinding::builder()
                             .set_x(
                                 SingleAxisBinding::hold()
@@ -312,10 +326,10 @@ pub fn default_mapping_config() -> MappingConfig {
                     MappingJoystick::new(
                         "Joystick gamepad",
                         9,
-                        (300, 300).into(),
+                        (300, 1000).into(),
                         300,
-                        100,
-                        100,
+                        100.,
+                        100.,
                         DualAxisBinding::builder()
                             .set_x(
                                 SingleAxisBinding::analog(AnalogInput::GamePad(
@@ -333,6 +347,34 @@ pub fn default_mapping_config() -> MappingConfig {
                             )
                             .build()
                             .0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Fps1,
+                MappingType::Fps(
+                    MappingFps::new(
+                        "FPS",
+                        0,
+                        (1280, 720).into(),
+                        2.,
+                        1.,
+                        PulseBinding::just_pressed(MouseButton::Right).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Fire1,
+                MappingType::Fire(
+                    MappingFire::new(
+                        "Fire",
+                        1,
+                        (2000, 1000).into(),
+                        1.,
+                        0.5,
+                        ContinuousBinding::hold(MouseButton::Left).0,
                     )
                     .unwrap(),
                 ),
