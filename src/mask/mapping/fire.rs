@@ -174,13 +174,13 @@ pub fn handle_fire_trigger(
     }
 
     for (_, fire_item) in active_map.0.iter_mut() {
-        fire_item.cursor_pos += accumulated_motion.delta * fire_item.sensitivity;
+        fire_item.current_pos += accumulated_motion.delta * fire_item.sensitivity;
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
             MotionEventAction::Move,
             fire_item.pointer_id,
             mask_size.0,
-            fire_item.cursor_pos, // fire item cursor pos
+            fire_item.current_pos, // fire item cursor pos
         );
     }
 }
@@ -189,7 +189,7 @@ pub fn handle_fire_trigger(
 pub struct ActiveFireMap(HashMap<String, FireItem>);
 
 struct FireItem {
-    cursor_pos: Vec2,
+    current_pos: Vec2,
     pointer_id: u64,
     sensitivity: Vec2,
 }
@@ -223,7 +223,7 @@ pub fn handle_fire(
                     let original_pos: Vec2 = mapping.position.into();
                     let sensitivity: Vec2 = (mapping.sensitivity_x, mapping.sensitivity_y).into();
                     let pointer_id = mapping.pointer_id;
-                    let target_cursor_pos = original_pos / original_size * mask_size.0;
+                    let current_pos = original_pos / original_size * mask_size.0;
                     // touch down fire
                     ControlMsgHelper::send_touch(
                         &cs_tx_res.0,
@@ -236,21 +236,20 @@ pub fn handle_fire(
                     active_map.0.insert(
                         key,
                         FireItem {
-                            cursor_pos: target_cursor_pos, // independent cursor pos
+                            current_pos, // independent pos
                             pointer_id,
                             sensitivity,
                         },
                     );
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let Some(fire_item) = active_map.0.remove(&key) {
-                        let target_cursor_pos = fire_item.cursor_pos;
                         // touch up fire
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
                             MotionEventAction::Up,
                             fire_item.pointer_id,
                             mask_size.0,
-                            target_cursor_pos,
+                            fire_item.current_pos,
                         );
                         // touch down fps center
                         ControlMsgHelper::send_touch(

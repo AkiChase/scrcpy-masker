@@ -1,0 +1,649 @@
+use bevy::{
+    ecs::{
+        resource::Resource,
+        system::{Commands, Res, ResMut},
+    },
+    math::Vec2,
+};
+use bevy_ineffable::prelude::{Ineffable, InputBinding};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    mask::{
+        mapping::{
+            config::{ActiveMappingConfig, MappingAction},
+            cursor::CursorPosition,
+            direction_pad::{BlockDirectionPad, DirectionPadMap},
+            utils::{ControlMsgHelper, MIN_MOVE_STEP_LENGTH, Position},
+        },
+        mask_command::MaskSize,
+    },
+    scrcpy::constant::MotionEventAction,
+    utils::ChannelSenderCS,
+};
+
+pub fn cast_spell_init(mut commands: Commands) {
+    commands.insert_resource(ActiveCastSpell::default());
+}
+
+#[derive(Resource, Default)]
+pub struct ActiveCastSpell(Option<ActiveCastSpellItem>);
+
+struct ActiveCastSpellItem {
+    key: String,
+    pointer_id: u64,
+    current_pos: Vec2,
+    original_size: Vec2,
+    cast_pos: Vec2,
+    drag_radius: f32,
+    // for mouse
+    mouse_flag: bool,
+    center_pos: Vec2,
+    cast_radius: f32,
+    horizontal_scale: f32,
+    vertical_scale: f32,
+    cast_no_direction: bool,
+    // for pad
+    pad_action: Option<MappingAction>,
+    last_state: Vec2,
+    block_direction_pad: bool,
+}
+
+impl ActiveCastSpellItem {
+    fn new_mouse_item(
+        key: String,
+        pointer_id: u64,
+        current_pos: Vec2,
+        original_size: Vec2,
+        cast_pos: Vec2,
+        drag_radius: f32,
+        center_pos: Vec2,
+        cast_radius: f32,
+        horizontal_scale: f32,
+        vertical_scale: f32,
+        cast_no_direction: bool,
+    ) -> Self {
+        Self {
+            mouse_flag: true,
+            key,
+            pointer_id,
+            current_pos,
+            original_size,
+            cast_pos,
+            drag_radius,
+            center_pos,
+            cast_radius,
+            horizontal_scale,
+            vertical_scale,
+            cast_no_direction,
+            pad_action: None,
+            last_state: Vec2::ZERO,
+            block_direction_pad: false,
+        }
+    }
+
+    fn new_pad_item(
+        key: String,
+        pointer_id: u64,
+        current_pos: Vec2,
+        original_size: Vec2,
+        cast_pos: Vec2,
+        drag_radius: f32,
+        block_direction_pad: bool,
+        pad_action: MappingAction,
+    ) -> Self {
+        Self {
+            mouse_flag: false,
+            key,
+            pointer_id,
+            current_pos,
+            original_size,
+            cast_pos,
+            drag_radius,
+            center_pos: Vec2::ZERO,
+            cast_radius: 0.,
+            horizontal_scale: 0.,
+            vertical_scale: 0.,
+            cast_no_direction: false,
+            pad_action: Some(pad_action),
+            last_state: Vec2::ZERO,
+            block_direction_pad,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum MouseCastReleaseMode {
+    OnPress,
+    OnRelease,
+    OnSecondPress,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingMouseCastSpell {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub center: Position,
+    pub horizontal_scale: f32,
+    pub vertical_scale: f32,
+    pub drag_radius: f32,
+    pub cast_radius: f32,
+    pub release_mode: MouseCastReleaseMode,
+    pub cast_no_direction: bool,
+    pub bind: InputBinding,
+}
+
+impl MappingMouseCastSpell {
+    pub fn new(
+        note: &str,
+        pointer_id: u64,
+        position: Position,
+        center: Position,
+        horizontal_scale: f32,
+        vertical_scale: f32,
+        drag_radius: f32,
+        cast_radius: f32,
+        release_mode: MouseCastReleaseMode,
+        cast_no_direction: bool,
+        bind: InputBinding,
+    ) -> Result<Self, String> {
+        // check binding
+        if let InputBinding::Continuous(_) = bind {
+            Ok(Self {
+                note: note.to_string(),
+                pointer_id,
+                position,
+                vertical_scale,
+                center,
+                horizontal_scale,
+                drag_radius,
+                cast_radius,
+                release_mode,
+                cast_no_direction,
+                bind,
+            })
+        } else {
+            Err("MouseCastSpell's binding must be Continuous".to_string())
+        }
+    }
+}
+
+fn cal_mouse_cast_spell_current_pos(
+    cursor_pos: Vec2,
+    mut center_pos: Vec2,
+    mut cast_pos: Vec2,
+    mut cast_radius: f32,
+    mut drag_radius: f32,
+    mask_size: Vec2,
+    original_size: Vec2,
+    horizontal_scale: f32,
+    vertical_scale: f32,
+) -> Vec2 {
+    // convert to mask scale
+    center_pos = center_pos / original_size * mask_size;
+    cast_pos = cast_pos / original_size * mask_size;
+    cast_radius = cast_radius / original_size.y * mask_size.y;
+    drag_radius = drag_radius / original_size.y * mask_size.y;
+
+    let mut delta = cursor_pos - center_pos;
+    let scale = if horizontal_scale >= vertical_scale {
+        let r = vertical_scale / horizontal_scale;
+        cast_radius *= r;
+        Vec2::new(1.0, r)
+    } else {
+        let r = horizontal_scale / vertical_scale;
+        cast_radius *= r;
+        Vec2::new(r, 1.0)
+    };
+    delta *= scale;
+
+    if delta.length_squared() > cast_radius * cast_radius {
+        // outside of cast range
+        delta = delta.normalize() * drag_radius;
+    } else {
+        // inside of cast range
+        delta = delta / cast_radius * drag_radius;
+    }
+
+    cast_pos + delta
+}
+
+pub fn handle_mouse_cast_spell_trigger(
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    cursor_pos: Res<CursorPosition>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+) {
+    if let Some(active_cast) = active_cast.0.as_mut() {
+        if active_cast.cast_no_direction || !active_cast.mouse_flag {
+            return;
+        }
+
+        let new_pos = cal_mouse_cast_spell_current_pos(
+            cursor_pos.0,
+            active_cast.center_pos,
+            active_cast.cast_pos,
+            active_cast.cast_radius,
+            active_cast.drag_radius,
+            mask_size.0,
+            active_cast.original_size,
+            active_cast.horizontal_scale,
+            active_cast.vertical_scale,
+        );
+        ControlMsgHelper::send_touch(
+            &cs_tx_res.0,
+            MotionEventAction::Move,
+            active_cast.pointer_id,
+            mask_size.0,
+            new_pos,
+        );
+        active_cast.current_pos = new_pos;
+    }
+}
+
+pub fn handle_mouse_cast_spell(
+    ineffable: Res<Ineffable>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    cursor_pos: Res<CursorPosition>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+) {
+    if let Some(active_mapping) = &active_mapping.0 {
+        for (action, mapping) in &active_mapping.mappings {
+            if action.as_ref().starts_with("MouseCastSpell") {
+                let mapping = mapping.as_ref_mousecastspell();
+                if ineffable.just_activated(action.ineff_continuous()) {
+                    // clear and touch up existing active cast
+                    // for OnSecondPress cast, we do the same thing
+                    if let Some(cast) = active_cast.0.take() {
+                        ControlMsgHelper::send_touch(
+                            &cs_tx_res.0,
+                            MotionEventAction::Up,
+                            cast.pointer_id,
+                            mask_size.0,
+                            cast.current_pos,
+                        );
+
+                        if cast.block_direction_pad {
+                            block_direction_pad.0 = false;
+                        }
+
+                        if cast.key == action.as_ref() {
+                            continue;
+                        }
+                    }
+
+                    // touch down new cast
+                    let original_size: Vec2 = active_mapping.original_size.into();
+                    let pointer_id = mapping.pointer_id;
+                    let original_pos: Vec2 = mapping.position.into();
+                    let center_pos: Vec2 = mapping.center.into();
+                    let mut current_pos = original_pos / original_size * mask_size.0;
+                    ControlMsgHelper::send_touch(
+                        &cs_tx_res.0,
+                        MotionEventAction::Down,
+                        pointer_id,
+                        mask_size.0,
+                        current_pos,
+                    );
+                    if !mapping.cast_no_direction {
+                        // move to direction
+                        let new_pos = cal_mouse_cast_spell_current_pos(
+                            cursor_pos.0,
+                            center_pos,
+                            original_pos,
+                            mapping.cast_radius,
+                            mapping.drag_radius,
+                            mask_size.0,
+                            original_size,
+                            mapping.horizontal_scale,
+                            mapping.vertical_scale,
+                        );
+                        let delta = new_pos - current_pos;
+                        let steps = std::cmp::max(
+                            2, // at least 2 steps
+                            (delta.length() / MIN_MOVE_STEP_LENGTH).ceil() as i32,
+                        );
+                        for step in 1..=steps {
+                            let linear_t = step as f32 / steps as f32;
+                            let interp = current_pos + delta * linear_t;
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Move,
+                                pointer_id,
+                                mask_size.0,
+                                interp,
+                            );
+                        }
+                        current_pos = new_pos;
+                    }
+
+                    // for OnPress cast, touch up here
+                    if let MouseCastReleaseMode::OnPress = mapping.release_mode {
+                        ControlMsgHelper::send_touch(
+                            &cs_tx_res.0,
+                            MotionEventAction::Up,
+                            pointer_id,
+                            mask_size.0,
+                            current_pos,
+                        );
+                    } else {
+                        // set active
+                        active_cast.0 = Some(ActiveCastSpellItem::new_mouse_item(
+                            action.to_string(),
+                            pointer_id,
+                            current_pos,
+                            original_size,
+                            original_pos,
+                            mapping.drag_radius,
+                            center_pos,
+                            mapping.cast_radius,
+                            mapping.horizontal_scale,
+                            mapping.vertical_scale,
+                            mapping.cast_no_direction,
+                        ))
+                    }
+                } else if ineffable.just_deactivated(action.ineff_continuous()) {
+                    if let MouseCastReleaseMode::OnRelease = mapping.release_mode {
+                        let Some(cast) = &active_cast.0 else {
+                            continue;
+                        };
+
+                        if cast.key != action.as_ref() {
+                            continue;
+                        }
+                        // clear and touch up
+                        if let Some(cast) = active_cast.0.take() {
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Up,
+                                cast.pointer_id,
+                                mask_size.0,
+                                cast.current_pos,
+                            );
+
+                            if cast.block_direction_pad {
+                                block_direction_pad.0 = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum PadCastReleaseMode {
+    OnRelease,
+    OnSecondPress,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingPadCastSpell {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub release_mode: PadCastReleaseMode,
+    pub drag_radius: f32,
+    pub block_direction_pad: bool,
+    pub pad_action: MappingAction,
+    pub pad_bind: InputBinding,
+    pub bind: InputBinding,
+}
+
+impl MappingPadCastSpell {
+    pub fn new(
+        note: &str,
+        pointer_id: u64,
+        position: Position,
+        release_mode: PadCastReleaseMode,
+        drag_radius: f32,
+        block_direction_pad: bool,
+        pad_action: MappingAction,
+        pad_bind: InputBinding,
+        bind: InputBinding,
+    ) -> Result<Self, String> {
+        // check binding
+        if let InputBinding::Continuous(_) = bind {
+            if let InputBinding::DualAxis { .. } = pad_bind {
+                return Ok(Self {
+                    note: note.to_string(),
+                    pointer_id,
+                    position,
+                    drag_radius,
+                    release_mode,
+                    block_direction_pad,
+                    bind,
+                    pad_action,
+                    pad_bind,
+                });
+            }
+            return Err("PadCastSpell's pad_bind must be DualAxis".to_string());
+        }
+        Err("PadCastSpell's binding must be Continuous".to_string())
+    }
+}
+
+fn scale_direction_2d_state(d_state: Vec2, drag_radius: f32) -> Vec2 {
+    if d_state.x == 0.0 && d_state.y == 0.0 {
+        return d_state;
+    }
+
+    let scaled = d_state * drag_radius;
+    if scaled.length() > drag_radius {
+        scaled.normalize() * drag_radius
+    } else {
+        scaled
+    }
+}
+
+pub fn handle_pad_cast_spell_trigger(
+    ineffable: Res<Ineffable>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+) {
+    if let Some(active_cast) = active_cast.0.as_mut() {
+        if active_cast.mouse_flag {
+            return;
+        }
+
+        let state = scale_direction_2d_state(
+            ineffable.direction_2d(active_cast.pad_action.as_ref().unwrap().ineff_dual_axis()),
+            active_cast.drag_radius,
+        );
+
+        if state != active_cast.last_state {
+            // move to new state
+            ControlMsgHelper::send_touch(
+                &cs_tx_res.0,
+                MotionEventAction::Move,
+                active_cast.pointer_id,
+                active_cast.original_size,
+                active_cast.cast_pos + state,
+            );
+            // record last state
+            active_cast.last_state = state;
+        }
+    }
+}
+
+pub fn handle_pad_cast_spell(
+    ineffable: Res<Ineffable>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+    mut direction_pad_map: ResMut<DirectionPadMap>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+) {
+    if let Some(active_mapping) = &active_mapping.0 {
+        for (action, mapping) in &active_mapping.mappings {
+            if action.as_ref().starts_with("PadCastSpell") {
+                let mapping = mapping.as_ref_padcastspell();
+                if ineffable.just_activated(action.ineff_continuous()) {
+                    // clear and touch up existing active cast
+                    // for OnSecondPress cast, we do the same thing
+                    if let Some(cast) = active_cast.0.take() {
+                        ControlMsgHelper::send_touch(
+                            &cs_tx_res.0,
+                            MotionEventAction::Up,
+                            cast.pointer_id,
+                            mask_size.0,
+                            cast.current_pos,
+                        );
+
+                        if cast.block_direction_pad {
+                            block_direction_pad.0 = false;
+                        }
+
+                        if cast.key == action.as_ref() {
+                            continue;
+                        }
+                    }
+
+                    if mapping.block_direction_pad {
+                        // block direction pad
+                        block_direction_pad.0 = true;
+                        // touch up and remove state
+                        for (_key, item) in direction_pad_map.0.drain() {
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Up,
+                                item.pointer_id,
+                                item.original_size,
+                                item.original_pos + item.last_state,
+                            );
+                        }
+                    }
+
+                    // touch down new cast
+                    let original_size: Vec2 = active_mapping.original_size.into();
+                    let pointer_id = mapping.pointer_id;
+                    let original_pos: Vec2 = mapping.position.into();
+                    let current_pos = original_pos / original_size * mask_size.0;
+                    ControlMsgHelper::send_touch(
+                        &cs_tx_res.0,
+                        MotionEventAction::Down,
+                        pointer_id,
+                        mask_size.0,
+                        current_pos,
+                    );
+
+                    // set active
+                    active_cast.0 = Some(ActiveCastSpellItem::new_pad_item(
+                        action.to_string(),
+                        pointer_id,
+                        current_pos,
+                        original_size,
+                        original_pos,
+                        mapping.drag_radius,
+                        mapping.block_direction_pad,
+                        mapping.pad_action.clone(),
+                    ));
+                } else if ineffable.just_deactivated(action.ineff_continuous()) {
+                    if let PadCastReleaseMode::OnRelease = mapping.release_mode {
+                        let Some(cast) = &active_cast.0 else {
+                            continue;
+                        };
+
+                        if cast.key != action.as_ref() {
+                            continue;
+                        }
+                        // clear and touch up
+                        if let Some(cast) = active_cast.0.take() {
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Up,
+                                cast.pointer_id,
+                                mask_size.0,
+                                cast.current_pos,
+                            );
+                            if cast.block_direction_pad {
+                                block_direction_pad.0 = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingCancelCast {
+    pub note: String,
+    pub position: Position,
+    pub bind: InputBinding,
+}
+
+impl MappingCancelCast {
+    pub fn new(note: &str, position: Position, bind: InputBinding) -> Result<Self, String> {
+        // check binding
+        if let InputBinding::Pulse(_) = bind {
+            Ok(Self {
+                note: note.to_string(),
+                position,
+                bind,
+            })
+        } else {
+            Err("CancelCast's binding must be Pulse".to_string())
+        }
+    }
+}
+
+pub fn handle_cancel_cast(
+    ineffable: Res<Ineffable>,
+    active_mapping: Res<ActiveMappingConfig>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    mask_size: Res<MaskSize>,
+    mut active_cast: ResMut<ActiveCastSpell>,
+    mut block_direction_pad: ResMut<BlockDirectionPad>,
+) {
+    if let Some(active_mapping) = &active_mapping.0 {
+        for (action, mapping) in &active_mapping.mappings {
+            if action.as_ref().starts_with("CancelCast") {
+                let mapping = mapping.as_ref_cancelcast();
+                if ineffable.just_pulsed(action.ineff_pulse()) {
+                    // clear
+                    if let Some(cast) = active_cast.0.take() {
+                        let original_size: Vec2 = active_mapping.original_size.into();
+                        let mut cancel_pos: Vec2 = mapping.position.into();
+                        cancel_pos = cancel_pos / original_size * mask_size.0; // relative to mask
+
+                        let delta = cancel_pos - cast.current_pos;
+                        let steps = std::cmp::min(
+                            5, // at most 5 steps
+                            (delta.length() / MIN_MOVE_STEP_LENGTH).ceil() as i32,
+                        );
+                        for step in 1..=steps {
+                            let linear_t = step as f32 / steps as f32;
+                            let interp = cast.current_pos + delta * linear_t;
+                            ControlMsgHelper::send_touch(
+                                &cs_tx_res.0,
+                                MotionEventAction::Move,
+                                cast.pointer_id,
+                                mask_size.0,
+                                interp,
+                            );
+                        }
+                        ControlMsgHelper::send_touch(
+                            &cs_tx_res.0,
+                            MotionEventAction::Up,
+                            cast.pointer_id,
+                            mask_size.0,
+                            cancel_pos,
+                        );
+
+                        if cast.block_direction_pad {
+                            block_direction_pad.0 = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

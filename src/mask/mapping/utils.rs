@@ -7,6 +7,9 @@ use crate::scrcpy::{
     control_msg::ScrcpyControlMsg,
 };
 
+pub const MIN_MOVE_STEP_LENGTH: f32 = 25.; // px
+pub const MIN_MOVE_STEP_INTERVAL: u64 = 25; // ms
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Copy)]
 pub struct Size {
     pub width: u32,

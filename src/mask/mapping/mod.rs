@@ -1,7 +1,8 @@
+pub mod cast_spell;
 pub mod config;
 pub mod cursor;
+pub mod direction_pad;
 pub mod fire;
-pub mod joystick;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
@@ -38,8 +39,9 @@ impl Plugin for MappingPlugins {
                 (
                     init,
                     tap::tap_init,
-                    joystick::joystick_init,
+                    direction_pad::direction_pad_init,
                     fire::fire_init,
+                    cast_spell::cast_spell_init,
                 ),
             )
             .add_systems(
@@ -50,7 +52,12 @@ impl Plugin for MappingPlugins {
                     tap::handle_repeat_tap_trigger,
                     tap::handle_multiple_tap,
                     swipe::handle_swipe,
-                    joystick::handle_joystick,
+                    direction_pad::handle_direction_pad,
+                    cast_spell::handle_mouse_cast_spell,
+                    cast_spell::handle_mouse_cast_spell_trigger,
+                    cast_spell::handle_cancel_cast,
+                    cast_spell::handle_pad_cast_spell,
+                    cast_spell::handle_pad_cast_spell_trigger,
                     fire::handle_fps,
                     (fire::handle_fire, fire::handle_fire_trigger)
                         .run_if(in_state(CursorState::Fps)),

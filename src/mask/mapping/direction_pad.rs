@@ -15,18 +15,19 @@ use tokio::time::sleep;
 use crate::{
     mask::mapping::{
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, Position, ease_sigmoid_like},
+        utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
 };
 
-pub fn joystick_init(mut commands: Commands) {
-    commands.insert_resource(JoystickStates::default());
+pub fn direction_pad_init(mut commands: Commands) {
+    commands.insert_resource(DirectionPadMap::default());
+    commands.insert_resource(BlockDirectionPad::default());
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingJoystick {
+pub struct MappingDirectionPad {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -36,7 +37,7 @@ pub struct MappingJoystick {
     pub bind: InputBinding,
 }
 
-impl MappingJoystick {
+impl MappingDirectionPad {
     pub fn new(
         note: &str,
         pointer_id: u64,
@@ -58,15 +59,22 @@ impl MappingJoystick {
                 bind,
             })
         } else {
-            Err("Joystick's binding must be DualAxis".to_string())
+            Err("DirectionPad's binding must be DualAxis".to_string())
         }
     }
 }
 
 #[derive(Resource, Default)]
-pub struct JoystickStates(HashMap<String, Vec2>);
+pub struct DirectionPadMap(pub HashMap<String, DirectionPadItem>);
 
-fn scale_direction_2d_state(d_state: Vec2, mapping: &MappingJoystick) -> Vec2 {
+pub struct DirectionPadItem {
+    pub pointer_id: u64,
+    pub original_size: Vec2,
+    pub original_pos: Vec2,
+    pub last_state: Vec2,
+}
+
+fn scale_direction_2d_state(d_state: Vec2, mapping: &MappingDirectionPad) -> Vec2 {
     if d_state.x == 0.0 && d_state.y == 0.0 {
         return d_state;
     }
@@ -96,91 +104,97 @@ fn scale_direction_2d_state(d_state: Vec2, mapping: &MappingJoystick) -> Vec2 {
     }
 }
 
-const MIN_STEP: u64 = 25; // 25 is the minimum step length
-const MIN_INTERVAL: u64 = 50; // 50ms is the minimum interval
+#[derive(Resource, Default)]
+pub struct BlockDirectionPad(pub bool);
 
-pub fn handle_joystick(
+pub fn handle_direction_pad(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
     cs_tx_res: Res<ChannelSenderCS>,
     runtime: ResMut<TokioTasksRuntime>,
-    mut joystick_states: ResMut<JoystickStates>,
+    block: Res<BlockDirectionPad>,
+    mut direction_pad_map: ResMut<DirectionPadMap>,
 ) {
+    if block.0 {
+        return;
+    }
+
     if let Some(active_mapping) = &active_mapping.0 {
         for (action, mapping) in &active_mapping.mappings {
-            if action.as_ref().starts_with("Joystick") {
-                let mapping = mapping.as_ref_joystick();
+            if action.as_ref().starts_with("DirectionPad") {
+                let mapping = mapping.as_ref_directionpad();
                 let key = action.to_string();
+                let original_size: Vec2 = active_mapping.original_size.into();
                 let state = scale_direction_2d_state(
                     ineffable.direction_2d(action.ineff_dual_axis()),
                     mapping,
                 );
-                if joystick_states.0.contains_key(&key) {
-                    let last_state = joystick_states.0.get(&key).unwrap().clone();
-                    let position: Vec2 = mapping.position.into();
+                if direction_pad_map.0.contains_key(&key) {
+                    let item = direction_pad_map.0.get_mut(&key).unwrap();
+                    let original_pos: Vec2 = mapping.position.into();
                     if state.x == 0.0 && state.y == 0.0 {
                         // touch up and remove state
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
                             MotionEventAction::Up,
                             mapping.pointer_id,
-                            active_mapping.original_size.into(),
-                            position + last_state,
+                            original_size,
+                            original_pos + item.last_state,
                         );
-                        joystick_states.0.remove(&key);
-                    } else if state != last_state {
+                        direction_pad_map.0.remove(&key);
+                    } else if state != item.last_state {
                         // record new state
-                        joystick_states.0.insert(key, state);
+                        item.last_state = state;
                         // move to new state
-                        let delta = state - last_state;
-                        let steps = std::cmp::max(1, f32::max(delta.x, delta.y) as u64 / MIN_STEP);
-                        for step in 1..=steps {
-                            let linear_t = step as f32 / steps as f32;
-                            let interp_x = position.x + last_state.x + delta.x * linear_t;
-                            let interp_y = position.y + last_state.y + delta.y * linear_t;
-                            ControlMsgHelper::send_touch(
-                                &cs_tx_res.0,
-                                MotionEventAction::Move,
-                                mapping.pointer_id,
-                                active_mapping.original_size.into(),
-                                (interp_x, interp_y).into(),
-                            );
-                        }
+                        ControlMsgHelper::send_touch(
+                            &cs_tx_res.0,
+                            MotionEventAction::Move,
+                            mapping.pointer_id,
+                            original_size,
+                            original_pos + state,
+                        );
                     }
                 } else if state.x != 0.0 || state.y != 0.0 {
-                    // record state
-                    joystick_states.0.insert(key, state);
-                    // touch down
-                    let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
                     let original_size: Vec2 = active_mapping.original_size.into();
-                    let position: Vec2 = mapping.position.into();
+                    let original_pos: Vec2 = mapping.position.into();
+                    // record new item
+                    direction_pad_map.0.insert(
+                        key,
+                        DirectionPadItem {
+                            pointer_id,
+                            original_size,
+                            original_pos: original_pos,
+                            last_state: state,
+                        },
+                    );
+                    // touch down
+                    let cs_tx = cs_tx_res.0.clone();
                     ControlMsgHelper::send_touch(
                         &cs_tx,
                         MotionEventAction::Down,
                         pointer_id,
                         original_size,
-                        position,
+                        original_pos,
                     );
-                    // move to state
-                    let delta = state.clone();
-                    let steps: u64 = std::cmp::max(1, mapping.initial_duration / MIN_INTERVAL);
+                    // move to state with initial_duration
+                    let delta = state;
+                    let steps: u64 =
+                        std::cmp::max(1, mapping.initial_duration / MIN_MOVE_STEP_INTERVAL);
 
                     runtime.spawn_background_task(move |_ctx| async move {
                         for step in 1..=steps {
                             let linear_t = step as f32 / steps as f32;
                             let eased_t = ease_sigmoid_like(linear_t);
-
-                            let interp_x = position.x + eased_t * delta.x;
-                            let interp_y = position.y + eased_t * delta.y;
+                            let interp = original_pos + delta * eased_t;
                             ControlMsgHelper::send_touch(
                                 &cs_tx,
                                 MotionEventAction::Move,
                                 pointer_id,
                                 original_size,
-                                (interp_x, interp_y).into(),
+                                interp,
                             );
-                            sleep(Duration::from_millis(MIN_INTERVAL)).await;
+                            sleep(Duration::from_millis(MIN_MOVE_STEP_INTERVAL)).await;
                         }
                     });
                 }

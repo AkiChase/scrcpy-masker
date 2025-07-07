@@ -12,7 +12,7 @@ use tokio::time::sleep;
 use crate::{
     mask::mapping::{
         config::ActiveMappingConfig,
-        utils::{ControlMsgHelper, Position, ease_sigmoid_like},
+        utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
     },
     scrcpy::constant::MotionEventAction,
     utils::ChannelSenderCS,
@@ -50,8 +50,6 @@ impl MappingSwipe {
     }
 }
 
-const MIN_INTERVAL: u64 = 50; // 50ms is the minimum interval
-
 pub fn handle_swipe(
     ineffable: Res<Ineffable>,
     active_mapping: Res<ActiveMappingConfig>,
@@ -81,21 +79,19 @@ pub fn handle_swipe(
                             let next_pos: Vec2 = potions[i].into();
 
                             let delta = next_pos - cur_pos;
-                            let steps = std::cmp::max(1, interval / MIN_INTERVAL);
+                            let steps = std::cmp::max(1, interval / MIN_MOVE_STEP_INTERVAL);
                             let step_duration = interval / steps;
 
                             for step in 1..=steps {
                                 let linear_t = step as f32 / steps as f32;
                                 let eased_t = ease_sigmoid_like(linear_t);
-
-                                let interp_x = cur_pos.x + eased_t * delta.x;
-                                let interp_y = cur_pos.y + eased_t * delta.y;
+                                let interp = cur_pos + delta * eased_t;
                                 ControlMsgHelper::send_touch(
                                     &cs_tx,
                                     MotionEventAction::Move,
                                     pointer_id,
                                     original_size,
-                                    (interp_x, interp_y).into(),
+                                    interp.into(),
                                 );
                                 sleep(Duration::from_millis(step_duration as u64)).await;
                             }

@@ -14,7 +14,7 @@ use bevy_ineffable::{
     config::InputConfig,
     phantom::IAWrp,
     prelude::{
-        ContinuousBinding, DualAxisBinding, InputAction, InputBinding, InputKind, PulseBinding,
+        ContinuousBinding, DualAxisBinding, InputAction, InputBinding, PulseBinding,
         SingleAxisBinding,
     },
 };
@@ -26,8 +26,12 @@ use strum_macros::{AsRefStr, Display};
 
 use crate::{
     mask::mapping::{
+        cast_spell::{
+            MappingCancelCast, MappingMouseCastSpell, MappingPadCastSpell, MouseCastReleaseMode,
+            PadCastReleaseMode,
+        },
+        direction_pad::MappingDirectionPad,
         fire::{MappingFire, MappingFps},
-        joystick::MappingJoystick,
         swipe::MappingSwipe,
         tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
         utils::Size,
@@ -49,7 +53,15 @@ seq!(N in 1..=32 {
             #[ineffable(pulse)]
             Swipe~N,
             #[ineffable(dual_axis)]
-            Joystick~N,
+            DirectionPad~N,
+            #[ineffable(continuous)]
+            MouseCastSpell~N,
+            #[ineffable(continuous)]
+            PadCastSpell~N,
+            #[ineffable(dual_axis)]
+            PadCastSpellDirection~N,
+            #[ineffable(pulse)]
+            CancelCast~N,
             #[ineffable(pulse)]
             Fps~N,
             #[ineffable(continuous)]
@@ -58,26 +70,13 @@ seq!(N in 1..=32 {
     }
 
     impl MappingAction {
-        pub fn input_kind(&self)->InputKind{
-            match self {
-                #(
-                    MappingAction::SingleTap~N => InputKind::Continuous,
-                    MappingAction::RepeatTap~N => InputKind::Continuous,
-                    MappingAction::MultipleTap~N => InputKind::Pulse,
-                    MappingAction::Swipe~N => InputKind::Pulse,
-                    MappingAction::Joystick~N => InputKind::DualAxis,
-                    MappingAction::Fps~N => InputKind::Pulse,
-                    MappingAction::Fire~N => InputKind::Continuous,
-
-                )*
-            }
-        }
-
         pub fn ineff_continuous(&self) -> IAWrp<MappingAction, bevy_ineffable::phantom::Continuous> {
             match self {
                 #(
                     MappingAction::SingleTap~N => self.clone()._singletap~N(),
                     MappingAction::RepeatTap~N => self.clone()._repeattap~N(),
+                    MappingAction::MouseCastSpell~N => self.clone()._mousecastspell~N(),
+                    MappingAction::PadCastSpell~N => self.clone()._padcastspell~N(),
                     MappingAction::Fire~N => self.clone()._fire~N(),
                 )*
                 _ => panic!("ineff_continuous called on non-continuous variant"),
@@ -89,6 +88,7 @@ seq!(N in 1..=32 {
                 #(
                     MappingAction::MultipleTap~N => self.clone()._multipletap~N(),
                     MappingAction::Swipe~N => self.clone()._swipe~N(),
+                    MappingAction::CancelCast~N => self.clone()._cancelcast~N(),
                     MappingAction::Fps~N => self.clone()._fps~N(),
                 )*
                 _ => panic!("ineff_pulse called on non-pulse variant"),
@@ -98,7 +98,8 @@ seq!(N in 1..=32 {
         pub fn ineff_dual_axis(&self) -> IAWrp<MappingAction, bevy_ineffable::phantom::DualAxis> {
             match self {
                 #(
-                    MappingAction::Joystick~N => self.clone()._joystick~N(),
+                    MappingAction::DirectionPad~N => self.clone()._directionpad~N(),
+                    MappingAction::PadCastSpellDirection~N => self.clone()._padcastspelldirection~N(),
                 )*
                 _ => panic!("ineff_dual_axis called on non-dual_axis variant"),
             }
@@ -141,7 +142,10 @@ pub enum MappingType {
     RepeatTap(MappingRepeatTap),
     MultipleTap(MappingMultipleTap),
     Swipe(MappingSwipe),
-    Joystick(MappingJoystick),
+    DirectionPad(MappingDirectionPad),
+    MouseCastSpell(MappingMouseCastSpell),
+    PadCastSpell(MappingPadCastSpell),
+    CancelCast(MappingCancelCast),
     Fps(MappingFps),
     Fire(MappingFire),
 }
@@ -152,7 +156,10 @@ impl_mapping_type_methods! {
         RepeatTap => MappingRepeatTap,
         MultipleTap => MappingMultipleTap,
         Swipe => MappingSwipe,
-        Joystick => MappingJoystick,
+        DirectionPad => MappingDirectionPad,
+        MouseCastSpell => MappingMouseCastSpell,
+        PadCastSpell => MappingPadCastSpell,
+        CancelCast => MappingCancelCast,
         Fps => MappingFps,
         Fire => MappingFire,
     }
@@ -171,7 +178,12 @@ impl From<&MappingConfig> for InputConfig {
         let mut all_bindings: HashMap<String, Vec<InputBinding>> = HashMap::new();
 
         for (action, mapping) in &mapping_config.mappings {
-            all_bindings.insert(action.to_string(), vec![mapping.get_bind()]);
+            if let MappingType::PadCastSpell(m) = mapping {
+                all_bindings.insert(action.to_string(), vec![m.bind.clone()]);
+                all_bindings.insert(m.pad_action.to_string(), vec![m.pad_bind.clone()]);
+            } else {
+                all_bindings.insert(action.to_string(), vec![mapping.get_bind()]);
+            }
         }
 
         let binding_config: HashMap<String, HashMap<String, Vec<InputBinding>>> =
@@ -292,14 +304,14 @@ pub fn default_mapping_config() -> MappingConfig {
                 ),
             ),
             (
-                MappingAction::Joystick1,
-                MappingType::Joystick(
-                    MappingJoystick::new(
-                        "Joystick",
+                MappingAction::DirectionPad1,
+                MappingType::DirectionPad(
+                    MappingDirectionPad::new(
+                        "DirectionPad",
                         9,
                         (300, 1000).into(),
                         100,
-                        200.,
+                        100.,
                         100.,
                         DualAxisBinding::builder()
                             .set_x(
@@ -321,10 +333,10 @@ pub fn default_mapping_config() -> MappingConfig {
                 ),
             ),
             (
-                MappingAction::Joystick2,
-                MappingType::Joystick(
-                    MappingJoystick::new(
-                        "Joystick gamepad",
+                MappingAction::DirectionPad2,
+                MappingType::DirectionPad(
+                    MappingDirectionPad::new(
+                        "DirectionPad gamepad",
                         9,
                         (300, 1000).into(),
                         300,
@@ -347,6 +359,138 @@ pub fn default_mapping_config() -> MappingConfig {
                             )
                             .build()
                             .0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Fps1,
+                MappingType::Fps(
+                    MappingFps::new(
+                        "FPS",
+                        0,
+                        (1280, 720).into(),
+                        2.,
+                        1.,
+                        PulseBinding::just_pressed(MouseButton::Right).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::MouseCastSpell1,
+                MappingType::MouseCastSpell(
+                    MappingMouseCastSpell::new(
+                        "MouseCastSpell (no direction)",
+                        3,
+                        (1900, 1150).into(),
+                        (1280, 815).into(),
+                        1.,
+                        0.7,
+                        150.,
+                        625.,
+                        MouseCastReleaseMode::OnRelease,
+                        true,
+                        ContinuousBinding::hold(KeyCode::KeyR).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::MouseCastSpell2,
+                MappingType::MouseCastSpell(
+                    MappingMouseCastSpell::new(
+                        "MouseCastSpell (press to release)",
+                        3,
+                        (1900, 1150).into(),
+                        (1280, 815).into(),
+                        1.,
+                        0.7,
+                        150.,
+                        625.,
+                        MouseCastReleaseMode::OnPress,
+                        false,
+                        ContinuousBinding::hold(KeyCode::KeyQ).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::MouseCastSpell3,
+                MappingType::MouseCastSpell(
+                    MappingMouseCastSpell::new(
+                        "MouseCastSpell (second press to release)",
+                        3,
+                        (2100, 1030).into(),
+                        (1280, 815).into(),
+                        1.,
+                        0.7,
+                        150.,
+                        625.,
+                        MouseCastReleaseMode::OnSecondPress,
+                        true,
+                        ContinuousBinding::hold(MouseButton::Back).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::MouseCastSpell4,
+                MappingType::MouseCastSpell(
+                    MappingMouseCastSpell::new(
+                        "MouseCastSpell",
+                        3,
+                        (2250, 900).into(),
+                        (1280, 815).into(),
+                        1.,
+                        0.7,
+                        150.,
+                        625.,
+                        MouseCastReleaseMode::OnRelease,
+                        false,
+                        ContinuousBinding::hold(KeyCode::KeyE).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::PadCastSpell1,
+                MappingType::PadCastSpell(
+                    MappingPadCastSpell::new(
+                        "PadCastSpell",
+                        3,
+                        (2000, 750).into(),
+                        PadCastReleaseMode::OnRelease,
+                        150.,
+                        true,
+                        MappingAction::PadCastSpellDirection1,
+                        DualAxisBinding::builder()
+                            .set_x(
+                                SingleAxisBinding::hold()
+                                    .set_negative(KeyCode::KeyA)
+                                    .set_positive(KeyCode::KeyD)
+                                    .build(),
+                            )
+                            .set_y(
+                                SingleAxisBinding::hold()
+                                    .set_negative(KeyCode::KeyW)
+                                    .set_positive(KeyCode::KeyS)
+                                    .build(),
+                            )
+                            .build()
+                            .0,
+                        ContinuousBinding::hold(KeyCode::KeyJ).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::CancelCast1,
+                MappingType::CancelCast(
+                    MappingCancelCast::new(
+                        "CancelCast",
+                        (2200, 175).into(),
+                        PulseBinding::just_pressed(KeyCode::Space).0,
                     )
                     .unwrap(),
                 ),
