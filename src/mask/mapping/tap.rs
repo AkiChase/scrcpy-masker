@@ -216,14 +216,13 @@ pub fn handle_repeat_tap(
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("RepeatTap") {
                 let mapping = mapping.as_ref_repeattap();
-                let key = action.to_string();
                 if ineffable.just_activated(action.ineff_continuous()) {
                     let interval = Duration::from_millis(mapping.interval as u64);
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let mut timer = Timer::new(interval, TimerMode::Repeating);
                     timer.tick(interval);
                     active_map.0.insert(
-                        key,
+                        action.to_string(),
                         RepeatTapTimer {
                             timer,
                             pointer_id: mapping.pointer_id,
@@ -233,7 +232,7 @@ pub fn handle_repeat_tap(
                         },
                     );
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
-                    active_map.0.remove(&key);
+                    active_map.0.remove(action.as_ref());
                 }
             }
         }

@@ -32,6 +32,7 @@ use crate::{
         },
         direction_pad::MappingDirectionPad,
         fire::{MappingFire, MappingFps},
+        observation::MappingObservation,
         swipe::MappingSwipe,
         tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
         utils::Size,
@@ -59,9 +60,11 @@ seq!(N in 1..=32 {
             #[ineffable(continuous)]
             PadCastSpell~N,
             #[ineffable(dual_axis)]
-            PadCastSpellDirection~N,
+            PadCastDirection~N,
             #[ineffable(pulse)]
             CancelCast~N,
+            #[ineffable(continuous)]
+            Observation~N,
             #[ineffable(pulse)]
             Fps~N,
             #[ineffable(continuous)]
@@ -77,6 +80,7 @@ seq!(N in 1..=32 {
                     MappingAction::RepeatTap~N => self.clone()._repeattap~N(),
                     MappingAction::MouseCastSpell~N => self.clone()._mousecastspell~N(),
                     MappingAction::PadCastSpell~N => self.clone()._padcastspell~N(),
+                    MappingAction::Observation~N => self.clone()._observation~N(),
                     MappingAction::Fire~N => self.clone()._fire~N(),
                 )*
                 _ => panic!("ineff_continuous called on non-continuous variant"),
@@ -99,7 +103,7 @@ seq!(N in 1..=32 {
             match self {
                 #(
                     MappingAction::DirectionPad~N => self.clone()._directionpad~N(),
-                    MappingAction::PadCastSpellDirection~N => self.clone()._padcastspelldirection~N(),
+                    MappingAction::PadCastDirection~N => self.clone()._padcastdirection~N(),
                 )*
                 _ => panic!("ineff_dual_axis called on non-dual_axis variant"),
             }
@@ -146,6 +150,7 @@ pub enum MappingType {
     MouseCastSpell(MappingMouseCastSpell),
     PadCastSpell(MappingPadCastSpell),
     CancelCast(MappingCancelCast),
+    Observation(MappingObservation),
     Fps(MappingFps),
     Fire(MappingFire),
 }
@@ -160,6 +165,7 @@ impl_mapping_type_methods! {
         MouseCastSpell => MappingMouseCastSpell,
         PadCastSpell => MappingPadCastSpell,
         CancelCast => MappingCancelCast,
+        Observation => MappingObservation,
         Fps => MappingFps,
         Fire => MappingFire,
     }
@@ -391,7 +397,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnRelease,
                         true,
-                        ContinuousBinding::hold(KeyCode::KeyR).0,
+                        ContinuousBinding::hold(KeyCode::KeyE).0,
                     )
                     .unwrap(),
                 ),
@@ -429,7 +435,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnSecondPress,
                         true,
-                        ContinuousBinding::hold(MouseButton::Back).0,
+                        ContinuousBinding::hold(KeyCode::AltLeft).0,
                     )
                     .unwrap(),
                 ),
@@ -448,7 +454,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnRelease,
                         false,
-                        ContinuousBinding::hold(KeyCode::KeyE).0,
+                        ContinuousBinding::hold(MouseButton::Back).0,
                     )
                     .unwrap(),
                 ),
@@ -463,7 +469,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         PadCastReleaseMode::OnRelease,
                         150.,
                         true,
-                        MappingAction::PadCastSpellDirection1,
+                        MappingAction::PadCastDirection1,
                         DualAxisBinding::builder()
                             .set_x(
                                 SingleAxisBinding::hold()
@@ -491,6 +497,20 @@ pub fn default_mapping_config() -> MappingConfig {
                         "CancelCast",
                         (2200, 175).into(),
                         PulseBinding::just_pressed(KeyCode::Space).0,
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::Observation1,
+                MappingType::Observation(
+                    MappingObservation::new(
+                        "Observation",
+                        4,
+                        (2000, 300).into(),
+                        0.5,
+                        0.5,
+                        ContinuousBinding::hold(MouseButton::Forward).0,
                     )
                     .unwrap(),
                 ),

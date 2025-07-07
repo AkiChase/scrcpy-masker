@@ -156,10 +156,13 @@ impl MappingFire {
                 bind,
             })
         } else {
-            Err("Fps's binding must be Continuous".to_string())
+            Err("Fire's binding must be Continuous".to_string())
         }
     }
 }
+
+#[derive(Resource, Default)]
+pub struct ActiveFireMap(HashMap<String, FireItem>);
 
 pub fn handle_fire_trigger(
     accumulated_motion: Res<AccumulatedMouseMotion>,
@@ -185,9 +188,6 @@ pub fn handle_fire_trigger(
     }
 }
 
-#[derive(Resource, Default)]
-pub struct ActiveFireMap(HashMap<String, FireItem>);
-
 struct FireItem {
     current_pos: Vec2,
     pointer_id: u64,
@@ -207,7 +207,6 @@ pub fn handle_fire(
         for (action, mapping) in &active_mapping.mappings {
             if action.as_ref().starts_with("Fire") {
                 let mapping = mapping.as_ref_fire();
-                let key = action.to_string();
                 if ineffable.just_activated(action.ineff_continuous()) {
                     // stop fps motion
                     fps_config.ignore_fps_motion = true;
@@ -234,7 +233,7 @@ pub fn handle_fire(
                     );
                     // add to active_map
                     active_map.0.insert(
-                        key,
+                        action.to_string(),
                         FireItem {
                             current_pos, // independent pos
                             pointer_id,
@@ -242,7 +241,7 @@ pub fn handle_fire(
                         },
                     );
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
-                    if let Some(fire_item) = active_map.0.remove(&key) {
+                    if let Some(fire_item) = active_map.0.remove(action.as_ref()) {
                         // touch up fire
                         ControlMsgHelper::send_touch(
                             &cs_tx_res.0,
