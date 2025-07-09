@@ -3,7 +3,10 @@ use bevy::prelude::*;
 use crate::{
     config::LocalConfig,
     mask::{
-        mapping::config::{ActiveMappingConfig, MappingType},
+        mapping::{
+            MappingState,
+            config::{ActiveMappingConfig, MappingType},
+        },
         mask_command::MaskSize,
     },
 };
@@ -12,14 +15,29 @@ pub struct MappingLabelPlugin;
 
 impl Plugin for MappingLabelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_label_opacity).add_systems(
-            Update,
-            (
-                update_labels
-                    .run_if(resource_changed::<MaskSize>.or(resource_changed::<LabelOpacity>)),
-                redraw_label.run_if(resource_changed::<ActiveMappingConfig>),
-            ),
-        );
+        app.add_systems(Startup, init_label_opacity)
+            .add_systems(
+                Update,
+                (
+                    update_labels
+                        .run_if(resource_changed::<MaskSize>.or(resource_changed::<LabelOpacity>)),
+                    redraw_normal_mapping_label.run_if(resource_changed::<ActiveMappingConfig>),
+                ),
+            )
+            .add_systems(
+                OnEnter(MappingState::RawInput),
+                (
+                    redraw_raw_input_label,
+                    update_labels.after(redraw_raw_input_label),
+                ),
+            )
+            .add_systems(
+                OnExit(MappingState::RawInput),
+                (
+                    redraw_normal_mapping_label,
+                    update_labels.after(redraw_normal_mapping_label),
+                ),
+            );
     }
 }
 
@@ -27,7 +45,19 @@ fn init_label_opacity(mut commands: Commands) {
     commands.insert_resource(LabelOpacity(LocalConfig::get().mapping_label_opacity));
 }
 
-fn redraw_label(
+fn redraw_raw_input_label(
+    mut commands: Commands,
+    query: Query<(Entity, &Label)>,
+    mask_size: Res<MaskSize>,
+) {
+    for (entity, _) in query.iter() {
+        commands.entity(entity).despawn();
+    }
+
+    create_simple_label(&mut commands, "M-Right", (25., 25.).into(), mask_size.0);
+}
+
+fn redraw_normal_mapping_label(
     mut commands: Commands,
     query: Query<(Entity, &Label)>,
     active_mapping: Res<ActiveMappingConfig>,

@@ -61,6 +61,7 @@ fn main() {
                 })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
+                        has_shadow: false,
                         transparent: true,
                         decorations: false,
                         present_mode: PresentMode::AutoVsync,

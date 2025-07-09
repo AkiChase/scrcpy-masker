@@ -41,9 +41,7 @@ pub enum KeyEventAction {
 
     /**
      * Multiple duplicate key events have occurred in a row, or a
-     * complex string is being delivered.  The repeat_count property
-     * of the key event contains the number of times the given key
-     * code should be executed.
+     * complex string is being delivered.
      */
     Multiple = 2,
 }

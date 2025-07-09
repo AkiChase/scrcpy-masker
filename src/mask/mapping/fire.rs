@@ -103,7 +103,7 @@ pub fn handle_fps(
                                 original_pos,
                             );
                             next_state.set(CursorState::Fps);
-                            log::info!("[Mapping] Enter FPS mode");
+                            log::info!("[Cursor] Enter FPS mode");
                         }
                         CursorState::Fps => {
                             // touch up
@@ -115,9 +115,10 @@ pub fn handle_fps(
                                 cursor_pos.0,
                             );
                             next_state.set(CursorState::Normal);
-                            log::info!("[Mapping] Exit FPS mode");
+                            log::info!("[Cursor] Exit FPS mode");
                         }
-                    }
+                    };
+                    return;
                 }
             }
         }

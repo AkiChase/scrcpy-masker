@@ -68,6 +68,7 @@ impl Controller {
                     ScrcpyDeviceMsg::Clipboard { length: _, text } => {
                         let mut ctx = ClipboardContext::new().unwrap();
                         ctx.set_contents(text).unwrap();
+                        log::info!("[Controller] Sync clipboard from main device");
                     }
                     ScrcpyDeviceMsg::AckClipboard { .. } => {}
                     ScrcpyDeviceMsg::UhidOutput { .. } => {}

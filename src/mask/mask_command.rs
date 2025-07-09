@@ -67,11 +67,13 @@ pub fn handle_mask_command(
             MaskCommand::DeviceConnectionChange { connect } => {
                 let msg = if connect {
                     next_mapping_state.set(MappingState::Normal);
+                    log::info!("[Mapping] Enter normal mapping mode");
                     window.visible = true;
                     format!("main device connection connected")
                 } else {
                     next_cursor_state.set(CursorState::Normal);
                     next_mapping_state.set(MappingState::Stop);
+                    log::info!("[Mapping] Stop mapping");
                     window.visible = false;
                     format!("main device connection disconnected")
                 };

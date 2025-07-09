@@ -31,6 +31,7 @@ use crate::{
         direction_pad::MappingDirectionPad,
         fire::{MappingFire, MappingFps},
         observation::MappingObservation,
+        raw_input::MappingRawInput,
         swipe::MappingSwipe,
         tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
         utils::Size,
@@ -67,6 +68,8 @@ seq!(N in 1..=32 {
             Fps~N,
             #[ineffable(continuous)]
             Fire~N,
+            #[ineffable(pulse)]
+            RawInput~N,
         )*
     }
 
@@ -92,6 +95,7 @@ seq!(N in 1..=32 {
                     MappingAction::Swipe~N => self.clone()._swipe~N(),
                     MappingAction::CancelCast~N => self.clone()._cancelcast~N(),
                     MappingAction::Fps~N => self.clone()._fps~N(),
+                    MappingAction::RawInput~N => self.clone()._rawinput~N(),
                 )*
                 _ => panic!("ineff_pulse called on non-pulse variant"),
             }
@@ -151,6 +155,7 @@ pub enum MappingType {
     Observation(MappingObservation),
     Fps(MappingFps),
     Fire(MappingFire),
+    RawInput(MappingRawInput),
 }
 
 impl_mapping_type_methods! {
@@ -166,6 +171,7 @@ impl_mapping_type_methods! {
         Observation => MappingObservation,
         Fps => MappingFps,
         Fire => MappingFire,
+        RawInput => MappingRawInput,
     }
 }
 
@@ -195,6 +201,7 @@ impl MappingConfig {
                     MappingType::Observation(m) => (m.bind.to_string(), m.position.into()),
                     MappingType::Fps(m) => (m.bind.to_string(), m.position.into()),
                     MappingType::Fire(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::RawInput(m) => (m.bind.to_string(), m.position.into()),
                 };
                 (mapping, binding, pos, size)
             })
@@ -534,6 +541,17 @@ pub fn default_mapping_config() -> MappingConfig {
                         1.,
                         0.5,
                         ButtonBinding::new(vec![MouseButton::Left.into()]),
+                    )
+                    .unwrap(),
+                ),
+            ),
+            (
+                MappingAction::RawInput1,
+                MappingType::RawInput(
+                    MappingRawInput::new(
+                        "RawInput",
+                        (2000, 300).into(),
+                        ButtonBinding::new(vec![KeyCode::Enter.into()]),
                     )
                     .unwrap(),
                 ),

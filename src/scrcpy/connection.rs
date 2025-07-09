@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use flume::Sender;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -10,6 +12,7 @@ use tokio::{
         mpsc::UnboundedSender,
         oneshot, watch,
     },
+    time::timeout,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -97,10 +100,12 @@ impl ScrcpyConnection {
                     }
                 }
             }=>{
-                log::error!("[Controller] Scrcpy control connection shutdown unexpectedly");
+                log::error!("[Controller] Scrcpy control write connection shutdown unexpectedly");
             }
         }
-        write_half.shutdown().await.ok();
+        timeout(Duration::from_millis(500), write_half.shutdown())
+            .await
+            .ok();
     }
 
     async fn control_reader_handler(
@@ -155,7 +160,6 @@ impl ScrcpyConnection {
                         ControlledDevice::update_device_size(scid, (width, height)).await;
                         watch_tx.send((width, height)).unwrap();
                     }
-
                     // only forward other message from main device
                     if main {
                         cr_tx.send(msg).unwrap();
@@ -182,7 +186,7 @@ impl ScrcpyConnection {
                 log::info!("[Controller] Scrcpy control connection reader half cancelled manually");
             }
             _ = Self::control_reader_handler(read_half, cr_tx, watch_tx, scid, main)=>{
-                log::error!("[Controller] Scrcpy control connection shutdown unexpectedly");
+                log::error!("[Controller] Scrcpy control read connection shutdown unexpectedly");
             }
         }
         // no need to shutdown the read_half
@@ -197,8 +201,9 @@ impl ScrcpyConnection {
         main: bool,
         token: CancellationToken,
     ) {
-        log::debug!("[Controller] handle scrcpy control connection...");
+        log::debug!("[Controller] Handle scrcpy control connection...");
         let (read_half, write_half) = self.socket.into_split();
+        let finnal_token = token.clone();
         let token_copy = token.clone();
         let (watch_tx, watch_rx) = watch::channel::<(u32, u32)>((0, 0)); // share device size with writer
         if main {
@@ -211,10 +216,13 @@ impl ScrcpyConnection {
             .unwrap();
             oneshot_rx.await.unwrap().unwrap();
         }
-        tokio::join!(
-            Self::control_writer(write_half, token, cs_rx, watch_rx),
-            Self::control_reader(read_half, token_copy, cr_tx, watch_tx, &scid, main)
-        );
+
+        tokio::select! {
+            _ = Self::control_writer(write_half, token, cs_rx, watch_rx) => {finnal_token.cancel();}
+            _ = Self::control_reader(read_half, token_copy, cr_tx, watch_tx, &scid, main) => {finnal_token.cancel();}
+        }
+
+        log::info!("[Controller] Scrcpy control connection closed");
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
             m_tx.send_async((

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
 use crate::scrcpy::{
-    constant::{MotionEventAction, MotionEventButtons},
+    constant::{self, MotionEventAction, MotionEventButtons},
     control_msg::ScrcpyControlMsg,
 };
 
@@ -76,6 +76,44 @@ impl ControlMsgHelper {
                 pressure: half::f16::from_f32_const(1.0),
                 action_button: MotionEventButtons::PRIMARY,
                 buttons: MotionEventButtons::PRIMARY,
+            })
+            .unwrap();
+    }
+
+    pub fn send_keycode(
+        cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+        keycode: constant::Keycode,
+        metastate: constant::MetaState,
+        down: bool,
+        repeat: u32,
+    ) {
+        let action = if down {
+            constant::KeyEventAction::Down
+        } else {
+            constant::KeyEventAction::Up
+        };
+        cs_tx
+            .send(ScrcpyControlMsg::InjectKeycode {
+                action,
+                keycode,
+                repeat,
+                metastate,
+            })
+            .unwrap();
+    }
+
+    pub fn set_clipboard(
+        cs_tx: &broadcast::Sender<ScrcpyControlMsg>,
+        sequence: Option<u64>,
+        text: String,
+        paste: bool,
+    ) {
+        let sequence = sequence.unwrap_or_else(|| rand::random());
+        cs_tx
+            .send(ScrcpyControlMsg::SetClipboard {
+                sequence,
+                paste,
+                text,
             })
             .unwrap();
     }

@@ -1,13 +1,14 @@
+pub mod binding;
 pub mod cast_spell;
 pub mod config;
 pub mod cursor;
 pub mod direction_pad;
 pub mod fire;
 pub mod observation;
+pub mod raw_input;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
-pub mod binding;
 
 use bevy::prelude::*;
 use bevy_ineffable::prelude::*;
@@ -29,7 +30,7 @@ pub enum MappingState {
     #[default]
     Stop,
     Normal,
-    // TODO RawInput, // convert all keys to keycodes
+    RawInput,
 }
 
 pub struct MappingPlugins;
@@ -49,8 +50,10 @@ impl Plugin for MappingPlugins {
                     fire::fire_init,
                     cast_spell::cast_spell_init,
                     observation::init_observation,
+                    raw_input::raw_input_init,
                 ),
             )
+            // normal mapping mode
             .add_systems(
                 Update,
                 (
@@ -68,10 +71,30 @@ impl Plugin for MappingPlugins {
                     observation::handle_observation,
                     observation::handle_observation_trigger,
                     fire::handle_fps,
+                    // raw input won't work in fps mode
+                    raw_input::handle_raw_input.run_if(not(in_state(CursorState::Fps))),
+                    // fire only works in fps mode
                     (fire::handle_fire, fire::handle_fire_trigger)
                         .run_if(in_state(CursorState::Fps)),
                 )
-                    .run_if(in_state(MappingState::Normal)), // mapping
+                    .run_if(in_state(MappingState::Normal)),
+            )
+            // handlers in raw input mode
+            .add_systems(
+                Update,
+                (
+                    raw_input::handle_raw_input_trigger,
+                    raw_input::handle_exit_raw_input_mode,
+                )
+                    .run_if(in_state(MappingState::RawInput).and(not(in_state(CursorState::Fps)))),
+            )
+            .add_systems(
+                OnEnter(MappingState::RawInput),
+                raw_input::on_enter_raw_input_mode,
+            )
+            .add_systems(
+                OnExit(MappingState::RawInput),
+                raw_input::on_exit_raw_input_mode,
             );
     }
 }
@@ -103,3 +126,5 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
     active_mapping.0 = Some(mapping_config);
     ineffable.set_config(&input_config);
 }
+
+// TODO 实现一个简单的解释器来完成宏代码的解析和运行

@@ -1,8 +1,4 @@
-use bevy::{
-    input::mouse::{AccumulatedMouseMotion},
-    prelude::*,
-    window::CursorGrabMode,
-};
+use bevy::{input::mouse::AccumulatedMouseMotion, prelude::*, window::CursorGrabMode};
 
 use crate::{
     mask::{
@@ -34,12 +30,20 @@ impl Plugin for CursorPlugins {
             .add_systems(
                 Update,
                 (
-                    handle_cursor_normal.run_if(in_state(CursorState::Normal)),
-                    handle_cursor_fps
-                        .run_if(in_state(CursorState::Fps).and(run_if_handle_cursor_fps)),
-                    handle_normal_left_click.run_if(in_state(CursorState::Normal)),
-                )
-                    .run_if(in_state(MappingState::Normal)),
+                    handle_cursor_normal.run_if(
+                        not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal)),
+                    ),
+                    handle_cursor_fps.run_if(
+                        in_state(CursorState::Fps)
+                            .and(in_state(MappingState::Normal))
+                            .and(run_if_handle_cursor_fps),
+                    ),
+                ),
+            )
+            .add_systems(
+                Update,
+                handle_normal_left_click
+                    .run_if(not(in_state(MappingState::Stop)).and(in_state(CursorState::Normal))),
             )
             .add_systems(OnEnter(CursorState::Fps), on_enter_cursor_fps)
             .add_systems(OnExit(CursorState::Fps), on_exit_cursor_fps);
