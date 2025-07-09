@@ -7,13 +7,14 @@ use bevy::{
     },
     math::Vec2,
 };
-use bevy_ineffable::prelude::*;
+use bevy_ineffable::prelude::{Ineffable, InputBinding};
 use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 
 use crate::{
     mask::mapping::{
+        binding::DirectionBinding,
         config::ActiveMappingConfig,
         utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
     },
@@ -34,7 +35,8 @@ pub struct MappingDirectionPad {
     pub initial_duration: u64,
     pub max_offset_x: f32,
     pub max_offset_y: f32,
-    pub bind: InputBinding,
+    pub bind: DirectionBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingDirectionPad {
@@ -45,22 +47,19 @@ impl MappingDirectionPad {
         initial_duration: u64,
         max_offset_x: f32,
         max_offset_y: f32,
-        bind: InputBinding,
+        bind: DirectionBinding,
     ) -> Result<Self, String> {
         // check binding
-        if let InputBinding::DualAxis { x: _, y: _ } = bind {
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                position,
-                initial_duration,
-                max_offset_x,
-                max_offset_y,
-                bind,
-            })
-        } else {
-            Err("DirectionPad's binding must be DualAxis".to_string())
-        }
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            position,
+            initial_duration,
+            max_offset_x,
+            max_offset_y,
+            bind: bind.clone(),
+            input_binding: bind.into(),
+        })
     }
 }
 

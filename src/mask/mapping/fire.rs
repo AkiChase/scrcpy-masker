@@ -9,12 +9,13 @@ use bevy::{
     math::Vec2,
     state::state::{NextState, State},
 };
-use bevy_ineffable::prelude::{Ineffable, InputBinding};
+use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     mask::{
         mapping::{
+            binding::ButtonBinding,
             config::ActiveMappingConfig,
             cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState, FPS_MARGIN},
             utils::{ControlMsgHelper, Position},
@@ -36,7 +37,8 @@ pub struct MappingFps {
     pub position: Position,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingFps {
@@ -46,28 +48,24 @@ impl MappingFps {
         position: Position,
         sensitivity_x: f32,
         sensitivity_y: f32,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Pulse(_) = bind {
-            if position.x <= FPS_MARGIN as i32 || position.y <= FPS_MARGIN as i32 {
-                return Err(format!(
-                    "Invalid position ({}, {}), x and y must be greater than {}",
-                    position.x, position.y, FPS_MARGIN,
-                ));
-            }
-
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                position,
-                sensitivity_x,
-                sensitivity_y,
-                bind,
-            })
-        } else {
-            Err("Fps's binding must be Pulse".to_string())
+        if position.x <= FPS_MARGIN as i32 || position.y <= FPS_MARGIN as i32 {
+            return Err(format!(
+                "Invalid position ({}, {}), x and y must be greater than {}",
+                position.x, position.y, FPS_MARGIN,
+            ));
         }
+
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            position,
+            sensitivity_x,
+            sensitivity_y,
+            bind: bind.clone(),
+            input_binding: PulseBinding::just_pressed(bind).0,
+        })
     }
 }
 
@@ -133,7 +131,8 @@ pub struct MappingFire {
     pub position: Position,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingFire {
@@ -143,21 +142,17 @@ impl MappingFire {
         position: Position,
         sensitivity_x: f32,
         sensitivity_y: f32,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Continuous(_) = bind {
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                position,
-                sensitivity_x,
-                sensitivity_y,
-                bind,
-            })
-        } else {
-            Err("Fire's binding must be Continuous".to_string())
-        }
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            position,
+            sensitivity_x,
+            sensitivity_y,
+            bind: bind.clone(),
+            input_binding: ContinuousBinding::hold(bind).0,
+        })
     }
 }
 

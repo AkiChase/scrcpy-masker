@@ -46,9 +46,11 @@ fn main() {
         exit(0);
     }
 
-    if let Err(_) = LocalConfig::load() {
-        LocalConfig::save().unwrap();
+    if let Err(e) = LocalConfig::load() {
+        println!("LocalConfig load failed. {}", e);
     }
+    // update config file
+    LocalConfig::save().unwrap();
 
     App::new()
         .add_plugins(

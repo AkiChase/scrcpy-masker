@@ -11,6 +11,7 @@ use tokio::time::sleep;
 
 use crate::{
     mask::mapping::{
+        binding::ButtonBinding,
         config::ActiveMappingConfig,
         utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
     },
@@ -24,7 +25,8 @@ pub struct MappingSwipe {
     pub pointer_id: u64,
     pub positions: Vec<Position>,
     pub interval: u64,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingSwipe {
@@ -33,20 +35,20 @@ impl MappingSwipe {
         pointer_id: u64,
         positions: Vec<Position>,
         interval: u64,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Pulse(_) = bind {
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                positions,
-                interval,
-                bind,
-            })
-        } else {
-            Err("Swipe's binding must be Pulse".to_string())
+        if positions.is_empty() {
+            return Err("Swipe's position list is empty".to_string());
         }
+
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            positions,
+            interval,
+            bind: bind.clone(),
+            input_binding: PulseBinding::just_pressed(bind).0,
+        })
     }
 }
 

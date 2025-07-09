@@ -8,7 +8,7 @@ use bevy::{
     math::Vec2,
     time::{Time, Timer, TimerMode},
 };
-use bevy_ineffable::prelude::*;
+use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
 use bevy_tokio_tasks::TokioTasksRuntime;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
@@ -16,6 +16,7 @@ use tokio::time::sleep;
 use crate::{
     mask::{
         mapping::{
+            binding::ButtonBinding,
             config::ActiveMappingConfig,
             utils::{ControlMsgHelper, Position},
         },
@@ -36,7 +37,8 @@ pub struct MappingSingleTap {
     pub pointer_id: u64,
     pub duration: u64,
     pub sync: bool,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingSingleTap {
@@ -46,21 +48,17 @@ impl MappingSingleTap {
         pointer_id: u64,
         duration: u64,
         sync: bool,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Continuous(_) = bind {
-            Ok(Self {
-                position,
-                note: note.to_string(),
-                pointer_id,
-                duration,
-                sync,
-                bind,
-            })
-        } else {
-            Err("SingleTap's binding must be Continuous".to_string())
-        }
+        Ok(Self {
+            position,
+            note: note.to_string(),
+            pointer_id,
+            duration,
+            sync,
+            bind: bind.clone(),
+            input_binding: ContinuousBinding::hold(bind).0,
+        })
     }
 }
 
@@ -132,7 +130,8 @@ pub struct MappingRepeatTap {
     pub pointer_id: u64,
     pub duration: u64,
     pub interval: u32,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingRepeatTap {
@@ -142,21 +141,17 @@ impl MappingRepeatTap {
         pointer_id: u64,
         duration: u64,
         interval: u32,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Continuous(_) = bind {
-            Ok(Self {
-                position,
-                note: note.to_string(),
-                pointer_id,
-                duration,
-                interval,
-                bind,
-            })
-        } else {
-            Err("RepeatTap's binding must be Continuous".to_string())
-        }
+        Ok(Self {
+            position,
+            note: note.to_string(),
+            pointer_id,
+            duration,
+            interval,
+            bind: bind.clone(),
+            input_binding: ContinuousBinding::hold(bind).0,
+        })
     }
 }
 
@@ -251,7 +246,8 @@ pub struct MappingMultipleTap {
     pub note: String,
     pub pointer_id: u64,
     pub items: Vec<MappingMultipleTapItem>,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingMultipleTap {
@@ -259,19 +255,19 @@ impl MappingMultipleTap {
         note: &str,
         pointer_id: u64,
         items: Vec<MappingMultipleTapItem>,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Pulse(_) = bind {
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                items,
-                bind,
-            })
-        } else {
-            Err("MultipleTap's binding must be Pulse".to_string())
+        if items.is_empty() {
+            return Err("MultipleTap's operation item list is empty".to_string());
         }
+
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            items,
+            bind: bind.clone(),
+            input_binding: PulseBinding::just_pressed(bind).0,
+        })
     }
 }
 

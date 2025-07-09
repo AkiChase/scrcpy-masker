@@ -7,12 +7,13 @@ use bevy::{
     },
     math::Vec2,
 };
-use bevy_ineffable::prelude::{Ineffable, InputBinding};
+use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     mask::{
         mapping::{
+            binding::ButtonBinding,
             config::ActiveMappingConfig,
             cursor::CursorPosition,
             utils::{ControlMsgHelper, Position},
@@ -34,7 +35,8 @@ pub struct MappingObservation {
     pub position: Position,
     pub sensitivity_x: f32,
     pub sensitivity_y: f32,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingObservation {
@@ -44,21 +46,17 @@ impl MappingObservation {
         position: Position,
         sensitivity_x: f32,
         sensitivity_y: f32,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Continuous(_) = bind {
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                position,
-                sensitivity_x,
-                sensitivity_y,
-                bind,
-            })
-        } else {
-            Err("Observation's binding must be Continuous".to_string())
-        }
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            position,
+            sensitivity_x,
+            sensitivity_y,
+            bind: bind.clone(),
+            input_binding: ContinuousBinding::hold(bind).0,
+        })
     }
 }
 

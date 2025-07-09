@@ -7,6 +7,7 @@ pub mod observation;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
+pub mod binding;
 
 use bevy::prelude::*;
 use bevy_ineffable::prelude::*;
@@ -91,9 +92,9 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
             log::error!("{}", e);
             log::info!("[Mask] Using default mapping config");
             let default_mapping = default_mapping_config();
-            let config_path = relate_to_root_path(["local", "mapping", "default.ron"]);
+            let config_path = relate_to_root_path(["local", "mapping", "default.json"]);
             save_mapping_config(&default_mapping, &config_path).unwrap();
-            LocalConfig::set_active_mapping_file("default.ron".to_string());
+            LocalConfig::set_active_mapping_file("default.json".to_string());
             let input_config: InputConfig = InputConfig::from(&default_mapping);
             (default_mapping, input_config)
         }

@@ -8,24 +8,22 @@ use std::{
 use bevy::{
     ecs::resource::Resource,
     input::{gamepad::GamepadAxis, keyboard::KeyCode, mouse::MouseButton},
+    math::Vec2,
 };
 use bevy_ineffable::{
-    bindings::AnalogInput,
     config::InputConfig,
     phantom::IAWrp,
-    prelude::{
-        ContinuousBinding, DualAxisBinding, InputAction, InputBinding, PulseBinding,
-        SingleAxisBinding,
-    },
+    prelude::{InputAction, InputBinding},
 };
 use paste::paste;
-use ron::ser::{PrettyConfig, to_string_pretty};
 use seq_macro::seq;
 use serde::{Deserialize, Serialize};
+use serde_json::to_string_pretty;
 use strum_macros::{AsRefStr, Display};
 
 use crate::{
     mask::mapping::{
+        binding::{ButtonBinding, DirectionBinding},
         cast_spell::{
             MappingCancelCast, MappingMouseCastSpell, MappingPadCastSpell, MouseCastReleaseMode,
             PadCastReleaseMode,
@@ -118,10 +116,10 @@ macro_rules! impl_mapping_type_methods {
         }
     ) => {
         impl $enum_name {
-            pub fn get_bind(&self) -> InputBinding {
+            pub fn get_input_binding(&self) -> InputBinding {
                 match self {
                     $(
-                        $enum_name::$variant(inner) => inner.bind.clone(),
+                        $enum_name::$variant(inner) => inner.input_binding.clone(),
                     )*
                 }
             }
@@ -179,16 +177,41 @@ pub struct MappingConfig {
     pub mappings: HashMap<MappingAction, MappingType>,
 }
 
+impl MappingConfig {
+    pub fn get_mapping_label_info(&self) -> Vec<(&MappingType, String, Vec2, Vec2)> {
+        let size: Vec2 = self.original_size.into();
+        self.mappings
+            .iter()
+            .map(|(_, mapping)| {
+                let (binding, pos): (String, Vec2) = match mapping {
+                    MappingType::SingleTap(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::RepeatTap(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::MultipleTap(m) => (m.bind.to_string(), m.items[0].position.into()),
+                    MappingType::Swipe(m) => (m.bind.to_string(), m.positions[0].into()),
+                    MappingType::DirectionPad(m) => (String::new(), m.position.into()),
+                    MappingType::MouseCastSpell(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::PadCastSpell(m) => (String::new(), m.position.into()),
+                    MappingType::CancelCast(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::Observation(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::Fps(m) => (m.bind.to_string(), m.position.into()),
+                    MappingType::Fire(m) => (m.bind.to_string(), m.position.into()),
+                };
+                (mapping, binding, pos, size)
+            })
+            .collect()
+    }
+}
+
 impl From<&MappingConfig> for InputConfig {
     fn from(mapping_config: &MappingConfig) -> Self {
         let mut all_bindings: HashMap<String, Vec<InputBinding>> = HashMap::new();
 
         for (action, mapping) in &mapping_config.mappings {
             if let MappingType::PadCastSpell(m) = mapping {
-                all_bindings.insert(action.to_string(), vec![m.bind.clone()]);
-                all_bindings.insert(m.pad_action.to_string(), vec![m.pad_bind.clone()]);
+                all_bindings.insert(action.to_string(), vec![m.input_binding.clone()]);
+                all_bindings.insert(m.pad_action.to_string(), vec![m.pad_input_binding.clone()]);
             } else {
-                all_bindings.insert(action.to_string(), vec![mapping.get_bind()]);
+                all_bindings.insert(action.to_string(), vec![mapping.get_input_binding()]);
             }
         }
 
@@ -221,7 +244,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         1,
                         1000,
                         false,
-                        ContinuousBinding::hold(KeyCode::Digit1).0,
+                        ButtonBinding::new(vec![KeyCode::Digit1.into()]),
                     )
                     .unwrap(),
                 ),
@@ -235,7 +258,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         1,
                         0,
                         true,
-                        ContinuousBinding::hold(KeyCode::Digit2).0,
+                        ButtonBinding::new(vec![KeyCode::Digit2.into()]),
                     )
                     .unwrap(),
                 ),
@@ -249,7 +272,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         1,
                         30,
                         100,
-                        ContinuousBinding::hold(KeyCode::Digit3).0,
+                        ButtonBinding::new(vec![KeyCode::Digit3.into()]),
                     )
                     .unwrap(),
                 ),
@@ -263,7 +286,10 @@ pub fn default_mapping_config() -> MappingConfig {
                         2,
                         30,
                         100,
-                        ContinuousBinding::hold((KeyCode::ControlLeft, KeyCode::Digit3)).0,
+                        ButtonBinding::new(vec![
+                            KeyCode::ControlLeft.into(),
+                            KeyCode::Digit3.into(),
+                        ]),
                     )
                     .unwrap(),
                 ),
@@ -291,7 +317,7 @@ pub fn default_mapping_config() -> MappingConfig {
                                 wait: 1000,
                             },
                         ],
-                        PulseBinding::just_pressed(KeyCode::Digit4).0,
+                        ButtonBinding::new(vec![KeyCode::Digit4.into()]),
                     )
                     .unwrap(),
                 ),
@@ -304,7 +330,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         1,
                         vec![(100, 100).into(), (200, 200).into(), (300, 300).into()],
                         1000,
-                        PulseBinding::just_pressed(KeyCode::Digit5).0,
+                        ButtonBinding::new(vec![KeyCode::Digit5.into()]),
                     )
                     .unwrap(),
                 ),
@@ -319,21 +345,12 @@ pub fn default_mapping_config() -> MappingConfig {
                         100,
                         100.,
                         100.,
-                        DualAxisBinding::builder()
-                            .set_x(
-                                SingleAxisBinding::hold()
-                                    .set_negative(KeyCode::KeyA)
-                                    .set_positive(KeyCode::KeyD)
-                                    .build(),
-                            )
-                            .set_y(
-                                SingleAxisBinding::hold()
-                                    .set_negative(KeyCode::KeyW)
-                                    .set_positive(KeyCode::KeyS)
-                                    .build(),
-                            )
-                            .build()
-                            .0,
+                        DirectionBinding::Button {
+                            up: KeyCode::KeyW.into(),
+                            down: KeyCode::KeyS.into(),
+                            left: KeyCode::KeyA.into(),
+                            right: KeyCode::KeyD.into(),
+                        },
                     )
                     .unwrap(),
                 ),
@@ -344,27 +361,14 @@ pub fn default_mapping_config() -> MappingConfig {
                     MappingDirectionPad::new(
                         "DirectionPad gamepad",
                         9,
-                        (300, 1000).into(),
+                        (500, 1000).into(),
                         300,
                         100.,
                         100.,
-                        DualAxisBinding::builder()
-                            .set_x(
-                                SingleAxisBinding::analog(AnalogInput::GamePad(
-                                    GamepadAxis::LeftStickX,
-                                ))
-                                .set_sensitivity(1.0)
-                                .build(),
-                            )
-                            .set_y(
-                                SingleAxisBinding::analog(AnalogInput::GamePad(
-                                    GamepadAxis::LeftStickY,
-                                ))
-                                .set_sensitivity(1.0)
-                                .build(),
-                            )
-                            .build()
-                            .0,
+                        DirectionBinding::JoyStick {
+                            x: GamepadAxis::LeftStickX,
+                            y: GamepadAxis::LeftStickY,
+                        },
                     )
                     .unwrap(),
                 ),
@@ -378,7 +382,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         (1280, 720).into(),
                         2.,
                         1.,
-                        PulseBinding::just_pressed(MouseButton::Right).0,
+                        ButtonBinding::new(vec![KeyCode::Backquote.into()]),
                     )
                     .unwrap(),
                 ),
@@ -397,7 +401,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnRelease,
                         true,
-                        ContinuousBinding::hold(KeyCode::KeyE).0,
+                        ButtonBinding::new(vec![KeyCode::KeyE.into()]),
                     )
                     .unwrap(),
                 ),
@@ -416,7 +420,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnPress,
                         false,
-                        ContinuousBinding::hold(KeyCode::KeyQ).0,
+                        ButtonBinding::new(vec![KeyCode::KeyQ.into()]),
                     )
                     .unwrap(),
                 ),
@@ -435,7 +439,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnSecondPress,
                         true,
-                        ContinuousBinding::hold(KeyCode::AltLeft).0,
+                        ButtonBinding::new(vec![KeyCode::AltLeft.into()]),
                     )
                     .unwrap(),
                 ),
@@ -454,7 +458,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         625.,
                         MouseCastReleaseMode::OnRelease,
                         false,
-                        ContinuousBinding::hold(MouseButton::Back).0,
+                        ButtonBinding::new(vec![MouseButton::Back.into()]),
                     )
                     .unwrap(),
                 ),
@@ -470,22 +474,13 @@ pub fn default_mapping_config() -> MappingConfig {
                         150.,
                         true,
                         MappingAction::PadCastDirection1,
-                        DualAxisBinding::builder()
-                            .set_x(
-                                SingleAxisBinding::hold()
-                                    .set_negative(KeyCode::KeyA)
-                                    .set_positive(KeyCode::KeyD)
-                                    .build(),
-                            )
-                            .set_y(
-                                SingleAxisBinding::hold()
-                                    .set_negative(KeyCode::KeyW)
-                                    .set_positive(KeyCode::KeyS)
-                                    .build(),
-                            )
-                            .build()
-                            .0,
-                        ContinuousBinding::hold(KeyCode::KeyJ).0,
+                        DirectionBinding::Button {
+                            up: KeyCode::KeyW.into(),
+                            down: KeyCode::KeyS.into(),
+                            left: KeyCode::KeyA.into(),
+                            right: KeyCode::KeyD.into(),
+                        },
+                        ButtonBinding::new(vec![KeyCode::KeyJ.into()]),
                     )
                     .unwrap(),
                 ),
@@ -496,7 +491,7 @@ pub fn default_mapping_config() -> MappingConfig {
                     MappingCancelCast::new(
                         "CancelCast",
                         (2200, 175).into(),
-                        PulseBinding::just_pressed(KeyCode::Space).0,
+                        ButtonBinding::new(vec![KeyCode::Space.into()]),
                     )
                     .unwrap(),
                 ),
@@ -510,7 +505,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         (2000, 300).into(),
                         0.5,
                         0.5,
-                        ContinuousBinding::hold(MouseButton::Forward).0,
+                        ButtonBinding::new(vec![MouseButton::Forward.into()]),
                     )
                     .unwrap(),
                 ),
@@ -524,7 +519,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         (1280, 720).into(),
                         2.,
                         1.,
-                        PulseBinding::just_pressed(MouseButton::Right).0,
+                        ButtonBinding::new(vec![MouseButton::Right.into()]),
                     )
                     .unwrap(),
                 ),
@@ -538,7 +533,7 @@ pub fn default_mapping_config() -> MappingConfig {
                         (2000, 1000).into(),
                         1.,
                         0.5,
-                        ContinuousBinding::hold(MouseButton::Left).0,
+                        ButtonBinding::new(vec![MouseButton::Left.into()]),
                     )
                     .unwrap(),
                 ),
@@ -552,9 +547,9 @@ pub fn load_mapping_config(
 ) -> Result<(MappingConfig, InputConfig), String> {
     // load from file
     let path = relate_to_root_path(["local", "mapping", file_name.as_ref()]);
-    let ron_string = std::fs::read_to_string(path)
+    let config_string = std::fs::read_to_string(path)
         .map_err(|e| format!("Cannot read mapping config file: {}", e))?;
-    let mapping_config: MappingConfig = ron::from_str(&ron_string)
+    let mapping_config: MappingConfig = serde_json::from_str(&config_string)
         .map_err(|e| format!("Cannot deserialize mapping config: {}", e))?;
 
     let input_config: InputConfig = InputConfig::from(&mapping_config);
@@ -563,16 +558,17 @@ pub fn load_mapping_config(
 }
 
 pub fn save_mapping_config(config: &MappingConfig, path: &Path) -> Result<(), String> {
-    let pretty = PrettyConfig::default();
-    let ron_string = to_string_pretty(config, pretty)
-        .map_err(|e| format!("Cannot serialize mapping config: {}", e))?;
+    let json_string =
+        to_string_pretty(config).map_err(|e| format!("Cannot serialize mapping config: {}", e))?;
     if let Some(parent) = path.parent() {
         create_dir_all(parent)
             .map_err(|e| format!("Cannot create directory for config file: {}", e))?;
     }
+
     let mut file =
         File::create(path).map_err(|e| format!("Cannot create mapping config file: {}", e))?;
-    file.write_all(ron_string.as_bytes())
+    file.write_all(json_string.as_bytes())
         .map_err(|e| format!("Cannot write to mapping config file: {}", e))?;
+
     Ok(())
 }

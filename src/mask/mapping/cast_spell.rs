@@ -5,12 +5,13 @@ use bevy::{
     },
     math::Vec2,
 };
-use bevy_ineffable::prelude::{Ineffable, InputBinding};
+use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     mask::{
         mapping::{
+            binding::{ButtonBinding, DirectionBinding},
             config::{ActiveMappingConfig, MappingAction},
             cursor::CursorPosition,
             direction_pad::{BlockDirectionPad, DirectionPadMap},
@@ -131,7 +132,8 @@ pub struct MappingMouseCastSpell {
     pub cast_radius: f32,
     pub release_mode: MouseCastReleaseMode,
     pub cast_no_direction: bool,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingMouseCastSpell {
@@ -146,26 +148,23 @@ impl MappingMouseCastSpell {
         cast_radius: f32,
         release_mode: MouseCastReleaseMode,
         cast_no_direction: bool,
-        bind: InputBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
         // check binding
-        if let InputBinding::Continuous(_) = bind {
-            Ok(Self {
-                note: note.to_string(),
-                pointer_id,
-                position,
-                vertical_scale,
-                center,
-                horizontal_scale,
-                drag_radius,
-                cast_radius,
-                release_mode,
-                cast_no_direction,
-                bind,
-            })
-        } else {
-            Err("MouseCastSpell's binding must be Continuous".to_string())
-        }
+        Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            position,
+            vertical_scale,
+            center,
+            horizontal_scale,
+            drag_radius,
+            cast_radius,
+            release_mode,
+            cast_no_direction,
+            bind: bind.clone(),
+            input_binding: ContinuousBinding::hold(bind).0,
+        })
     }
 }
 
@@ -391,8 +390,10 @@ pub struct MappingPadCastSpell {
     pub drag_radius: f32,
     pub block_direction_pad: bool,
     pub pad_action: MappingAction,
-    pub pad_bind: InputBinding,
-    pub bind: InputBinding,
+    pub pad_bind: DirectionBinding,
+    pub pad_input_binding: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingPadCastSpell {
@@ -404,27 +405,22 @@ impl MappingPadCastSpell {
         drag_radius: f32,
         block_direction_pad: bool,
         pad_action: MappingAction,
-        pad_bind: InputBinding,
-        bind: InputBinding,
+        pad_bind: DirectionBinding,
+        bind: ButtonBinding,
     ) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Continuous(_) = bind {
-            if let InputBinding::DualAxis { .. } = pad_bind {
-                return Ok(Self {
-                    note: note.to_string(),
-                    pointer_id,
-                    position,
-                    drag_radius,
-                    release_mode,
-                    block_direction_pad,
-                    bind,
-                    pad_action,
-                    pad_bind,
-                });
-            }
-            return Err("PadCastSpell's pad_bind must be DualAxis".to_string());
-        }
-        Err("PadCastSpell's binding must be Continuous".to_string())
+        return Ok(Self {
+            note: note.to_string(),
+            pointer_id,
+            position,
+            drag_radius,
+            release_mode,
+            block_direction_pad,
+            pad_action,
+            pad_bind: pad_bind.clone(),
+            pad_input_binding: pad_bind.into(),
+            bind: bind.clone(),
+            input_binding: ContinuousBinding::hold(bind).0,
+        });
     }
 }
 
@@ -577,21 +573,18 @@ pub fn handle_pad_cast_spell(
 pub struct MappingCancelCast {
     pub note: String,
     pub position: Position,
-    pub bind: InputBinding,
+    pub bind: ButtonBinding,
+    pub input_binding: InputBinding,
 }
 
 impl MappingCancelCast {
-    pub fn new(note: &str, position: Position, bind: InputBinding) -> Result<Self, String> {
-        // check binding
-        if let InputBinding::Pulse(_) = bind {
-            Ok(Self {
-                note: note.to_string(),
-                position,
-                bind,
-            })
-        } else {
-            Err("CancelCast's binding must be Pulse".to_string())
-        }
+    pub fn new(note: &str, position: Position, bind: ButtonBinding) -> Result<Self, String> {
+        Ok(Self {
+            note: note.to_string(),
+            position,
+            bind: bind.clone(),
+            input_binding: PulseBinding::just_pressed(bind).0,
+        })
     }
 }
 
