@@ -103,3 +103,5 @@ fn start_servers(mut commands: Commands) {
     web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone());
     controller::Controller::start(controller_addr, cs_tx, v_tx, a_tx, d_rx, m_tx, ws_tx);
 }
+
+// TODO 构建为安装包 https://github.com/burtonageo/cargo-bundle 添加Github Action

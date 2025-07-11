@@ -55,7 +55,7 @@ async fn update_config(
                     None,
                 ));
             } else {
-                return Err(WebServerError::bad_request("web_port must be u16"));
+                return Err(WebServerError::bad_request("The web_port must be u16"));
             }
         }
         "adb_path" => {
@@ -70,13 +70,13 @@ async fn update_config(
                     }
                     Err(e) => {
                         return Err(WebServerError::bad_request(format!(
-                            "Failed to set adb_path, {}",
+                            "Failed to set adb_path: {}",
                             e
                         )));
                     }
                 }
             } else {
-                return Err(WebServerError::bad_request("adb_path must be string"));
+                return Err(WebServerError::bad_request("The adb_path must be string"));
             }
         }
         "controller_port" => {
@@ -87,7 +87,9 @@ async fn update_config(
                     None,
                 ));
             } else {
-                return Err(WebServerError::bad_request("controller_port must be u16"));
+                return Err(WebServerError::bad_request(
+                    "The controller_port must be u16",
+                ));
             }
         }
         "vertical_mask_height" => {
@@ -103,7 +105,7 @@ async fn update_config(
                 }
             } else {
                 return Err(WebServerError::bad_request(
-                    "vertical_mask_height must be u32",
+                    "The vertical_mask_height must be u32",
                 ));
             }
         }
@@ -120,7 +122,7 @@ async fn update_config(
                 }
             } else {
                 return Err(WebServerError::bad_request(
-                    "horizontal_mask_width must be u32",
+                    "The horizontal_mask_width must be u32",
                 ));
             }
         }
@@ -164,19 +166,38 @@ async fn update_config(
                         }
                     } else {
                         return Err(WebServerError::bad_request(
-                            "horizontal_position must be array [i32, i32]",
+                            "The horizontal_position must be array [i32, i32]",
                         ));
                     }
                 } else {
                     return Err(WebServerError::bad_request(
-                        "horizontal_position must be array [i32, i32]",
+                        "The horizontal_position must be array [i32, i32]",
                     ));
                 }
             }
         }
+        "active_mapping_file" => {
+            return Err(WebServerError::bad_request(
+                "Please request /api/mapping/change_active_mapping for this operation",
+            ));
+        }
+        "mapping_label_opacity" => {
+            if let Some(value) = payload.value.as_f64() {
+                if value <= 1.0 && value >= 0.0 {
+                    LocalConfig::set_mapping_label_opacity(value as f32);
+                    return Ok(JsonResponse::success(
+                        format!("Successfully updated mapping_label_opacity"),
+                        None,
+                    ));
+                }
+            }
+            return Err(WebServerError::bad_request(
+                "The mapping_label_opacity must between 0.0 and 1.0",
+            ));
+        }
         _ => {
             return Err(WebServerError::bad_request(format!(
-                "unknown config key: {}",
+                "Unknown config key: {}",
                 payload.key
             )));
         }

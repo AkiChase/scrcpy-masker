@@ -11,7 +11,7 @@ use tokio::time::sleep;
 
 use crate::{
     mask::mapping::{
-        binding::ButtonBinding,
+        binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
     },
@@ -19,8 +19,8 @@ use crate::{
     utils::ChannelSenderCS,
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingSwipe {
+#[derive(Debug, Clone)]
+pub struct BindMappingSwipe {
     pub note: String,
     pub pointer_id: u64,
     pub positions: Vec<Position>,
@@ -29,26 +29,34 @@ pub struct MappingSwipe {
     pub input_binding: InputBinding,
 }
 
-impl MappingSwipe {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        positions: Vec<Position>,
-        interval: u64,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        if positions.is_empty() {
+impl From<MappingSwipe> for BindMappingSwipe {
+    fn from(value: MappingSwipe) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            positions: value.positions,
+            interval: value.interval,
+            bind: value.bind.clone(),
+            input_binding: PulseBinding::just_pressed(value.bind).0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingSwipe {
+    pub note: String,
+    pub pointer_id: u64,
+    pub positions: Vec<Position>,
+    pub interval: u64,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingSwipe {
+    fn validate(&self) -> Result<(), String> {
+        if self.positions.is_empty() {
             return Err("Swipe's position list is empty".to_string());
         }
-
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            positions,
-            interval,
-            bind: bind.clone(),
-            input_binding: PulseBinding::just_pressed(bind).0,
-        })
+        Ok(())
     }
 }
 

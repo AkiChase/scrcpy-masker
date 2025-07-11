@@ -1,4 +1,7 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 use bevy::{
     ecs::{
@@ -14,7 +17,7 @@ use tokio::time::sleep;
 
 use crate::{
     mask::mapping::{
-        binding::DirectionBinding,
+        binding::{DirectionBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, Position, ease_sigmoid_like},
     },
@@ -27,8 +30,8 @@ pub fn direction_pad_init(mut commands: Commands) {
     commands.insert_resource(BlockDirectionPad::default());
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingDirectionPad {
+#[derive(Debug, Clone)]
+pub struct BindMappingDirectionPad {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -39,41 +42,46 @@ pub struct MappingDirectionPad {
     pub input_binding: InputBinding,
 }
 
-impl MappingDirectionPad {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        position: Position,
-        initial_duration: u64,
-        max_offset_x: f32,
-        max_offset_y: f32,
-        bind: DirectionBinding,
-    ) -> Result<Self, String> {
-        // check binding
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            position,
-            initial_duration,
-            max_offset_x,
-            max_offset_y,
-            bind: bind.clone(),
-            input_binding: bind.into(),
-        })
+impl From<MappingDirectionPad> for BindMappingDirectionPad {
+    fn from(value: MappingDirectionPad) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            position: value.position,
+            initial_duration: value.initial_duration,
+            max_offset_x: value.max_offset_x,
+            max_offset_y: value.max_offset_y,
+            bind: value.bind.clone(),
+            input_binding: value.bind.into(),
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingDirectionPad {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub initial_duration: u64,
+    pub max_offset_x: f32,
+    pub max_offset_y: f32,
+    pub bind: DirectionBinding,
+}
+
+impl ValidateMappingConfig for MappingDirectionPad {}
 
 #[derive(Resource, Default)]
 pub struct DirectionPadMap(pub HashMap<String, DirectionPadItem>);
 
 pub struct DirectionPadItem {
+    pub enable_instant: Instant,
     pub pointer_id: u64,
     pub original_size: Vec2,
     pub original_pos: Vec2,
     pub last_state: Vec2,
 }
 
-fn scale_direction_2d_state(d_state: Vec2, mapping: &MappingDirectionPad) -> Vec2 {
+fn scale_direction_2d_state(d_state: Vec2, mapping: &BindMappingDirectionPad) -> Vec2 {
     if d_state.x == 0.0 && d_state.y == 0.0 {
         return d_state;
     }
@@ -130,6 +138,10 @@ pub fn handle_direction_pad(
                 );
                 if direction_pad_map.0.contains_key(&key) {
                     let item = direction_pad_map.0.get_mut(&key).unwrap();
+                    if item.enable_instant > Instant::now() {
+                        // wait for initial duration
+                        continue;
+                    }
                     let original_pos: Vec2 = mapping.position.into();
                     if state.x == 0.0 && state.y == 0.0 {
                         // touch up and remove state
@@ -157,10 +169,15 @@ pub fn handle_direction_pad(
                     let pointer_id = mapping.pointer_id;
                     let original_size: Vec2 = active_mapping.original_size.into();
                     let original_pos: Vec2 = mapping.position.into();
+
+                    let enable_instant = Instant::now()
+                        + Duration::from_millis(mapping.initial_duration + MIN_MOVE_STEP_INTERVAL);
+
                     // record new item
                     direction_pad_map.0.insert(
                         key,
                         DirectionPadItem {
+                            enable_instant,
                             pointer_id,
                             original_size,
                             original_pos: original_pos,

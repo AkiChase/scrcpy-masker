@@ -22,6 +22,18 @@ where
     segments.into_iter().fold(root, |acc, seg| acc.join(seg))
 }
 
+const ILLEGAL_CHARS: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
+
+pub fn is_safe_file_name(name: &str) -> bool {
+    !name.contains("..")
+        && !name.contains('/')
+        && !name.contains('\\')
+        && !name.contains('\0')
+        && !name.contains("..")
+        && !name.chars().any(|c| ILLEGAL_CHARS.contains(&c))
+        && Path::new(name).file_name().is_some()
+}
+
 fn get_base_root() -> PathBuf {
     #[cfg(debug_assertions)]
     {

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     mask::{
         mapping::{
-            binding::{ButtonBinding, DirectionBinding},
+            binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
             config::{ActiveMappingConfig, MappingAction},
             cursor::CursorPosition,
             direction_pad::{BlockDirectionPad, DirectionPadMap},
@@ -41,8 +41,8 @@ struct ActiveCastSpellItem {
     mouse_flag: bool,
     center_pos: Vec2,
     cast_radius: f32,
-    horizontal_scale: f32,
-    vertical_scale: f32,
+    horizontal_scale_factor: f32,
+    vertical_scale_factor: f32,
     cast_no_direction: bool,
     // for pad
     pad_action: Option<MappingAction>,
@@ -60,8 +60,8 @@ impl ActiveCastSpellItem {
         drag_radius: f32,
         center_pos: Vec2,
         cast_radius: f32,
-        horizontal_scale: f32,
-        vertical_scale: f32,
+        horizontal_scale_factor: f32,
+        vertical_scale_factor: f32,
         cast_no_direction: bool,
     ) -> Self {
         Self {
@@ -74,8 +74,8 @@ impl ActiveCastSpellItem {
             drag_radius,
             center_pos,
             cast_radius,
-            horizontal_scale,
-            vertical_scale,
+            horizontal_scale_factor,
+            vertical_scale_factor,
             cast_no_direction,
             pad_action: None,
             last_state: Vec2::ZERO,
@@ -103,8 +103,8 @@ impl ActiveCastSpellItem {
             drag_radius,
             center_pos: Vec2::ZERO,
             cast_radius: 0.,
-            horizontal_scale: 0.,
-            vertical_scale: 0.,
+            horizontal_scale_factor: 0.,
+            vertical_scale_factor: 0.,
             cast_no_direction: false,
             pad_action: Some(pad_action),
             last_state: Vec2::ZERO,
@@ -120,14 +120,14 @@ pub enum MouseCastReleaseMode {
     OnSecondPress,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingMouseCastSpell {
+#[derive(Debug, Clone)]
+pub struct BindMappingMouseCastSpell {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
     pub center: Position,
-    pub horizontal_scale: f32,
-    pub vertical_scale: f32,
+    pub horizontal_scale_factor: f32,
+    pub vertical_scale_factor: f32,
     pub drag_radius: f32,
     pub cast_radius: f32,
     pub release_mode: MouseCastReleaseMode,
@@ -136,37 +136,41 @@ pub struct MappingMouseCastSpell {
     pub input_binding: InputBinding,
 }
 
-impl MappingMouseCastSpell {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        position: Position,
-        center: Position,
-        horizontal_scale: f32,
-        vertical_scale: f32,
-        drag_radius: f32,
-        cast_radius: f32,
-        release_mode: MouseCastReleaseMode,
-        cast_no_direction: bool,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        // check binding
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            position,
-            vertical_scale,
-            center,
-            horizontal_scale,
-            drag_radius,
-            cast_radius,
-            release_mode,
-            cast_no_direction,
-            bind: bind.clone(),
-            input_binding: ContinuousBinding::hold(bind).0,
-        })
+impl From<MappingMouseCastSpell> for BindMappingMouseCastSpell {
+    fn from(value: MappingMouseCastSpell) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            position: value.position,
+            center: value.center,
+            horizontal_scale_factor: value.horizontal_scale_factor,
+            vertical_scale_factor: value.vertical_scale_factor,
+            drag_radius: value.drag_radius,
+            cast_radius: value.cast_radius,
+            release_mode: value.release_mode,
+            cast_no_direction: value.cast_no_direction,
+            bind: value.bind.clone(),
+            input_binding: ContinuousBinding::hold(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingMouseCastSpell {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub center: Position,
+    pub horizontal_scale_factor: f32,
+    pub vertical_scale_factor: f32,
+    pub drag_radius: f32,
+    pub cast_radius: f32,
+    pub release_mode: MouseCastReleaseMode,
+    pub cast_no_direction: bool,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingMouseCastSpell {}
 
 fn cal_mouse_cast_spell_current_pos(
     cursor_pos: Vec2,
@@ -176,8 +180,8 @@ fn cal_mouse_cast_spell_current_pos(
     mut drag_radius: f32,
     mask_size: Vec2,
     original_size: Vec2,
-    horizontal_scale: f32,
-    vertical_scale: f32,
+    horizontal_scale_factor: f32,
+    vertical_scale_factor: f32,
 ) -> Vec2 {
     // convert to mask scale
     center_pos = center_pos / original_size * mask_size;
@@ -186,12 +190,12 @@ fn cal_mouse_cast_spell_current_pos(
     drag_radius = drag_radius / original_size.y * mask_size.y;
 
     let mut delta = cursor_pos - center_pos;
-    let scale = if horizontal_scale >= vertical_scale {
-        let r = vertical_scale / horizontal_scale;
+    let scale = if horizontal_scale_factor >= vertical_scale_factor {
+        let r = vertical_scale_factor / horizontal_scale_factor;
         cast_radius *= r;
         Vec2::new(1.0, r)
     } else {
-        let r = horizontal_scale / vertical_scale;
+        let r = horizontal_scale_factor / vertical_scale_factor;
         cast_radius *= r;
         Vec2::new(r, 1.0)
     };
@@ -227,8 +231,8 @@ pub fn handle_mouse_cast_spell_trigger(
             active_cast.drag_radius,
             mask_size.0,
             active_cast.original_size,
-            active_cast.horizontal_scale,
-            active_cast.vertical_scale,
+            active_cast.horizontal_scale_factor,
+            active_cast.vertical_scale_factor,
         );
         ControlMsgHelper::send_touch(
             &cs_tx_res.0,
@@ -298,8 +302,8 @@ pub fn handle_mouse_cast_spell(
                             mapping.drag_radius,
                             mask_size.0,
                             original_size,
-                            mapping.horizontal_scale,
-                            mapping.vertical_scale,
+                            mapping.horizontal_scale_factor,
+                            mapping.vertical_scale_factor,
                         );
                         let delta = new_pos - current_pos;
                         let steps = std::cmp::max(
@@ -340,8 +344,8 @@ pub fn handle_mouse_cast_spell(
                             mapping.drag_radius,
                             center_pos,
                             mapping.cast_radius,
-                            mapping.horizontal_scale,
-                            mapping.vertical_scale,
+                            mapping.horizontal_scale_factor,
+                            mapping.vertical_scale_factor,
                             mapping.cast_no_direction,
                         ))
                     }
@@ -381,8 +385,8 @@ pub enum PadCastReleaseMode {
     OnSecondPress,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingPadCastSpell {
+#[derive(Debug, Clone)]
+pub struct BindMappingPadCastSpell {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -396,33 +400,38 @@ pub struct MappingPadCastSpell {
     pub input_binding: InputBinding,
 }
 
-impl MappingPadCastSpell {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        position: Position,
-        release_mode: PadCastReleaseMode,
-        drag_radius: f32,
-        block_direction_pad: bool,
-        pad_action: MappingAction,
-        pad_bind: DirectionBinding,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        return Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            position,
-            drag_radius,
-            release_mode,
-            block_direction_pad,
-            pad_action,
-            pad_bind: pad_bind.clone(),
-            pad_input_binding: pad_bind.into(),
-            bind: bind.clone(),
-            input_binding: ContinuousBinding::hold(bind).0,
-        });
+impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
+    fn from(value: MappingPadCastSpell) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            position: value.position,
+            release_mode: value.release_mode,
+            drag_radius: value.drag_radius,
+            block_direction_pad: value.block_direction_pad,
+            pad_action: value.pad_action,
+            pad_bind: value.pad_bind.clone(),
+            pad_input_binding: value.pad_bind.into(),
+            bind: value.bind.clone(),
+            input_binding: ContinuousBinding::hold(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingPadCastSpell {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub release_mode: PadCastReleaseMode,
+    pub drag_radius: f32,
+    pub block_direction_pad: bool,
+    pub pad_action: MappingAction,
+    pub pad_bind: DirectionBinding,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingPadCastSpell {}
 
 fn scale_direction_2d_state(d_state: Vec2, drag_radius: f32) -> Vec2 {
     if d_state.x == 0.0 && d_state.y == 0.0 {
@@ -569,24 +578,33 @@ pub fn handle_pad_cast_spell(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingCancelCast {
+#[derive(Debug, Clone)]
+pub struct BindMappingCancelCast {
     pub note: String,
     pub position: Position,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
 
-impl MappingCancelCast {
-    pub fn new(note: &str, position: Position, bind: ButtonBinding) -> Result<Self, String> {
-        Ok(Self {
-            note: note.to_string(),
-            position,
-            bind: bind.clone(),
-            input_binding: PulseBinding::just_pressed(bind).0,
-        })
+impl From<MappingCancelCast> for BindMappingCancelCast {
+    fn from(value: MappingCancelCast) -> Self {
+        Self {
+            position: value.position,
+            note: value.note,
+            bind: value.bind.clone(),
+            input_binding: PulseBinding::just_pressed(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingCancelCast {
+    pub note: String,
+    pub position: Position,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingCancelCast {}
 
 pub fn handle_cancel_cast(
     ineffable: Res<Ineffable>,

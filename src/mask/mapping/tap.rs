@@ -16,7 +16,7 @@ use tokio::time::sleep;
 use crate::{
     mask::{
         mapping::{
-            binding::ButtonBinding,
+            binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
             utils::{ControlMsgHelper, Position},
         },
@@ -30,8 +30,8 @@ pub fn tap_init(mut commands: Commands) {
     commands.insert_resource(ActiveRepeatTapMap::default());
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingSingleTap {
+#[derive(Debug, Clone)]
+pub struct BindMappingSingleTap {
     pub position: Position,
     pub note: String,
     pub pointer_id: u64,
@@ -41,26 +41,31 @@ pub struct MappingSingleTap {
     pub input_binding: InputBinding,
 }
 
-impl MappingSingleTap {
-    pub fn new(
-        position: Position,
-        note: &str,
-        pointer_id: u64,
-        duration: u64,
-        sync: bool,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            position,
-            note: note.to_string(),
-            pointer_id,
-            duration,
-            sync,
-            bind: bind.clone(),
-            input_binding: ContinuousBinding::hold(bind).0,
-        })
+impl From<MappingSingleTap> for BindMappingSingleTap {
+    fn from(value: MappingSingleTap) -> Self {
+        Self {
+            position: value.position,
+            note: value.note,
+            pointer_id: value.pointer_id,
+            duration: value.duration,
+            sync: value.sync,
+            bind: value.bind.clone(),
+            input_binding: ContinuousBinding::hold(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingSingleTap {
+    pub position: Position,
+    pub note: String,
+    pub pointer_id: u64,
+    pub duration: u64,
+    pub sync: bool,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingSingleTap {}
 
 pub fn handle_single_tap(
     ineffable: Res<Ineffable>,
@@ -123,8 +128,8 @@ pub fn handle_single_tap(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingRepeatTap {
+#[derive(Debug, Clone)]
+pub struct BindMappingRepeatTap {
     pub position: Position,
     pub note: String,
     pub pointer_id: u64,
@@ -134,26 +139,31 @@ pub struct MappingRepeatTap {
     pub input_binding: InputBinding,
 }
 
-impl MappingRepeatTap {
-    pub fn new(
-        position: Position,
-        note: &str,
-        pointer_id: u64,
-        duration: u64,
-        interval: u32,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            position,
-            note: note.to_string(),
-            pointer_id,
-            duration,
-            interval,
-            bind: bind.clone(),
-            input_binding: ContinuousBinding::hold(bind).0,
-        })
+impl From<MappingRepeatTap> for BindMappingRepeatTap {
+    fn from(value: MappingRepeatTap) -> Self {
+        Self {
+            position: value.position,
+            note: value.note,
+            pointer_id: value.pointer_id,
+            duration: value.duration,
+            interval: value.interval,
+            bind: value.bind.clone(),
+            input_binding: ContinuousBinding::hold(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingRepeatTap {
+    pub position: Position,
+    pub note: String,
+    pub pointer_id: u64,
+    pub duration: u64,
+    pub interval: u32,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingRepeatTap {}
 
 #[derive(Resource, Default)]
 pub struct ActiveRepeatTapMap(HashMap<String, RepeatTapTimer>);
@@ -241,8 +251,8 @@ pub struct MappingMultipleTapItem {
     pub wait: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingMultipleTap {
+#[derive(Debug, Clone)]
+pub struct BindMappingMultipleTap {
     pub note: String,
     pub pointer_id: u64,
     pub items: Vec<MappingMultipleTapItem>,
@@ -250,24 +260,32 @@ pub struct MappingMultipleTap {
     pub input_binding: InputBinding,
 }
 
-impl MappingMultipleTap {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        items: Vec<MappingMultipleTapItem>,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        if items.is_empty() {
+impl From<MappingMultipleTap> for BindMappingMultipleTap {
+    fn from(value: MappingMultipleTap) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            items: value.items,
+            bind: value.bind.clone(),
+            input_binding: PulseBinding::just_pressed(value.bind).0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingMultipleTap {
+    pub note: String,
+    pub pointer_id: u64,
+    pub items: Vec<MappingMultipleTapItem>,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingMultipleTap {
+    fn validate(&self) -> Result<(), String> {
+        if self.items.is_empty() {
             return Err("MultipleTap's operation item list is empty".to_string());
         }
-
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            items,
-            bind: bind.clone(),
-            input_binding: PulseBinding::just_pressed(bind).0,
-        })
+        Ok(())
     }
 }
 

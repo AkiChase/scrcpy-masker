@@ -5,7 +5,7 @@ use crate::{
     mask::{
         mapping::{
             MappingState,
-            config::{ActiveMappingConfig, MappingType},
+            config::{ActiveMappingConfig, BindMappingType},
         },
         mask_command::MaskSize,
     },
@@ -19,9 +19,14 @@ impl Plugin for MappingLabelPlugin {
             .add_systems(
                 Update,
                 (
-                    update_labels
-                        .run_if(resource_changed::<MaskSize>.or(resource_changed::<LabelOpacity>)),
                     redraw_normal_mapping_label.run_if(resource_changed::<ActiveMappingConfig>),
+                    update_labels
+                        .run_if(
+                            resource_changed::<MaskSize>
+                                .or(resource_changed::<LabelOpacity>)
+                                .or(resource_changed::<ActiveMappingConfig>),
+                        )
+                        .after(redraw_normal_mapping_label),
                 ),
             )
             .add_systems(
@@ -73,7 +78,7 @@ fn redraw_normal_mapping_label(
             .for_each(|(mapping, binding, pos, size)| {
                 if binding.is_empty() {
                     match mapping {
-                        MappingType::DirectionPad(mapping_direction_pad) => {
+                        BindMappingType::DirectionPad(mapping_direction_pad) => {
                             create_pad_label(
                                 &mut commands,
                                 mapping_direction_pad
@@ -86,7 +91,7 @@ fn redraw_normal_mapping_label(
                                 size,
                             );
                         }
-                        MappingType::PadCastSpell(mapping_pad_cast_spell) => {
+                        BindMappingType::PadCastSpell(mapping_pad_cast_spell) => {
                             let mut bindings = mapping_pad_cast_spell.pad_bind.to_string_vec();
                             bindings.push(mapping_pad_cast_spell.bind.to_string());
                             create_pad_label(

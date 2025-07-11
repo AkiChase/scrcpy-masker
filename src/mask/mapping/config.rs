@@ -3,6 +3,7 @@ use std::{
     fs::{File, create_dir_all},
     io::Write,
     path::Path,
+    str::FromStr,
 };
 
 use bevy::{
@@ -19,29 +20,33 @@ use paste::paste;
 use seq_macro::seq;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
-use strum_macros::{AsRefStr, Display};
+use strum_macros::{AsRefStr, Display, EnumString};
 
 use crate::{
     mask::mapping::{
-        binding::{ButtonBinding, DirectionBinding},
+        binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
         cast_spell::{
+            BindMappingCancelCast, BindMappingMouseCastSpell, BindMappingPadCastSpell,
             MappingCancelCast, MappingMouseCastSpell, MappingPadCastSpell, MouseCastReleaseMode,
             PadCastReleaseMode,
         },
-        direction_pad::MappingDirectionPad,
-        fire::{MappingFire, MappingFps},
-        observation::MappingObservation,
-        raw_input::MappingRawInput,
-        swipe::MappingSwipe,
-        tap::{MappingMultipleTap, MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap},
+        direction_pad::{BindMappingDirectionPad, MappingDirectionPad},
+        fire::{BindMappingFire, BindMappingFps, MappingFire, MappingFps},
+        observation::{BindMappingObservation, MappingObservation},
+        raw_input::{BindMappingRawInput, MappingRawInput},
+        swipe::{BindMappingSwipe, MappingSwipe},
+        tap::{
+            BindMappingMultipleTap, BindMappingRepeatTap, BindMappingSingleTap, MappingMultipleTap,
+            MappingMultipleTapItem, MappingRepeatTap, MappingSingleTap,
+        },
         utils::Size,
     },
-    utils::relate_to_root_path,
+    utils::{is_safe_file_name, relate_to_root_path},
 };
 
 // declare 32 actions for each kind of key mapping
 seq!(N in 1..=32 {
-    #[derive(InputAction, Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, AsRefStr, Display)]
+    #[derive(InputAction, Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, AsRefStr, Display, EnumString)]
     pub enum MappingAction {
         #(
             #[ineffable(continuous)]
@@ -113,36 +118,8 @@ seq!(N in 1..=32 {
     }
 });
 
-macro_rules! impl_mapping_type_methods {
-    (
-        $enum_name:ident {
-            $($variant:ident => $type_name:ident),* $(,)?
-        }
-    ) => {
-        impl $enum_name {
-            pub fn get_input_binding(&self) -> InputBinding {
-                match self {
-                    $(
-                        $enum_name::$variant(inner) => inner.input_binding.clone(),
-                    )*
-                }
-            }
-
-            $(
-                paste! {
-                    pub fn [<as_ref_ $variant:lower>](&self) -> &$type_name {
-                        match self {
-                            $enum_name::$variant(inner) => inner,
-                            _ => panic!(concat!("Not a ", stringify!($variant), " mapping")),
-                        }
-                    }
-                }
-            )*
-        }
-    };
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, AsRefStr)]
+#[serde(tag = "type")]
 pub enum MappingType {
     SingleTap(MappingSingleTap),
     RepeatTap(MappingRepeatTap),
@@ -158,21 +135,80 @@ pub enum MappingType {
     RawInput(MappingRawInput),
 }
 
-impl_mapping_type_methods! {
-    MappingType {
-        SingleTap => MappingSingleTap,
-        RepeatTap => MappingRepeatTap,
-        MultipleTap => MappingMultipleTap,
-        Swipe => MappingSwipe,
-        DirectionPad => MappingDirectionPad,
-        MouseCastSpell => MappingMouseCastSpell,
-        PadCastSpell => MappingPadCastSpell,
-        CancelCast => MappingCancelCast,
-        Observation => MappingObservation,
-        Fps => MappingFps,
-        Fire => MappingFire,
-        RawInput => MappingRawInput,
-    }
+#[derive(Debug, Clone)]
+pub enum BindMappingType {
+    SingleTap(BindMappingSingleTap),
+    RepeatTap(BindMappingRepeatTap),
+    MultipleTap(BindMappingMultipleTap),
+    Swipe(BindMappingSwipe),
+    DirectionPad(BindMappingDirectionPad),
+    MouseCastSpell(BindMappingMouseCastSpell),
+    PadCastSpell(BindMappingPadCastSpell),
+    CancelCast(BindMappingCancelCast),
+    Observation(BindMappingObservation),
+    Fps(BindMappingFps),
+    Fire(BindMappingFire),
+    RawInput(BindMappingRawInput),
+}
+
+macro_rules! impl_mapping_related {
+    ( $($variant:ident),* $(,)? ) => {
+        impl ValidateMappingConfig for MappingType {
+            fn validate(&self) -> Result<(), String> {
+                match self {
+                    $(
+                        MappingType::$variant(v) => v.validate(),
+                    )*
+                }
+            }
+        }
+
+        impl From<MappingType> for BindMappingType {
+            fn from(value: MappingType) -> Self {
+                match value {
+                    $(
+                        MappingType::$variant(v) => Self::$variant(v.into()),
+                    )*
+                }
+            }
+        }
+
+        impl BindMappingType {
+            pub fn get_input_binding(&self) -> InputBinding {
+                match self {
+                    $(
+                        BindMappingType::$variant(inner) => inner.input_binding.clone(),
+                    )*
+                }
+            }
+
+            $(
+                paste! {
+                    pub fn [<as_ref_ $variant:lower>](&self) -> & [<BindMapping $variant>] {
+                        match self {
+                            BindMappingType::$variant(inner) => inner,
+                            _ => panic!(concat!("Not a ", stringify!($variant), " mapping")),
+                        }
+                    }
+                }
+            )*
+        }
+    };
+}
+
+impl_mapping_related! {
+    SingleTap,
+    RepeatTap,
+    MultipleTap,
+    Swipe,
+    DirectionPad,
+    MouseCastSpell,
+    PadCastSpell,
+    CancelCast,
+    Observation,
+    Fps,
+    Fire,
+    RawInput,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -180,28 +216,62 @@ pub struct MappingConfig {
     pub version: String,
     pub title: String,
     pub original_size: Size,
-    pub mappings: HashMap<MappingAction, MappingType>,
+    pub mappings: Vec<MappingType>,
 }
 
-impl MappingConfig {
-    pub fn get_mapping_label_info(&self) -> Vec<(&MappingType, String, Vec2, Vec2)> {
+#[derive(Debug, Clone)]
+pub struct BindMappingConfig {
+    pub version: String,
+    pub title: String,
+    pub original_size: Size,
+    pub mappings: HashMap<MappingAction, BindMappingType>,
+}
+
+impl From<MappingConfig> for BindMappingConfig {
+    fn from(value: MappingConfig) -> Self {
+        let mut mappings = HashMap::<MappingAction, BindMappingType>::new();
+        let mut mapping_type_map = HashMap::<String, u32>::new();
+        for mapping in value.mappings.into_iter() {
+            let name = mapping.as_ref();
+            let count = *mapping_type_map
+                .entry(name.to_string())
+                .and_modify(|c| *c += 1)
+                .or_insert(1);
+            let action_name = format!("{}{}", name, count);
+            let action = MappingAction::from_str(&action_name).unwrap();
+            mappings.insert(action, mapping.into());
+        }
+
+        Self {
+            version: value.version,
+            title: value.title,
+            original_size: value.original_size,
+            mappings,
+        }
+    }
+}
+
+impl BindMappingConfig {
+    pub fn get_mapping_label_info(&self) -> Vec<(&BindMappingType, String, Vec2, Vec2)> {
         let size: Vec2 = self.original_size.into();
         self.mappings
             .iter()
             .map(|(_, mapping)| {
                 let (binding, pos): (String, Vec2) = match mapping {
-                    MappingType::SingleTap(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::RepeatTap(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::MultipleTap(m) => (m.bind.to_string(), m.items[0].position.into()),
-                    MappingType::Swipe(m) => (m.bind.to_string(), m.positions[0].into()),
-                    MappingType::DirectionPad(m) => (String::new(), m.position.into()),
-                    MappingType::MouseCastSpell(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::PadCastSpell(m) => (String::new(), m.position.into()),
-                    MappingType::CancelCast(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::Observation(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::Fps(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::Fire(m) => (m.bind.to_string(), m.position.into()),
-                    MappingType::RawInput(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::SingleTap(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::RepeatTap(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::MultipleTap(m) => {
+                        (m.bind.to_string(), m.items[0].position.into())
+                    }
+                    BindMappingType::Swipe(m) => (m.bind.to_string(), m.positions[0].into()),
+                    BindMappingType::DirectionPad(m) => (String::new(), m.position.into()),
+                    BindMappingType::MouseCastSpell(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::PadCastSpell(m) => (String::new(), m.position.into()),
+                    BindMappingType::CancelCast(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::Observation(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::Fps(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::Fire(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::RawInput(m) => (m.bind.to_string(), m.position.into()),
                 };
                 (mapping, binding, pos, size)
             })
@@ -209,12 +279,12 @@ impl MappingConfig {
     }
 }
 
-impl From<&MappingConfig> for InputConfig {
-    fn from(mapping_config: &MappingConfig) -> Self {
+impl From<&BindMappingConfig> for InputConfig {
+    fn from(mapping_config: &BindMappingConfig) -> Self {
         let mut all_bindings: HashMap<String, Vec<InputBinding>> = HashMap::new();
 
         for (action, mapping) in &mapping_config.mappings {
-            if let MappingType::PadCastSpell(m) = mapping {
+            if let BindMappingType::PadCastSpell(m) = mapping {
                 all_bindings.insert(action.to_string(), vec![m.input_binding.clone()]);
                 all_bindings.insert(m.pad_action.to_string(), vec![m.pad_input_binding.clone()]);
             } else {
@@ -231,7 +301,7 @@ impl From<&MappingConfig> for InputConfig {
 }
 
 #[derive(Resource, Debug, Clone, Default)]
-pub struct ActiveMappingConfig(pub Option<MappingConfig>);
+pub struct ActiveMappingConfig(pub Option<BindMappingConfig>, pub String);
 
 pub fn default_mapping_config() -> MappingConfig {
     MappingConfig {
@@ -241,338 +311,265 @@ pub fn default_mapping_config() -> MappingConfig {
             width: 2560,
             height: 1440,
         },
-        mappings: HashMap::from([
-            (
-                MappingAction::SingleTap1,
-                MappingType::SingleTap(
-                    MappingSingleTap::new(
-                        (100, 100).into(),
-                        "SingleTap (duration)",
-                        1,
-                        1000,
-                        false,
-                        ButtonBinding::new(vec![KeyCode::Digit1.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::SingleTap2,
-                MappingType::SingleTap(
-                    MappingSingleTap::new(
-                        (200, 100).into(),
-                        "SingleTap (sync)",
-                        1,
-                        0,
-                        true,
-                        ButtonBinding::new(vec![KeyCode::Digit2.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::RepeatTap1,
-                MappingType::RepeatTap(
-                    MappingRepeatTap::new(
-                        (250, 200).into(),
-                        "RepeatTap",
-                        1,
-                        30,
-                        100,
-                        ButtonBinding::new(vec![KeyCode::Digit3.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::RepeatTap2,
-                MappingType::RepeatTap(
-                    MappingRepeatTap::new(
-                        (250, 250).into(),
-                        "RepeatTap (multi-binding)",
-                        2,
-                        30,
-                        100,
-                        ButtonBinding::new(vec![
-                            KeyCode::ControlLeft.into(),
-                            KeyCode::Digit3.into(),
-                        ]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::MultipleTap1,
-                MappingType::MultipleTap(
-                    MappingMultipleTap::new(
-                        "MultipleTap",
-                        1,
-                        vec![
-                            MappingMultipleTapItem {
-                                position: (100, 100).into(),
-                                duration: 500,
-                                wait: 0,
-                            },
-                            MappingMultipleTapItem {
-                                position: (200, 200).into(),
-                                duration: 500,
-                                wait: 1000,
-                            },
-                            MappingMultipleTapItem {
-                                position: (300, 300).into(),
-                                duration: 500,
-                                wait: 1000,
-                            },
-                        ],
-                        ButtonBinding::new(vec![KeyCode::Digit4.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::Swipe1,
-                MappingType::Swipe(
-                    MappingSwipe::new(
-                        "Swipe",
-                        1,
-                        vec![(100, 100).into(), (200, 200).into(), (300, 300).into()],
-                        1000,
-                        ButtonBinding::new(vec![KeyCode::Digit5.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::DirectionPad1,
-                MappingType::DirectionPad(
-                    MappingDirectionPad::new(
-                        "DirectionPad",
-                        9,
-                        (300, 1000).into(),
-                        100,
-                        100.,
-                        100.,
-                        DirectionBinding::Button {
-                            up: KeyCode::KeyW.into(),
-                            down: KeyCode::KeyS.into(),
-                            left: KeyCode::KeyA.into(),
-                            right: KeyCode::KeyD.into(),
-                        },
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::DirectionPad2,
-                MappingType::DirectionPad(
-                    MappingDirectionPad::new(
-                        "DirectionPad gamepad",
-                        9,
-                        (500, 1000).into(),
-                        300,
-                        100.,
-                        100.,
-                        DirectionBinding::JoyStick {
-                            x: GamepadAxis::LeftStickX,
-                            y: GamepadAxis::LeftStickY,
-                        },
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::Fps1,
-                MappingType::Fps(
-                    MappingFps::new(
-                        "FPS",
-                        0,
-                        (1280, 720).into(),
-                        2.,
-                        1.,
-                        ButtonBinding::new(vec![KeyCode::Backquote.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::MouseCastSpell1,
-                MappingType::MouseCastSpell(
-                    MappingMouseCastSpell::new(
-                        "MouseCastSpell (no direction)",
-                        3,
-                        (1900, 1150).into(),
-                        (1280, 815).into(),
-                        1.,
-                        0.7,
-                        150.,
-                        625.,
-                        MouseCastReleaseMode::OnRelease,
-                        true,
-                        ButtonBinding::new(vec![KeyCode::KeyE.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::MouseCastSpell2,
-                MappingType::MouseCastSpell(
-                    MappingMouseCastSpell::new(
-                        "MouseCastSpell (press to release)",
-                        3,
-                        (1900, 1150).into(),
-                        (1280, 815).into(),
-                        1.,
-                        0.7,
-                        150.,
-                        625.,
-                        MouseCastReleaseMode::OnPress,
-                        false,
-                        ButtonBinding::new(vec![KeyCode::KeyQ.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::MouseCastSpell3,
-                MappingType::MouseCastSpell(
-                    MappingMouseCastSpell::new(
-                        "MouseCastSpell (second press to release)",
-                        3,
-                        (2100, 1030).into(),
-                        (1280, 815).into(),
-                        1.,
-                        0.7,
-                        150.,
-                        625.,
-                        MouseCastReleaseMode::OnSecondPress,
-                        true,
-                        ButtonBinding::new(vec![KeyCode::AltLeft.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::MouseCastSpell4,
-                MappingType::MouseCastSpell(
-                    MappingMouseCastSpell::new(
-                        "MouseCastSpell",
-                        3,
-                        (2250, 900).into(),
-                        (1280, 815).into(),
-                        1.,
-                        0.7,
-                        150.,
-                        625.,
-                        MouseCastReleaseMode::OnRelease,
-                        false,
-                        ButtonBinding::new(vec![MouseButton::Back.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::PadCastSpell1,
-                MappingType::PadCastSpell(
-                    MappingPadCastSpell::new(
-                        "PadCastSpell",
-                        3,
-                        (2000, 750).into(),
-                        PadCastReleaseMode::OnRelease,
-                        150.,
-                        true,
-                        MappingAction::PadCastDirection1,
-                        DirectionBinding::Button {
-                            up: KeyCode::KeyW.into(),
-                            down: KeyCode::KeyS.into(),
-                            left: KeyCode::KeyA.into(),
-                            right: KeyCode::KeyD.into(),
-                        },
-                        ButtonBinding::new(vec![KeyCode::KeyJ.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::CancelCast1,
-                MappingType::CancelCast(
-                    MappingCancelCast::new(
-                        "CancelCast",
-                        (2200, 175).into(),
-                        ButtonBinding::new(vec![KeyCode::Space.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::Observation1,
-                MappingType::Observation(
-                    MappingObservation::new(
-                        "Observation",
-                        4,
-                        (2000, 300).into(),
-                        0.5,
-                        0.5,
-                        ButtonBinding::new(vec![MouseButton::Forward.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::Fps1,
-                MappingType::Fps(
-                    MappingFps::new(
-                        "FPS",
-                        0,
-                        (1280, 720).into(),
-                        2.,
-                        1.,
-                        ButtonBinding::new(vec![MouseButton::Right.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::Fire1,
-                MappingType::Fire(
-                    MappingFire::new(
-                        "Fire",
-                        1,
-                        (2000, 1000).into(),
-                        1.,
-                        0.5,
-                        ButtonBinding::new(vec![MouseButton::Left.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-            (
-                MappingAction::RawInput1,
-                MappingType::RawInput(
-                    MappingRawInput::new(
-                        "RawInput",
-                        (2000, 300).into(),
-                        ButtonBinding::new(vec![KeyCode::Enter.into()]),
-                    )
-                    .unwrap(),
-                ),
-            ),
-        ]),
+        mappings: vec![
+            MappingType::SingleTap(MappingSingleTap {
+                position: (100, 100).into(),
+                note: "SingleTap".to_string(),
+                pointer_id: 1,
+                duration: 1000,
+                sync: false,
+                bind: ButtonBinding::new(vec![KeyCode::Digit1.into()]),
+            }),
+            MappingType::SingleTap(MappingSingleTap {
+                position: (200, 100).into(),
+                note: "SingleTap (sync)".to_string(),
+                pointer_id: 1,
+                duration: 0,
+                sync: true,
+                bind: ButtonBinding::new(vec![KeyCode::Digit2.into()]),
+            }),
+            MappingType::RepeatTap(MappingRepeatTap {
+                position: (250, 200).into(),
+                note: "RepeatTap".to_string(),
+                pointer_id: 1,
+                duration: 30,
+                interval: 100,
+                bind: ButtonBinding::new(vec![KeyCode::Digit3.into()]),
+            }),
+            MappingType::RepeatTap(MappingRepeatTap {
+                position: (250, 250).into(),
+                note: "RepeatTap (multi-binding)".to_string(),
+                pointer_id: 2,
+                duration: 30,
+                interval: 100,
+                bind: ButtonBinding::new(vec![KeyCode::ControlLeft.into(), KeyCode::Digit3.into()]),
+            }),
+            MappingType::MultipleTap(MappingMultipleTap {
+                note: "MultipleTap".to_string(),
+                pointer_id: 1,
+                items: vec![
+                    MappingMultipleTapItem {
+                        position: (100, 100).into(),
+                        duration: 500,
+                        wait: 0,
+                    },
+                    MappingMultipleTapItem {
+                        position: (200, 200).into(),
+                        duration: 500,
+                        wait: 1000,
+                    },
+                    MappingMultipleTapItem {
+                        position: (300, 300).into(),
+                        duration: 500,
+                        wait: 1000,
+                    },
+                ],
+                bind: ButtonBinding::new(vec![KeyCode::Digit4.into()]),
+            }),
+            MappingType::Swipe(MappingSwipe {
+                note: "Swipe".to_string(),
+                pointer_id: 1,
+                positions: vec![(100, 100).into(), (200, 200).into(), (300, 300).into()],
+                interval: 1000,
+                bind: ButtonBinding::new(vec![KeyCode::Digit5.into()]),
+            }),
+            MappingType::DirectionPad(MappingDirectionPad {
+                note: "DirectionPad".to_string(),
+                pointer_id: 9,
+                position: (300, 1000).into(),
+                initial_duration: 100,
+                max_offset_x: 100.,
+                max_offset_y: 100.,
+                bind: DirectionBinding::Button {
+                    up: KeyCode::KeyW.into(),
+                    down: KeyCode::KeyS.into(),
+                    left: KeyCode::KeyA.into(),
+                    right: KeyCode::KeyD.into(),
+                },
+            }),
+            MappingType::DirectionPad(MappingDirectionPad {
+                note: "DirectionPad gamepad".to_string(),
+                pointer_id: 9,
+                position: (500, 1000).into(),
+                initial_duration: 300,
+                max_offset_x: 100.,
+                max_offset_y: 100.,
+                bind: DirectionBinding::JoyStick {
+                    x: GamepadAxis::LeftStickX,
+                    y: GamepadAxis::LeftStickY,
+                },
+            }),
+            MappingType::Fps(MappingFps {
+                note: "FPS".to_string(),
+                pointer_id: 0,
+                position: (1280, 720).into(),
+                sensitivity_x: 1.2,
+                sensitivity_y: 1.,
+                bind: ButtonBinding::new(vec![KeyCode::Backquote.into()]),
+            }),
+            MappingType::MouseCastSpell(MappingMouseCastSpell {
+                note: "MouseCastSpell (no direction)".to_string(),
+                pointer_id: 3,
+                position: (1900, 1150).into(),
+                center: (1280, 815).into(),
+                horizontal_scale_factor: 1.,
+                vertical_scale_factor: 0.7,
+                drag_radius: 150.,
+                cast_radius: 625.,
+                release_mode: MouseCastReleaseMode::OnRelease,
+                cast_no_direction: true,
+                bind: ButtonBinding::new(vec![KeyCode::KeyE.into()]),
+            }),
+            MappingType::MouseCastSpell(MappingMouseCastSpell {
+                note: "MouseCastSpell (press to release)".to_string(),
+                pointer_id: 3,
+                position: (1900, 1150).into(),
+                center: (1280, 815).into(),
+                horizontal_scale_factor: 1.0,
+                vertical_scale_factor: 0.7,
+                drag_radius: 150.0,
+                cast_radius: 625.0,
+                release_mode: MouseCastReleaseMode::OnPress,
+                cast_no_direction: false,
+                bind: ButtonBinding::new(vec![KeyCode::KeyQ.into()]),
+            }),
+            MappingType::MouseCastSpell(MappingMouseCastSpell {
+                note: "MouseCastSpell (second press to release)".to_string(),
+                pointer_id: 3,
+                position: (2100, 1030).into(),
+                center: (1280, 815).into(),
+                horizontal_scale_factor: 1.0,
+                vertical_scale_factor: 0.7,
+                drag_radius: 150.0,
+                cast_radius: 625.0,
+                release_mode: MouseCastReleaseMode::OnSecondPress,
+                cast_no_direction: true,
+                bind: ButtonBinding::new(vec![KeyCode::AltLeft.into()]),
+            }),
+            MappingType::MouseCastSpell(MappingMouseCastSpell {
+                note: "MouseCastSpell".to_string(),
+                pointer_id: 3,
+                position: (2250, 900).into(),
+                center: (1280, 815).into(),
+                horizontal_scale_factor: 1.0,
+                vertical_scale_factor: 0.7,
+                drag_radius: 150.0,
+                cast_radius: 625.0,
+                release_mode: MouseCastReleaseMode::OnRelease,
+                cast_no_direction: false,
+                bind: ButtonBinding::new(vec![MouseButton::Back.into()]),
+            }),
+            MappingType::PadCastSpell(MappingPadCastSpell {
+                note: "PadCastSpell".to_string(),
+                pointer_id: 3,
+                position: (2000, 750).into(),
+                release_mode: PadCastReleaseMode::OnRelease,
+                drag_radius: 150.0,
+                block_direction_pad: true,
+                pad_action: MappingAction::PadCastDirection1,
+                pad_bind: DirectionBinding::Button {
+                    up: KeyCode::KeyW.into(),
+                    down: KeyCode::KeyS.into(),
+                    left: KeyCode::KeyA.into(),
+                    right: KeyCode::KeyD.into(),
+                },
+                bind: ButtonBinding::new(vec![KeyCode::KeyJ.into()]),
+            }),
+            MappingType::CancelCast(MappingCancelCast {
+                note: "CancelCast".to_string(),
+                position: (2200, 175).into(),
+                bind: ButtonBinding::new(vec![KeyCode::Space.into()]),
+            }),
+            MappingType::Observation(MappingObservation {
+                note: "Observation".to_string(),
+                pointer_id: 4,
+                position: (2000, 300).into(),
+                sensitivity_x: 0.5,
+                sensitivity_y: 0.5,
+                bind: ButtonBinding::new(vec![MouseButton::Forward.into()]),
+            }),
+            MappingType::Fps(MappingFps {
+                note: "FPS".to_string(),
+                pointer_id: 0,
+                position: (1280, 720).into(),
+                sensitivity_x: 2.0,
+                sensitivity_y: 1.0,
+                bind: ButtonBinding::new(vec![MouseButton::Right.into()]),
+            }),
+            MappingType::Fire(MappingFire {
+                note: "Fire".to_string(),
+                pointer_id: 1,
+                position: (2000, 1000).into(),
+                sensitivity_x: 1.0,
+                sensitivity_y: 0.5,
+                bind: ButtonBinding::new(vec![MouseButton::Left.into()]),
+            }),
+            MappingType::RawInput(MappingRawInput {
+                note: "RawInput".to_string(),
+                position: (2000, 300).into(),
+                bind: ButtonBinding::new(vec![KeyCode::Enter.into()]),
+            }),
+        ],
     }
+}
+
+pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), String> {
+    let mut validate_errors = Vec::<String>::new();
+
+    let mut mapping_type_map = HashMap::<String, u32>::new();
+    for mapping in mapping_config.mappings.iter() {
+        let name = mapping.as_ref();
+        let count = *mapping_type_map
+            .entry(name.to_string())
+            .and_modify(|c| *c += 1)
+            .or_insert(1);
+        if count > 32 {
+            validate_errors.push(format!("Mapping action '{name}' exceeds the maximum allowed count (current: {count}, max: 32)"));
+        }
+
+        if let Err(e) = mapping.validate() {
+            validate_errors.push(e);
+        }
+    }
+
+    if !validate_errors.is_empty() {
+        let mut validate_errors: Vec<String> = validate_errors
+            .into_iter()
+            .enumerate()
+            .map(|(i, err)| format!("{}. {}", i + 1, err))
+            .collect();
+        validate_errors.insert(0, "Mapping config validation failed:".to_string());
+        return Err(validate_errors.join("\n"));
+    }
+    Ok(())
 }
 
 pub fn load_mapping_config(
     file_name: impl AsRef<str>,
-) -> Result<(MappingConfig, InputConfig), String> {
+) -> Result<(BindMappingConfig, InputConfig), String> {
+    if !is_safe_file_name(file_name.as_ref()) {
+        return Err(format!("File name is not safe: {}", file_name.as_ref()));
+    }
+
     // load from file
     let path = relate_to_root_path(["local", "mapping", file_name.as_ref()]);
+    if !path.exists() {
+        return Err(format!(
+            "Mapping config file not found: {}",
+            file_name.as_ref()
+        ));
+    }
+
     let config_string = std::fs::read_to_string(path)
         .map_err(|e| format!("Cannot read mapping config file: {}", e))?;
     let mapping_config: MappingConfig = serde_json::from_str(&config_string)
         .map_err(|e| format!("Cannot deserialize mapping config: {}", e))?;
 
-    let input_config: InputConfig = InputConfig::from(&mapping_config);
+    validate_mapping_config(&mapping_config)?;
 
-    Ok((mapping_config, input_config))
+    let bind_mapping_config: BindMappingConfig = mapping_config.into();
+    let input_config: InputConfig = InputConfig::from(&bind_mapping_config);
+    Ok((bind_mapping_config, input_config))
 }
 
 pub fn save_mapping_config(config: &MappingConfig, path: &Path) -> Result<(), String> {

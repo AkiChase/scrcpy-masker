@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     mask::{
         mapping::{
-            binding::ButtonBinding,
+            binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
             cursor::CursorPosition,
             utils::{ControlMsgHelper, Position},
@@ -29,7 +29,7 @@ pub fn init_observation(mut commands: Commands) {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingObservation {
+pub struct BindMappingObservation {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -39,26 +39,31 @@ pub struct MappingObservation {
     pub input_binding: InputBinding,
 }
 
-impl MappingObservation {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        position: Position,
-        sensitivity_x: f32,
-        sensitivity_y: f32,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            position,
-            sensitivity_x,
-            sensitivity_y,
-            bind: bind.clone(),
-            input_binding: ContinuousBinding::hold(bind).0,
-        })
+impl From<MappingObservation> for BindMappingObservation {
+    fn from(value: MappingObservation) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            position: value.position,
+            sensitivity_x: value.sensitivity_x,
+            sensitivity_y: value.sensitivity_y,
+            bind: value.bind.clone(),
+            input_binding: ContinuousBinding::hold(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingObservation {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub sensitivity_x: f32,
+    pub sensitivity_y: f32,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingObservation {}
 
 #[derive(Resource, Default)]
 pub struct ActiveObservation(HashMap<String, ObservationItem>);

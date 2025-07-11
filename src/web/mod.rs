@@ -119,11 +119,11 @@ impl JsonResponse {
         Self::new(200, message, data)
     }
 
-    pub fn internal_error(message: impl Into<String>, data: Option<Value>) -> Self {
-        Self::new(500, message, data)
+    pub fn internal_error(message: impl Into<String>) -> Self {
+        Self::new(500, message, None)
     }
-    pub fn bad_request(message: impl Into<String>, data: Option<Value>) -> Self {
-        Self::new(400, message, data)
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self::new(400, message, None)
     }
 }
 

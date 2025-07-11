@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     mask::{
         mapping::{
-            binding::ButtonBinding,
+            binding::{ButtonBinding, ValidateMappingConfig},
             config::ActiveMappingConfig,
             cursor::{ActiveCursorFpsConfig, CursorPosition, CursorState, FPS_MARGIN},
             utils::{ControlMsgHelper, Position},
@@ -30,8 +30,8 @@ pub fn fire_init(mut commands: Commands) {
     commands.insert_resource(ActiveFireMap::default());
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingFps {
+#[derive(Debug, Clone)]
+pub struct BindMappingFps {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -41,31 +41,39 @@ pub struct MappingFps {
     pub input_binding: InputBinding,
 }
 
-impl MappingFps {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        position: Position,
-        sensitivity_x: f32,
-        sensitivity_y: f32,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        if position.x <= FPS_MARGIN as i32 || position.y <= FPS_MARGIN as i32 {
+impl From<MappingFps> for BindMappingFps {
+    fn from(value: MappingFps) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            position: value.position,
+            sensitivity_x: value.sensitivity_x,
+            sensitivity_y: value.sensitivity_y,
+            bind: value.bind.clone(),
+            input_binding: PulseBinding::just_pressed(value.bind).0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingFps {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub sensitivity_x: f32,
+    pub sensitivity_y: f32,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingFps {
+    fn validate(&self) -> Result<(), String> {
+        if self.position.x <= FPS_MARGIN as i32 || self.position.y <= FPS_MARGIN as i32 {
             return Err(format!(
                 "Invalid position ({}, {}), x and y must be greater than {}",
-                position.x, position.y, FPS_MARGIN,
+                self.position.x, self.position.y, FPS_MARGIN,
             ));
         }
-
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            position,
-            sensitivity_x,
-            sensitivity_y,
-            bind: bind.clone(),
-            input_binding: PulseBinding::just_pressed(bind).0,
-        })
+        Ok(())
     }
 }
 
@@ -125,8 +133,8 @@ pub fn handle_fps(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingFire {
+#[derive(Debug, Clone)]
+pub struct BindMappingFire {
     pub note: String,
     pub pointer_id: u64,
     pub position: Position,
@@ -136,26 +144,31 @@ pub struct MappingFire {
     pub input_binding: InputBinding,
 }
 
-impl MappingFire {
-    pub fn new(
-        note: &str,
-        pointer_id: u64,
-        position: Position,
-        sensitivity_x: f32,
-        sensitivity_y: f32,
-        bind: ButtonBinding,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            note: note.to_string(),
-            pointer_id,
-            position,
-            sensitivity_x,
-            sensitivity_y,
-            bind: bind.clone(),
-            input_binding: ContinuousBinding::hold(bind).0,
-        })
+impl From<MappingFire> for BindMappingFire {
+    fn from(value: MappingFire) -> Self {
+        Self {
+            note: value.note,
+            pointer_id: value.pointer_id,
+            position: value.position,
+            sensitivity_x: value.sensitivity_x,
+            sensitivity_y: value.sensitivity_y,
+            bind: value.bind.clone(),
+            input_binding: ContinuousBinding::hold(value.bind).0,
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingFire {
+    pub note: String,
+    pub pointer_id: u64,
+    pub position: Position,
+    pub sensitivity_x: f32,
+    pub sensitivity_y: f32,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingFire {}
 
 #[derive(Resource, Default)]
 pub struct ActiveFireMap(HashMap<String, FireItem>);

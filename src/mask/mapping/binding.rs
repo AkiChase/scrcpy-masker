@@ -291,7 +291,7 @@ impl From<ButtonBinding> for ChordLike {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "type", content = "value")]
+#[serde(tag = "type")]
 pub enum DirectionBinding {
     Button {
         up: MergedButton,
@@ -382,5 +382,11 @@ impl DirectionBinding {
                 }
             }
         }
+    }
+}
+
+pub trait ValidateMappingConfig {
+    fn validate(&self) -> Result<(), String> {
+        Ok(())
     }
 }

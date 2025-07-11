@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     mask::mapping::{
         MappingState,
-        binding::ButtonBinding,
+        binding::{ButtonBinding, ValidateMappingConfig},
         config::ActiveMappingConfig,
         utils::{ControlMsgHelper, Position},
     },
@@ -34,24 +34,33 @@ pub fn raw_input_init(mut commands: Commands) {
     commands.insert_resource(RightMouseHoldInstant::default());
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct MappingRawInput {
+#[derive(Debug, Clone)]
+pub struct BindMappingRawInput {
     pub note: String,
     pub position: Position,
     pub bind: ButtonBinding,
     pub input_binding: InputBinding,
 }
 
-impl MappingRawInput {
-    pub fn new(note: &str, position: Position, bind: ButtonBinding) -> Result<Self, String> {
-        Ok(Self {
-            note: note.to_string(),
-            position,
-            bind: bind.clone(),
-            input_binding: PulseBinding::just_released(bind).0, // use release to trigger
-        })
+impl From<MappingRawInput> for BindMappingRawInput {
+    fn from(value: MappingRawInput) -> Self {
+        Self {
+            note: value.note,
+            position: value.position,
+            bind: value.bind.clone(),
+            input_binding: PulseBinding::just_released(value.bind).0, // use release to trigger
+        }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MappingRawInput {
+    pub note: String,
+    pub position: Position,
+    pub bind: ButtonBinding,
+}
+
+impl ValidateMappingConfig for MappingRawInput {}
 
 pub fn handle_raw_input(
     ineffable: Res<Ineffable>,

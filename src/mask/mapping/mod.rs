@@ -17,8 +17,8 @@ use crate::{
     config::LocalConfig,
     mask::mapping::{
         config::{
-            ActiveMappingConfig, MappingAction, default_mapping_config, load_mapping_config,
-            save_mapping_config,
+            ActiveMappingConfig, BindMappingConfig, MappingAction, default_mapping_config,
+            load_mapping_config, save_mapping_config,
         },
         cursor::{CursorPlugins, CursorState},
     },
@@ -39,7 +39,7 @@ impl Plugin for MappingPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((IneffablePlugin, CursorPlugins))
             .insert_state(MappingState::Stop)
-            .insert_resource(ActiveMappingConfig(None))
+            .insert_resource(ActiveMappingConfig(None, String::new()))
             .register_input_action::<MappingAction>()
             .add_systems(
                 Startup,
@@ -102,7 +102,8 @@ impl Plugin for MappingPlugins {
 fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappingConfig>) {
     let config = LocalConfig::get();
 
-    let (mapping_config, input_config) = match load_mapping_config(&config.active_mapping_file) {
+    let (bind_mapping_config, input_config) = match load_mapping_config(&config.active_mapping_file)
+    {
         Ok((mapping_config, input_config)) => {
             log::info!(
                 "[Mask] Using mapping config {}: {}",
@@ -118,13 +119,14 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
             let config_path = relate_to_root_path(["local", "mapping", "default.json"]);
             save_mapping_config(&default_mapping, &config_path).unwrap();
             LocalConfig::set_active_mapping_file("default.json".to_string());
-            let input_config: InputConfig = InputConfig::from(&default_mapping);
-            (default_mapping, input_config)
+            let default_bind_mapping: BindMappingConfig = default_mapping.into();
+            let input_config: InputConfig = InputConfig::from(&default_bind_mapping);
+            (default_bind_mapping, input_config)
         }
     };
-
-    active_mapping.0 = Some(mapping_config);
+    active_mapping.0 = Some(bind_mapping_config);
     ineffable.set_config(&input_config);
 }
 
+// TODO fluent-rs 实现i8n，配置中添加语言选项，支持api来修改。用宏实现fluent-rs消息的获取（不存在panic， fluent有自带的Language优先级回退）
 // TODO 实现一个简单的解释器来完成宏代码的解析和运行
