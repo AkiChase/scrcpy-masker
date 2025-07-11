@@ -1,0 +1,47 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.scrollbar {
+  &::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+    background-color: transparent;
+  }
+
+  &::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--ant-color-text-secondary);
+    border-radius: 3px;
+
+    &:hover {
+      background-color: var(--ant-color-text-tertiary);
+    }
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+.page-container-parent {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-container {
+  height: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+  padding: 16px 32px;
+  @extend .scrollbar;
+}
