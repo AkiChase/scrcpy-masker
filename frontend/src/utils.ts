@@ -40,3 +40,17 @@ export async function requestPost(
 ): Promise<{ message: string; data: any }> {
   return await handleRequest(() => axios.post(url, data, { params }));
 }
+
+export interface ControlledDevice {
+  device_id: string;
+  device_size: [number, number];
+  main: boolean;
+  name: string;
+  scid: string;
+  socket_ids: string[];
+}
+
+export interface AdbDevice {
+  id: string;
+  status: string;
+}

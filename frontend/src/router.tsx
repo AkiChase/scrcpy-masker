@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import { lazy } from "react";
-import LoadingWrapper from "./components/LoadingWrapper";
+import LoadingWrapper from "./components/common/LoadingWrapper";
 import App from "./App";
 
 const Welcome = lazy(() => import("./components/Welcome"));

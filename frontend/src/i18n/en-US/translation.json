@@ -3,5 +3,32 @@
     "devices": "Devices",
     "mappings": "Mappings",
     "settings": "Settings"
+  },
+  "welcome": {
+    "main": "Welcome to Scrcpy Mask 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "connect": {
+        "label": "Wireless connection",
+        "btn": "Connect"
+      },
+      "title": "ADB Tools",
+      "pair": {
+        "label": "Wireless pairing",
+        "btn": "Pair"
+      }
+    },
+    "controlledDevices": {
+      "name": "Name",
+      "action": "Action",
+      "size": "Size",
+      "title": "Controlled Devices"
+    },
+    "otherDevices": {
+      "title": "Other Devices",
+      "action": "Action",
+      "status": "Status"
+    }
   }
 }

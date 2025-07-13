@@ -6,11 +6,19 @@ import { forceSetLocalConfig } from "./store/localConfigReducer";
 import { useEffect } from "react";
 import { Content } from "antd/es/layout/layout";
 import Sider from "./components/Sider";
-import { Outlet } from "react-router-dom";
+import { useLocation, useOutlet } from "react-router-dom";
+import KeepAlive, { useKeepAliveRef } from "keepalive-for-react";
+import LoadingWrapper from "./components/common/LoadingWrapper";
 
 function App() {
   const dispatch = useAppDispatch();
   const [messageApi, contextHolder] = message.useMessage();
+
+  const location = useLocation();
+  const aliveRef = useKeepAliveRef();
+
+  const outlet = useOutlet();
+
   async function loadLocalConfig() {
     try {
       // TODO 临时数据
@@ -45,9 +53,15 @@ function App() {
         <Sider />
         <Layout>
           <Content>
-            <div className="page-container-parent scrollbar">
-              <Outlet />
-            </div>
+            <KeepAlive
+              transition
+              aliveRef={aliveRef}
+              activeCacheKey={location.pathname}
+            >
+              <LoadingWrapper>
+                <div className="page-container-parent scrollbar">{outlet}</div>
+              </LoadingWrapper>
+            </KeepAlive>
           </Content>
         </Layout>
       </Layout>

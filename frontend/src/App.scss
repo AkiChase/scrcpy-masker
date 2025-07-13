@@ -6,6 +6,16 @@ body,
   width: 100%;
 }
 
+.ant-form-item-label {
+  font-weight: bold;
+}
+
+.hide-scrollbar {
+  &::-webkit-scrollbar {
+    display: "none";
+  }
+}
+
 .scrollbar {
   &::-webkit-scrollbar {
     height: 6px;
@@ -28,6 +38,23 @@ body,
 
   &::-webkit-scrollbar-track {
     background-color: transparent;
+  }
+}
+
+.title-with-line {
+  font-size: var(--ant-font-size-heading-4);
+  font-weight: bold;
+  margin: 0;
+  margin-bottom: 24px;
+
+  &::before {
+    content: "";
+    margin-right: 0.4em;
+    display: inline-block;
+    width: 0.2em;
+    height: 1.1em;
+    background-color: var(--ant-color-primary);
+    vertical-align: text-top;
   }
 }
 

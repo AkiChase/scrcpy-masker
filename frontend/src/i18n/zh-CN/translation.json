@@ -3,5 +3,32 @@
     "devices": "设备",
     "mappings": "映射",
     "settings": "设置"
+  },
+  "welcome": {
+    "main": "欢迎来到 Scrcpy Mask 👏🏻"
+  },
+  "devices": {
+    "adbTools": {
+      "title": "ADB工具",
+      "pair": {
+        "label": "无线配对",
+        "btn": "配对"
+      },
+      "connect": {
+        "label": "无线连接",
+        "btn": "连接"
+      }
+    },
+    "controlledDevices": {
+      "name": "名称",
+      "size": "尺寸",
+      "action": "操作",
+      "title": "受控设备"
+    },
+    "otherDevices": {
+      "title": "其他设备",
+      "action": "操作",
+      "status": "状态"
+    }
   }
 }

@@ -18,7 +18,8 @@ createRoot(document.getElementById("root")!).render(
         hashed: false,
         token: {
           colorPrimary: "#b72a20",
-          colorInfo: "#b72a20",
+          colorInfo: "#1677ff",
+          colorLink: "#1677ff",
           colorSuccess: "#3d8d7a",
           colorError: "#de7c7d",
           colorWarning: "#c1840c",

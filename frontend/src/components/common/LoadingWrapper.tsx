@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 
@@ -8,12 +8,12 @@ export default function LoadingWrapper({
   children: React.ReactNode;
 }) {
   return (
-    <React.Suspense
+    <Suspense
       fallback={
         <Spin indicator={<LoadingOutlined spin />} size="large" fullscreen />
       }
     >
       {children}
-    </React.Suspense>
+    </Suspense>
   );
 }
