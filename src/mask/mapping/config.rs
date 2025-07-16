@@ -24,7 +24,7 @@ use strum_macros::{AsRefStr, Display, EnumString};
 
 use crate::{
     mask::mapping::{
-        binding::{ButtonBinding, DirectionBinding, ValidateMappingConfig},
+        binding::{ButtonBinding, DirectionBinding, MergedButton, ValidateMappingConfig},
         cast_spell::{
             BindMappingCancelCast, BindMappingMouseCastSpell, BindMappingPadCastSpell,
             MappingCancelCast, MappingMouseCastSpell, MappingPadCastSpell, MouseCastReleaseMode,
@@ -328,6 +328,17 @@ pub fn default_mapping_config() -> MappingConfig {
                 sync: true,
                 bind: ButtonBinding::new(vec![KeyCode::Digit2.into()]),
             }),
+            MappingType::SingleTap(MappingSingleTap {
+                position: (200, 150).into(),
+                note: "SingleTap (Scroll)".to_string(),
+                pointer_id: 1,
+                duration: 0,
+                sync: true,
+                bind: ButtonBinding::new(vec![
+                    KeyCode::ControlLeft.into(),
+                    MergedButton::ScrollDown,
+                ]),
+            }),
             MappingType::RepeatTap(MappingRepeatTap {
                 position: (250, 200).into(),
                 note: "RepeatTap".to_string(),
@@ -398,14 +409,6 @@ pub fn default_mapping_config() -> MappingConfig {
                     x: GamepadAxis::LeftStickX,
                     y: GamepadAxis::LeftStickY,
                 },
-            }),
-            MappingType::Fps(MappingFps {
-                note: "FPS".to_string(),
-                pointer_id: 0,
-                position: (1280, 720).into(),
-                sensitivity_x: 1.2,
-                sensitivity_y: 1.,
-                bind: ButtonBinding::new(vec![KeyCode::Backquote.into()]),
             }),
             MappingType::MouseCastSpell(MappingMouseCastSpell {
                 note: "MouseCastSpell (no direction)".to_string(),
@@ -492,9 +495,9 @@ pub fn default_mapping_config() -> MappingConfig {
                 note: "FPS".to_string(),
                 pointer_id: 0,
                 position: (1280, 720).into(),
-                sensitivity_x: 2.0,
-                sensitivity_y: 1.0,
-                bind: ButtonBinding::new(vec![MouseButton::Right.into()]),
+                sensitivity_x: 1.2,
+                sensitivity_y: 1.,
+                bind: ButtonBinding::new(vec![KeyCode::Backquote.into()]),
             }),
             MappingType::Fire(MappingFire {
                 note: "Fire".to_string(),

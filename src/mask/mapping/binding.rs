@@ -6,7 +6,7 @@ use bevy::input::{
     mouse::MouseButton,
 };
 use bevy_ineffable::{
-    bindings::{AnalogInput, BinaryInput, ChordLike},
+    bindings::{AnalogInput, BinaryInput, ChordLike, Threshold},
     prelude::{DualAxisBinding, InputBinding, SingleAxisBinding},
 };
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 pub enum MergedButton {
     Mouse(MouseButton),
+    ScrollDown,
+    ScrollUp,
     Keyboard(KeyCode),
     GamePad(GamepadButton),
 }
@@ -39,6 +41,12 @@ impl From<GamepadButton> for MergedButton {
 impl From<MergedButton> for BinaryInput {
     fn from(input: MergedButton) -> Self {
         match input {
+            MergedButton::ScrollDown => {
+                BinaryInput::Axis(AnalogInput::ScrollWheelY, Threshold::preset_down())
+            }
+            MergedButton::ScrollUp => {
+                BinaryInput::Axis(AnalogInput::ScrollWheelY, Threshold::preset_up())
+            }
             MergedButton::Mouse(mouse_button) => BinaryInput::MouseButton(mouse_button),
             MergedButton::Keyboard(key_code) => BinaryInput::Key(key_code),
             MergedButton::GamePad(gamepad_button) => BinaryInput::Gamepad(gamepad_button),
@@ -81,6 +89,8 @@ impl ToString for MergedButton {
                 MouseButton::Forward => "M-Forward".to_string(),
                 MouseButton::Other(other) => format!("M-Other-{}", other),
             },
+            MergedButton::ScrollDown => "ScrollDown".to_string(),
+            MergedButton::ScrollUp => "ScrollUp".to_string(),
             MergedButton::GamePad(gamepad_button) => match_gamepad_to_string!(gamepad_button;
                 South, East, North, West, C, Z,
                 LeftTrigger, LeftTrigger2, RightTrigger, RightTrigger2,
@@ -142,6 +152,8 @@ macro_rules! match_keycode_from_str {
         match $s {
             $(stringify!($variant) => Ok(MergedButton::Keyboard(KeyCode::$variant)),)*
             "Unidentified" => Ok(MergedButton::Keyboard(KeyCode::Unidentified(NativeKeyCode::Unidentified))),
+            "ScrollDown" => Ok(MergedButton::ScrollDown),
+            "ScrollUp" => Ok(MergedButton::ScrollUp),
             s if s.starts_with("Android-") => s[8..].parse()
                 .map(|code| MergedButton::Keyboard(KeyCode::Unidentified(NativeKeyCode::Android(code))))
                 .map_err(|e| format!("Invalid Android code: {}", e)),
