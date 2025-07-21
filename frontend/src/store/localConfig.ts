@@ -55,7 +55,7 @@ const initialState: LocalConfigState = {
   mappingLabelOpacity: 0,
 };
 
-export const localConfigSlice = createSlice({
+const localConfigSlice = createSlice({
   name: "localConfig",
   initialState,
   reducers: {

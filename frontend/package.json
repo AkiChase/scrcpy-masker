@@ -15,7 +15,6 @@
     "@reduxjs/toolkit": "^2.8.2",
     "antd": "^5.26.3",
     "axios": "^1.10.0",
-    "clsx": "^2.1.1",
     "i18next": "^25.3.2",
     "keepalive-for-react": "^4.0.2",
     "react": "^19.1.0",

@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Descriptions,
   Input,
@@ -7,10 +8,8 @@ import {
   Table,
   type TableProps,
 } from "antd";
-import FormItem from "antd/es/form/FormItem";
 import { useTranslation } from "react-i18next";
-import FormBox from "./common/FormBox";
-import type { AdbDevice, ControlledDevice } from "../utils";
+import type { AdbDevice, ControlledDevice, requestGet } from "../utils";
 import {
   CloseCircleOutlined,
   InfoCircleOutlined,
@@ -18,9 +17,16 @@ import {
 } from "@ant-design/icons";
 import IconButton from "./common/IconButton";
 import { useMemo } from "react";
+import { ItemBox, ItemBoxContainer } from "./common/ItemBox";
 
-const res: any = {
-  code: 200,
+const res: Awaited<
+  ReturnType<
+    typeof requestGet<{
+      adb_devices: AdbDevice[];
+      controlled_devices: ControlledDevice[];
+    }>
+  >
+> = {
   message: "Successfully obtained device list",
   data: {
     adb_devices: [
@@ -46,27 +52,6 @@ const res: any = {
   },
 };
 
-// 复制多个重复设备
-res.data.adb_devices = [
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-  ...res.data.adb_devices,
-];
-
 function ControlledDevices() {
   const { t } = useTranslation();
 
@@ -75,6 +60,17 @@ function ControlledDevices() {
       title: "ID",
       dataIndex: "device_id",
       key: "device_id",
+      render: (_, record) => (
+        <Space size="large">
+          {record.device_id}
+          {record.main && (
+            <Badge
+              color="green"
+              text={t("devices.controlledDevices.mainDevice")}
+            />
+          )}
+        </Space>
+      ),
     },
     {
       title: t("devices.controlledDevices.name"),
@@ -122,9 +118,19 @@ function ControlledDevices() {
               />
             }
           >
-            <IconButton color="info" icon={<InfoCircleOutlined />} />
+            <IconButton
+              tooltip={t("devices.controlledDevices.actionInfo")}
+              size={18}
+              color="info"
+              icon={<InfoCircleOutlined />}
+            />
           </Popover>
-          <IconButton color="error" icon={<CloseCircleOutlined />} />
+          <IconButton
+            tooltip={t("devices.controlledDevices.actionClose")}
+            size={18}
+            color="error"
+            icon={<CloseCircleOutlined />}
+          />
         </Space>
       ),
     },
@@ -151,7 +157,7 @@ function OtherDevices() {
               controlledDevice.device_id === device.id
           ) === -1
       ),
-    [res.data.other_devices]
+    [res.data.adb_devices]
   );
 
   const columns: TableProps<AdbDevice>["columns"] = [
@@ -172,7 +178,9 @@ function OtherDevices() {
       render: (_, record) => (
         <Space size="middle" className="text-4">
           <IconButton
-            color="error"
+            color="primary"
+            tooltip={t("devices.otherDevices.actionControl")}
+            size={18}
             icon={<LinkOutlined />}
             onClick={() => console.log(record)}
           />
@@ -198,23 +206,23 @@ export default function Devices() {
     <div className="page-container">
       <section>
         <h2 className="title-with-line">{t("devices.adbTools.title")}</h2>
-        <FormBox>
-          <FormItem label={t("devices.adbTools.pair.label")}>
+        <ItemBoxContainer className="mb-6">
+          <ItemBox label={t("devices.adbTools.pair.label")}>
             <Space.Compact>
               <Input placeholder="ip:port" />
               <Input placeholder="code" />
               <Button type="primary">{t("devices.adbTools.pair.btn")}</Button>
             </Space.Compact>
-          </FormItem>
-          <FormItem label={t("devices.adbTools.connect.label")}>
+          </ItemBox>
+          <ItemBox label={t("devices.adbTools.connect.label")}>
             <Space.Compact>
               <Input placeholder="ip:port" />
               <Button type="primary">
                 {t("devices.adbTools.connect.btn")}
               </Button>
             </Space.Compact>
-          </FormItem>
-        </FormBox>
+          </ItemBox>
+        </ItemBoxContainer>
       </section>
       <section>
         <h2 className="title-with-line">

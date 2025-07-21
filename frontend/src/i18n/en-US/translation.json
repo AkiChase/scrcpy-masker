@@ -23,12 +23,62 @@
       "name": "Name",
       "action": "Action",
       "size": "Size",
-      "title": "Controlled Devices"
+      "title": "Controlled Devices",
+      "mainDevice": "main",
+      "actionInfo": "More information",
+      "actionClose": "Stop control"
     },
     "otherDevices": {
       "title": "Other Devices",
       "action": "Action",
-      "status": "Status"
+      "status": "Status",
+      "actionControl": "Control device"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "Double click to enable button recording",
+        "settingLabel": "Bind",
+        "settingManual": "Manual",
+        "settingAuto": "Auto",
+        "manualInputNew": "New"
+      },
+      "pointerId": {
+        "label": "PointerID"
+      },
+      "note": {
+        "label": "Note"
+      },
+      "delete": {
+        "label": "Delete"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "Mapping Configuration - SingleTap",
+        "sync": "Sync",
+        "duration": "Duration"
+      }
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "Mapping Configuration - RepeatTap",
+        "duration": "Duration",
+        "interval": "Interval"
+      }
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "Mapping Configuration - MultipleTap",
+        "delete": "Delete",
+        "duration": "Duration",
+        "keepLastOne": "Keep at least one operation!",
+        "wait": "Wait",
+        "edit": "Edit",
+        "operations": "Operation sequence",
+        "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button"
+      }
     }
   }
 }

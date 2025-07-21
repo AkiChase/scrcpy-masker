@@ -20,7 +20,7 @@ createRoot(document.getElementById("root")!).render(
           colorPrimary: "#b72a20",
           colorInfo: "#1677ff",
           colorLink: "#1677ff",
-          colorSuccess: "#3d8d7a",
+          colorSuccess: "#52c41a",
           colorError: "#de7c7d",
           colorWarning: "#c1840c",
           colorBgBase: "#060606",

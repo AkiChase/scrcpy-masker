@@ -23,12 +23,62 @@
       "name": "名称",
       "size": "尺寸",
       "action": "操作",
-      "title": "受控设备"
+      "title": "受控设备",
+      "mainDevice": "主设备",
+      "actionInfo": "更多信息",
+      "actionClose": "终止控制"
     },
     "otherDevices": {
       "title": "其他设备",
       "action": "操作",
-      "status": "状态"
+      "status": "状态",
+      "actionControl": "控制设备"
+    }
+  },
+  "mappings": {
+    "common": {
+      "bind": {
+        "autoInputPlaceholder": "双击开启按键记录",
+        "manualInputNew": "新建",
+        "settingManual": "手动",
+        "settingAuto": "自动",
+        "settingLabel": "绑定"
+      },
+      "pointerId": {
+        "label": "触点ID"
+      },
+      "note": {
+        "label": "备注"
+      },
+      "delete": {
+        "label": "删除"
+      }
+    },
+    "singleTap": {
+      "setting": {
+        "title": "映射配置 - 点击",
+        "sync": "同步模式",
+        "duration": "持续时长"
+      }
+    },
+    "repeatTap": {
+      "setting": {
+        "title": "映射配置 - 连点",
+        "duration": "持续时长",
+        "interval": "重复间隔"
+      }
+    },
+    "multipleTap": {
+      "setting": {
+        "title": "映射配置 - 多点点击",
+        "keepLastOne": "至少保留一个操作！",
+        "wait": "等待时长",
+        "duration": "持续时长",
+        "delete": "删除",
+        "operations": "操作序列",
+        "operationsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
+        "edit": "编辑"
+      }
     }
   }
 }

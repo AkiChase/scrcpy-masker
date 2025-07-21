@@ -32,17 +32,14 @@ export default defineConfig({
         DEFAULT: "var(--ant-color-success)",
         hover: "var(--ant-color-success-hover)",
         active: "var(--ant-color-success-active)",
-
         bg: {
           DEFAULT: "var(--ant-color-success-bg)",
           hover: "var(--ant-color-success-bg-hover)",
         },
-
         border: {
           DEFAULT: "var(--ant-color-success-border)",
           hover: "var(--ant-color-success-border-hover)",
         },
-
         text: {
           DEFAULT: "var(--ant-color-success-text)",
           hover: "var(--ant-color-success-text-hover)",
@@ -68,7 +65,6 @@ export default defineConfig({
         DEFAULT: "var(--ant-color-warning)",
         hover: "var(--ant-color-warning-hover)",
         active: "var(--ant-color-warning-active)",
-
         bg: {
           DEFAULT: "var(--ant-color-warning-bg)",
           hover: "var(--ant-color-warning-bg-hover)",
@@ -83,7 +79,6 @@ export default defineConfig({
         DEFAULT: "var(--ant-color-info)",
         hover: "var(--ant-color-info-hover)",
         active: "var(--ant-color-info-active)",
-
         bg: {
           DEFAULT: "var(--ant-color-info-bg)",
           hover: "var(--ant-color-info-bg-hover)",
@@ -96,4 +91,21 @@ export default defineConfig({
       },
     },
   },
+  safelist: [
+    "color-info-text",
+    "hover:color-info-text-hover",
+    "active:color-info-text-active",
+    "color-error-text",
+    "hover:color-error-text-hover",
+    "active:color-error-text-active",
+    "color-primary-text",
+    "hover:color-primary-text-hover",
+    "active:color-primary-text-active",
+    "color-success-text",
+    "hover:color-success-text-hover",
+    "active:color-success-text-active",
+    "color-warning-text",
+    "hover:color-warning-text-hover",
+    "active:color-warning-text-active",
+  ],
 });

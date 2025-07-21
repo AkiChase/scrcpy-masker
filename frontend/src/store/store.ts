@@ -1,10 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
-import localConfigReducer from "./localConfigReducer";
+import localConfig from "./localConfig";
+import other from "./other";
 
 export const store = configureStore({
   reducer: {
-    localConfig: localConfigReducer,
+    localConfig,
+    other,
   },
 });
 

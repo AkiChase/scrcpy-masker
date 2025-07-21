@@ -1,8 +1,8 @@
 import axios, { type AxiosResponse } from "axios";
 
-async function handleRequest(
+async function handleRequest<D = any>(
   req: () => Promise<AxiosResponse>
-): Promise<{ message: string; data: any }> {
+): Promise<{ message: string; data: D }> {
   try {
     const res = await req();
     return { message: res.data.message, data: res.data.data };
@@ -26,10 +26,10 @@ async function handleRequest(
   }
 }
 
-export async function requestGet(
+export async function requestGet<D = any>(
   url: string,
   params?: Record<string, string | number>
-): Promise<{ message: string; data: any }> {
+): Promise<{ message: string; data: D }> {
   return await handleRequest(() => axios.get(url, { params }));
 }
 
@@ -53,4 +53,102 @@ export interface ControlledDevice {
 export interface AdbDevice {
   id: string;
   status: string;
+}
+
+export function deepClone<T>(value: T, cache = new WeakMap()): T {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (cache.has(value)) {
+    return cache.get(value);
+  }
+
+  if (value instanceof Date) {
+    return new Date(value.getTime()) as any;
+  }
+
+  if (value instanceof RegExp) {
+    return new RegExp(value) as any;
+  }
+
+  if (value instanceof Map) {
+    const result = new Map();
+    cache.set(value, result);
+    value.forEach((v, k) => {
+      result.set(deepClone(k, cache), deepClone(v, cache));
+    });
+    return result as any;
+  }
+
+  if (value instanceof Set) {
+    const result = new Set();
+    cache.set(value, result);
+    value.forEach((v) => {
+      result.add(deepClone(v, cache));
+    });
+    return result as any;
+  }
+
+  if (Array.isArray(value)) {
+    const result: any[] = [];
+    cache.set(value, result);
+    value.forEach((item, index) => {
+      result[index] = deepClone(item, cache);
+    });
+    return result as any;
+  }
+
+  const result: Record<string | symbol, any> = {};
+  cache.set(value, result);
+  Reflect.ownKeys(value).forEach((key) => {
+    result[key] = deepClone((value as any)[key], cache);
+  });
+  return result as T;
+}
+
+export function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+) {
+  let lastCall = 0;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return function (...args: Parameters<T>) {
+    const now = Date.now();
+
+    const remaining = delay - (now - lastCall);
+
+    if (remaining <= 0) {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+      lastCall = now;
+      func(...args);
+    } else if (!timeout) {
+      timeout = setTimeout(() => {
+        lastCall = Date.now();
+        timeout = null;
+        func(...args);
+      }, remaining);
+    }
+  };
+}
+
+export function debounce<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  return function (...args: Parameters<T>) {
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
+
+    timer = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
 }

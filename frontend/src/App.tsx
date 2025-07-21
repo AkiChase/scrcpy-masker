@@ -2,7 +2,7 @@ import "./App.scss";
 import { Layout, message } from "antd";
 import { MessageContext } from "./hooks";
 import { useAppDispatch } from "./store/store";
-import { forceSetLocalConfig } from "./store/localConfigReducer";
+import { forceSetLocalConfig } from "./store/localConfig";
 import { useEffect } from "react";
 import { Content } from "antd/es/layout/layout";
 import Sider from "./components/Sider";
@@ -44,6 +44,17 @@ function App() {
 
   useEffect(() => {
     loadLocalConfig();
+
+    // prevent backward
+    history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
 
   return (
