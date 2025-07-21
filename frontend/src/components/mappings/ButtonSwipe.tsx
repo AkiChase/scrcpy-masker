@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import type { MultipleTapConfig, MultipleTapItem } from "./mapping";
-import { Button, Flex, InputNumber, Popover, Tooltip, Typography } from "antd";
+import type { SwipeConfig } from "./mapping";
+import { Button, Flex, Popover, Tooltip, Typography } from "antd";
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
+  mappingButtonPosition,
   mappingButtonPresetStyle,
   mappingButtonTransformStyle,
 } from "./tools";
@@ -22,7 +23,9 @@ import { useMessageContext } from "../../hooks";
 
 const PRESET_STYLE = mappingButtonPresetStyle(52);
 
-export default function ButtonMultipleTap({
+type Position = { x: number; y: number };
+
+export default function ButtonSwipe({
   index,
   config,
   originalSize,
@@ -30,9 +33,9 @@ export default function ButtonMultipleTap({
   onConfigDelete,
 }: {
   index: number;
-  config: MultipleTapConfig;
+  config: SwipeConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: MultipleTapConfig) => void;
+  onConfigChange: (config: SwipeConfig) => void;
   onConfigDelete: () => void;
 }) {
   const id = `mapping-single-tap-${index}`;
@@ -44,7 +47,7 @@ export default function ButtonMultipleTap({
   useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
-      const position = config.items[0].position;
+      const position = config.positions[0];
       element.style.transform = mappingButtonTransformStyle(
         position.x,
         position.y,
@@ -63,7 +66,7 @@ export default function ButtonMultipleTap({
       const newConfig = {
         ...config,
       };
-      newConfig.items[0].position = {
+      newConfig.positions[0] = {
         x,
         y,
       };
@@ -108,17 +111,17 @@ export default function ButtonMultipleTap({
         </Tooltip>
       </Flex>
       {showSetting && !isEditingPos && (
-        <Background items={config.items} originalSize={originalSize} />
+        <Background positions={config.positions} originalSize={originalSize} />
       )}
     </>
   );
 }
 
 function Background({
-  items,
+  positions,
   originalSize,
 }: {
-  items: MultipleTapItem[];
+  positions: Position[];
   originalSize: { width: number; height: number };
 }) {
   const maskArea = useAppSelector((state) => state.other.maskArea);
@@ -133,15 +136,62 @@ function Background({
         height: maskArea.height,
       }}
     >
-      {items.map((item, index) => {
+      <svg className="w-full h-full absolute color-primary">
+        <defs>
+          <marker
+            id="arrow"
+            markerWidth="8"
+            markerHeight="7"
+            refX="8"
+            refY="3.5"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L8,3.5 L0,7 Z" fill="currentColor" />
+          </marker>
+        </defs>
+        {positions.map((pos, index) => {
+          if (index === positions.length - 1) return null;
+          const { x: x1, y: y1 } = mappingButtonPosition(
+            pos.x,
+            pos.y,
+            originalSize.width,
+            originalSize.height,
+            maskArea.width,
+            maskArea.height
+          );
+          const { x: x2, y: y2 } = mappingButtonPosition(
+            positions[index + 1].x,
+            positions[index + 1].y,
+            originalSize.width,
+            originalSize.height,
+            maskArea.width,
+            maskArea.height
+          );
+
+          return (
+            <line
+              key={index}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#arrow)"
+            />
+          );
+        })}
+      </svg>
+      {positions.map((position, index) => {
         return (
           <div
             key={index}
             className="rounded-full w-3 h-3 bg-primary absolute left--1.5 top--1.5 text-center text-bold"
             style={{
               transform: mappingButtonTransformStyle(
-                item.position.x,
-                item.position.y,
+                position.x,
+                position.y,
                 originalSize.width,
                 originalSize.height,
                 maskArea.width,
@@ -160,16 +210,16 @@ function Background({
 type PositonEditorItemProps = {
   maskArea: { width: number; height: number; left: number; top: number };
   originalSize: { width: number; height: number };
-  item: MultipleTapItem;
+  position: Position;
   index: number;
-  onItemChange: (index: number, item: MultipleTapItem) => void;
+  onItemChange: (index: number, position: Position) => void;
   onItemDelete: (index: number) => void;
 };
 
 function PositonEditorItem({
   maskArea,
   originalSize,
-  item,
+  position,
   index,
   onItemChange,
   onItemDelete,
@@ -181,7 +231,7 @@ function PositonEditorItem({
   const handleDrag = mappingButtonDragFactory(
     maskArea,
     originalSize,
-    (pos) => onItemChange(index, { ...item, position: pos }),
+    (pos) => onItemChange(index, pos),
     100
   );
 
@@ -193,26 +243,6 @@ function PositonEditorItem({
       onOpenChange={(open) => setOpen(open)}
       content={
         <ItemBoxContainer gap={12}>
-          <ItemBox label={t("mappings.multipleTap.setting.wait")}>
-            <InputNumber
-              className="w-full"
-              value={item.wait}
-              min={0}
-              onChange={(v) =>
-                v !== null && onItemChange(index, { ...item, wait: v })
-              }
-            />
-          </ItemBox>
-          <ItemBox label={t("mappings.multipleTap.setting.duration")}>
-            <InputNumber
-              className="w-full"
-              value={item.duration}
-              min={0}
-              onChange={(v) =>
-                v !== null && onItemChange(index, { ...item, duration: v })
-              }
-            />
-          </ItemBox>
           <ItemBox>
             <Button
               block
@@ -222,7 +252,7 @@ function PositonEditorItem({
                 onItemDelete(index);
               }}
             >
-              {t("mappings.multipleTap.setting.delete")}
+              {t("mappings.swipe.setting.delete")}
             </Button>
           </ItemBox>
         </ItemBoxContainer>
@@ -232,8 +262,8 @@ function PositonEditorItem({
         className="rounded-full w-3 h-3 bg-primary absolute left--1.5 top--1.5 text-center text-bold hover:bg-primary-hover active:bg-primary-active"
         style={{
           transform: mappingButtonTransformStyle(
-            item.position.x,
-            item.position.y,
+            position.x,
+            position.y,
             originalSize.width,
             originalSize.height,
             maskArea.width,
@@ -249,50 +279,50 @@ function PositonEditorItem({
 }
 
 function PositonEditor({
-  items,
+  positions,
   originalSize,
   onExit,
   onChange,
 }: {
-  items: MultipleTapItem[];
+  positions: Position[];
   originalSize: { width: number; height: number };
   onExit: () => void;
-  onChange: (items: MultipleTapItem[]) => void;
+  onChange: (positions: Position[]) => void;
 }) {
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const messageApi = useMessageContext();
   const { t } = useTranslation();
 
   function handleItemDelete(index: number) {
-    if (items.length === 1) {
-      messageApi?.warning(t("mappings.multipleTap.setting.keepLastOne"));
+    if (positions.length === 1) {
+      messageApi?.warning(t("mappings.swipe.setting.keepLastOne"));
       return;
     }
-    onChange(items.filter((_, i) => i !== index));
+    onChange(positions.filter((_, i) => i !== index));
   }
 
-  function handleItemChange(index: number, item: MultipleTapItem) {
-    onChange([...items.slice(0, index), item, ...items.slice(index + 1)]);
+  function handleItemChange(index: number, position: Position) {
+    onChange([
+      ...positions.slice(0, index),
+      position,
+      ...positions.slice(index + 1),
+    ]);
   }
 
   function handleEditorClick(e: React.MouseEvent) {
     if (e.target === e.currentTarget && e.button === 2) {
       onChange([
-        ...items,
-        {
-          duration: 50,
-          position: clientPositionToMappingPosition(
-            e.clientX,
-            e.clientY,
-            maskArea.left,
-            maskArea.top,
-            maskArea.width,
-            maskArea.height,
-            originalSize.width,
-            originalSize.height
-          ),
-          wait: 50,
-        },
+        ...positions,
+        clientPositionToMappingPosition(
+          e.clientX,
+          e.clientY,
+          maskArea.left,
+          maskArea.top,
+          maskArea.width,
+          maskArea.height,
+          originalSize.width,
+          originalSize.height
+        ),
       ]);
     }
   }
@@ -306,19 +336,70 @@ function PositonEditor({
         width: maskArea.width,
         height: maskArea.height,
       }}
-      onMouseDown={handleEditorClick}
-      onContextMenu={(e) => e.preventDefault()}
     >
       <Button
         shape="circle"
+        size="small"
         type="primary"
         icon={<RollbackOutlined />}
-        className="absolute top-8 left-8 z--1"
+        className="absolute top-8 right-8 z-1"
         onClick={() => onExit()}
       />
-      {items.map((item, index) => (
+      <svg
+        className="w-full h-full absolute color-primary"
+        onMouseDown={handleEditorClick}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <defs>
+          <marker
+            id="arrow"
+            markerWidth="8"
+            markerHeight="7"
+            refX="8"
+            refY="3.5"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L8,3.5 L0,7 Z" fill="currentColor" />
+          </marker>
+        </defs>
+        {positions.map((pos, index) => {
+          if (index === positions.length - 1) return null;
+          const { x: x1, y: y1 } = mappingButtonPosition(
+            pos.x,
+            pos.y,
+            originalSize.width,
+            originalSize.height,
+            maskArea.width,
+            maskArea.height
+          );
+          const { x: x2, y: y2 } = mappingButtonPosition(
+            positions[index + 1].x,
+            positions[index + 1].y,
+            originalSize.width,
+            originalSize.height,
+            maskArea.width,
+            maskArea.height
+          );
+
+          return (
+            <line
+              key={index}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="currentColor"
+              strokeWidth="2"
+              markerEnd="url(#arrow)"
+            />
+          );
+        })}
+      </svg>
+      {positions.map((position, index) => (
         <PositonEditorItem
-          item={item}
+          key={index}
+          position={position}
           index={index}
           onItemChange={handleItemChange}
           onItemDelete={handleItemDelete}
@@ -338,8 +419,8 @@ function Setting({
   isEditing,
   onIsEditingChange,
 }: {
-  config: MultipleTapConfig;
-  onConfigChange: (config: MultipleTapConfig) => void;
+  config: SwipeConfig;
+  onConfigChange: (config: SwipeConfig) => void;
   onConfigDelete: () => void;
   originalSize: { width: number; height: number };
   isEditing: boolean;
@@ -350,15 +431,13 @@ function Setting({
 
   return (
     <div>
-      <h1 className="title-with-line">
-        {t("mappings.multipleTap.setting.title")}
-      </h1>
+      <h1 className="title-with-line">{t("mappings.swipe.setting.title")}</h1>
       {isEditing && (
         <PositonEditor
-          items={config.items}
+          positions={config.positions}
           originalSize={originalSize}
           onExit={() => onIsEditingChange(false)}
-          onChange={(items) => onConfigChange({ ...config, items })}
+          onChange={(positions) => onConfigChange({ ...config, positions })}
         />
       )}
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
@@ -376,18 +455,16 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <ItemBox label={t("mappings.multipleTap.setting.operations")}>
+        <ItemBox label={t("mappings.swipe.setting.positions")}>
           <Button
             type="primary"
             size="small"
             onClick={() => {
-              messageApi?.info(
-                t("mappings.multipleTap.setting.operationsHelp")
-              );
+              messageApi?.info(t("mappings.swipe.setting.positonsHelp"));
               onIsEditingChange(true);
             }}
           >
-            {t("mappings.multipleTap.setting.edit")}
+            {t("mappings.swipe.setting.edit")}
           </Button>
         </ItemBox>
         <SettingDelete onDelete={onDelete} />

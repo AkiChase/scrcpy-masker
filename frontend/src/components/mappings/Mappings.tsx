@@ -33,6 +33,7 @@ import { setMaskArea } from "../../store/other";
 import ButtonRepeatTap from "./ButtonRepeatTap";
 import ButtonMultipleTap from "./ButtonMultipleTap";
 import { clientPositionToMappingPosition } from "./tools";
+import ButtonSwipe from "./ButtonSwipe";
 
 type MappingFileTabelItem = {
   file: string;
@@ -170,6 +171,7 @@ const mappingButtonMap = {
   SingleTap: ButtonSingleTap,
   RepeatTap: ButtonRepeatTap,
   MultipleTap: ButtonMultipleTap,
+  Swipe: ButtonSwipe,
 };
 
 function Displayer({

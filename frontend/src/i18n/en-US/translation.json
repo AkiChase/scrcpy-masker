@@ -79,6 +79,16 @@
         "operations": "Operation sequence",
         "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button"
       }
+    },
+    "swipe": {
+      "setting": {
+        "keepLastOne": "Keep at least one operation!",
+        "title": "Mapping Configuration - Swipe",
+        "positonsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
+        "edit": "Edit",
+        "delete": "Delete",
+        "positions": "Position sequence"
+      }
     }
   }
 }
