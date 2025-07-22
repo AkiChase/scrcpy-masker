@@ -40,6 +40,12 @@ export default function ButtonSwipe({
 }) {
   const id = `mapping-single-tap-${index}`;
   const bindText = config.bind.join("+");
+  const className =
+    "rounded-full absolute box-border border-solid border-2 color-text " +
+    (config.bind.length > 0
+      ? "border-text-secondary hover:border-text"
+      : "border-primary hover:border-primary-hover");
+
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
   const [isEditingPos, setIsEditingPos] = useState(false);
@@ -98,7 +104,7 @@ export default function ButtonSwipe({
       <Flex
         id={id}
         style={PRESET_STYLE}
-        className="rounded-full absolute box-border border-solid border-2 border-text-secondary hover:border-text color-text"
+        className={className}
         onMouseDown={handleDrag}
         onDoubleClick={handleSetting}
         justify="center"
@@ -451,14 +457,9 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <SettingNote
-          note={config.note}
-          onNoteChange={(note) => onConfigChange({ ...config, note })}
-        />
         <ItemBox label={t("mappings.swipe.setting.positions")}>
           <Button
             type="primary"
-            size="small"
             onClick={() => {
               messageApi?.info(t("mappings.swipe.setting.positonsHelp"));
               onIsEditingChange(true);
@@ -467,6 +468,10 @@ function Setting({
             {t("mappings.swipe.setting.edit")}
           </Button>
         </ItemBox>
+        <SettingNote
+          note={config.note}
+          onNoteChange={(note) => onConfigChange({ ...config, note })}
+        />
         <SettingDelete onDelete={onDelete} />
       </ItemBoxContainer>
     </div>

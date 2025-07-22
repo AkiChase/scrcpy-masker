@@ -1,9 +1,14 @@
-export function mappingButtonPresetStyle(radius: number): React.CSSProperties {
+export function mappingButtonPresetStyle(
+  radiusX: number,
+  radiusY?: number
+): React.CSSProperties {
+  radiusY = radiusY ?? radiusX;
+
   return {
-    width: radius,
-    height: radius,
-    left: -radius / 2,
-    top: -radius / 2,
+    width: radiusX,
+    height: radiusY,
+    left: -radiusX / 2,
+    top: -radiusY / 2,
   };
 }
 

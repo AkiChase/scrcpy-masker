@@ -39,10 +39,10 @@
     "common": {
       "bind": {
         "autoInputPlaceholder": "双击开启按键记录",
-        "manualInputNew": "新建",
         "settingManual": "手动",
         "settingAuto": "自动",
-        "settingLabel": "绑定"
+        "settingLabel": "绑定",
+        "manualSelectPlaceholder": "选择绑定按键"
       },
       "pointerId": {
         "label": "触点ID"
@@ -88,6 +88,21 @@
         "positions": "坐标序列",
         "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
         "edit": "编辑"
+      }
+    },
+    "directionPad": {
+      "setting": {
+        "title": "映射配置 - 方向轮盘",
+        "joyStick": "操纵杆",
+        "button": "按键",
+        "xAxis": "X轴",
+        "yAxis": "Y轴",
+        "up": "上",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "maxOffset": "最大偏移量",
+        "initDuration": "首次滑动时长"
       }
     }
   }

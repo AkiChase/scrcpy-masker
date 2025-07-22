@@ -306,10 +306,10 @@ impl From<ButtonBinding> for ChordLike {
 #[serde(tag = "type")]
 pub enum DirectionBinding {
     Button {
-        up: MergedButton,
-        down: MergedButton,
-        left: MergedButton,
-        right: MergedButton,
+        up: ButtonBinding,
+        down: ButtonBinding,
+        left: ButtonBinding,
+        right: ButtonBinding,
     },
     JoyStick {
         x: GamepadAxis,

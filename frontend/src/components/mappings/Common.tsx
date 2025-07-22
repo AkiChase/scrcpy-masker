@@ -1,25 +1,22 @@
-import {
-  EditOutlined,
-  CloseCircleOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import {
   Input,
   Badge,
   Space,
   type InputRef,
   Flex,
-  Tag,
   Modal,
   Switch,
   InputNumber,
   Button,
+  Select,
+  type SelectProps,
 } from "antd";
 import { useState, useRef, useEffect, type PropsWithChildren } from "react";
 import IconButton from "../common/IconButton";
 
 import type { ButtonBinding } from "./mapping";
-import { EVENT_CODE_TO_KEY_CODE } from "./keyCode";
+import { EVENT_CODE_TO_KEY_CODE, KEY_NAMES } from "./keyCode";
 import { debounce } from "../../utils";
 import { useTranslation } from "react-i18next";
 import { ItemBox } from "../common/ItemBox";
@@ -49,17 +46,20 @@ export function SettingModal({ children, open, onClose }: SettingModalProps) {
 type SettingBindProps = {
   bind: ButtonBinding;
   onBindChange: (bind: ButtonBinding) => void;
+  label?: string;
 };
 
-export function SettingBind({ bind, onBindChange }: SettingBindProps) {
+export function SettingBind({ bind, onBindChange, label }: SettingBindProps) {
   const { t } = useTranslation();
   const [isManualInput, setIsManualInput] = useState(false);
+
+  label = label ?? t("mappings.common.bind.settingLabel");
 
   return (
     <ItemBox
       label={
         <Flex className="w-full" align="center" justify="space-between">
-          <span>{t("mappings.common.bind.settingLabel")}</span>
+          <span>{label}</span>
           <Switch
             size="small"
             checkedChildren={t("mappings.common.bind.settingManual")}
@@ -288,6 +288,11 @@ function AutoInputBinding({
   );
 }
 
+const KeyNameOptions: SelectProps["options"] = KEY_NAMES.map((v) => ({
+  value: v,
+  label: v,
+}));
+
 function ManualInputBinding({
   bind,
   onBindChange,
@@ -296,100 +301,20 @@ function ManualInputBinding({
   onBindChange: (bind: ButtonBinding) => void;
 }) {
   const { t } = useTranslation();
-  const [inputVisible, setInputVisible] = useState(false);
-  const [inputValue, setInputValue] = useState("");
-  const [editInputIndex, setEditInputIndex] = useState(-1);
-  const [editInputValue, setEditInputValue] = useState("");
-  const inputRef = useRef<InputRef>(null);
-  const editInputRef = useRef<InputRef>(null);
-
-  useEffect(() => {
-    if (inputVisible) inputRef.current?.focus();
-  }, [inputVisible]);
-
-  useEffect(() => {
-    if (editInputIndex !== -1) editInputRef.current?.focus();
-  }, [editInputIndex]);
-
-  const showInput = () => {
-    setInputVisible(true);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleInputConfirm = () => {
-    if (inputValue && !bind.includes(inputValue)) {
-      onBindChange([...bind, inputValue]);
-    }
-    setInputVisible(false);
-    setInputValue("");
-  };
-
-  const handleEditInputConfirm = () => {
-    if (editInputValue && !bind.includes(editInputValue)) {
-      const newTags = [...bind];
-      newTags[editInputIndex] = editInputValue;
-      onBindChange(newTags);
-    }
-    setEditInputIndex(-1);
-    setEditInputValue("");
-  };
-
   return (
-    <Flex gap="4px 0" wrap className="pt-2.5">
-      {bind.map<React.ReactNode>((btn, index) => {
-        if (editInputIndex === index) {
-          return (
-            <Input
-              ref={editInputRef}
-              className="w-16"
-              key={btn}
-              size="small"
-              value={editInputValue}
-              onChange={(e) => setEditInputValue(e.target.value)}
-              onBlur={handleEditInputConfirm}
-              onPressEnter={handleEditInputConfirm}
-            />
-          );
-        }
-        return (
-          <Tag
-            key={btn}
-            closable
-            onClose={() => onBindChange(bind.filter((b) => btn !== b))}
-            onDoubleClick={(e) => {
-              setEditInputIndex(index);
-              setEditInputValue(btn);
-              e.preventDefault();
-            }}
-          >
-            {btn}
-          </Tag>
-        );
-      })}
-      {inputVisible ? (
-        <Input
-          ref={inputRef}
-          type="text"
-          className="w-16"
-          size="small"
-          value={inputValue}
-          onChange={handleInputChange}
-          onBlur={handleInputConfirm}
-          onPressEnter={handleInputConfirm}
-        />
-      ) : (
-        <Tag icon={<PlusOutlined />} onClick={showInput}>
-          {t("mappings.common.bind.manualInputNew")}
-        </Tag>
-      )}
-    </Flex>
+    <Select
+      mode="multiple"
+      allowClear
+      className="w-full"
+      placeholder={t("mappings.common.bind.manualSelectPlaceholder")}
+      value={bind}
+      onChange={(v) => onBindChange(v)}
+      options={KeyNameOptions}
+    />
   );
 }
 
-function InputBinding({
+export function InputBinding({
   bind,
   onBindChange,
   manual,

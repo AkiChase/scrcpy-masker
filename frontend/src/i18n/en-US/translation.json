@@ -42,7 +42,7 @@
         "settingLabel": "Bind",
         "settingManual": "Manual",
         "settingAuto": "Auto",
-        "manualInputNew": "New"
+        "manualSelectPlaceholder": "Select Bindings"
       },
       "pointerId": {
         "label": "PointerID"
@@ -88,6 +88,21 @@
         "edit": "Edit",
         "delete": "Delete",
         "positions": "Position sequence"
+      }
+    },
+    "directionPad": {
+      "setting": {
+        "title": "Mapping Configuration - DirectionPad",
+        "joyStick": "JoyStick",
+        "button": "Button",
+        "xAxis": "X-axis",
+        "yAxis": "Y-axis",
+        "down": "Down",
+        "initDuration": "Initial sliding duration",
+        "left": "Left",
+        "maxOffset": "Maximum offset",
+        "right": "Right",
+        "up": "Up"
       }
     }
   }

@@ -32,8 +32,14 @@ export default function ButtonRepeatTap({
   onConfigChange: (config: RepeatTapConfig) => void;
   onConfigDelete: () => void;
 }) {
-  const id = `mapping-single-tap-${index}`;
+  const id = `mapping-repeat-tap-${index}`;
   const bindText = config.bind.join("+");
+  const className =
+    "rounded-full absolute box-border border-solid border-2 color-text " +
+    (config.bind.length > 0
+      ? "border-text-secondary hover:border-text"
+      : "border-primary hover:border-primary-hover");
+
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
 
@@ -86,7 +92,7 @@ export default function ButtonRepeatTap({
       <Flex
         id={id}
         style={PRESET_STYLE}
-        className="rounded-full absolute box-border border-solid border-2 border-text-secondary hover:border-text color-text"
+        className={className}
         onMouseDown={handleDrag}
         onDoubleClick={handleSetting}
         justify="center"
@@ -129,10 +135,6 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <SettingNote
-          note={config.note}
-          onNoteChange={(note) => onConfigChange({ ...config, note })}
-        />
         <ItemBox label={t("mappings.repeatTap.setting.duration")}>
           <InputNumber
             className="w-full"
@@ -153,6 +155,10 @@ function Setting({
             }
           />
         </ItemBox>
+        <SettingNote
+          note={config.note}
+          onNoteChange={(note) => onConfigChange({ ...config, note })}
+        />
         <SettingDelete onDelete={onDelete} />
       </ItemBoxContainer>
     </div>

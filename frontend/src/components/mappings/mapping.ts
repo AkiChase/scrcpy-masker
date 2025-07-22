@@ -74,10 +74,10 @@ export interface SwipeConfig {
 
 export interface DirectionButtonBinding {
   type: "Button";
-  up: string;
-  down: string;
-  left: string;
-  right: string;
+  up: ButtonBinding;
+  down: ButtonBinding;
+  left: ButtonBinding;
+  right: ButtonBinding;
 }
 
 export interface DirectionJoyStickBinding {

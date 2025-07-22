@@ -34,6 +34,7 @@ import ButtonRepeatTap from "./ButtonRepeatTap";
 import ButtonMultipleTap from "./ButtonMultipleTap";
 import { clientPositionToMappingPosition } from "./tools";
 import ButtonSwipe from "./ButtonSwipe";
+import ButtonDirectionPad from "./ButtonDirectionPad";
 
 type MappingFileTabelItem = {
   file: string;
@@ -172,6 +173,7 @@ const mappingButtonMap = {
   RepeatTap: ButtonRepeatTap,
   MultipleTap: ButtonMultipleTap,
   Swipe: ButtonSwipe,
+  DirectionPad: ButtonDirectionPad,
 };
 
 function Displayer({
@@ -538,11 +540,11 @@ const mappingConfigTMP: MappingConfig = {
     },
     {
       bind: {
-        down: "KeyS",
-        left: "KeyA",
-        right: "KeyD",
+        down: ["KeyS"],
+        left: ["KeyA"],
+        right: ["KeyD"],
         type: "Button",
-        up: "KeyW",
+        up: ["KeyW"],
       },
       initial_duration: 100,
       max_offset_x: 100,
@@ -659,11 +661,11 @@ const mappingConfigTMP: MappingConfig = {
       note: "PadCastSpell",
       pad_action: "PadCastDirection1",
       pad_bind: {
-        down: "KeyS",
-        left: "KeyA",
-        right: "KeyD",
+        down: ["KeyS"],
+        left: ["KeyA"],
+        right: ["KeyD"],
         type: "Button",
-        up: "KeyW",
+        up: ["KeyW"],
       },
       pointer_id: 3,
       position: {
