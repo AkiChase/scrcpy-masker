@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SwipeConfig } from "./mapping";
-import { Button, Flex, Popover, Tooltip, Typography } from "antd";
+import { Button, Flex, Popover, Space, Tooltip, Typography } from "antd";
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
@@ -11,6 +11,8 @@ import {
 import { useAppSelector } from "../../store/store";
 import { ItemBoxContainer, ItemBox } from "../common/ItemBox";
 import {
+  DeviceBackground,
+  RefreshImageButton,
   SettingBind,
   SettingDelete,
   SettingModal,
@@ -334,85 +336,90 @@ function PositonEditor({
   }
 
   return (
-    <div
-      className="select-none fixed bg-[var(--ant-color-bg-mask)] z-2000 border border-solid border-primary"
-      style={{
-        left: maskArea.left - 1,
-        top: maskArea.top - 1,
-        width: maskArea.width,
-        height: maskArea.height,
-      }}
-    >
-      <Button
-        shape="circle"
-        size="small"
-        type="primary"
-        icon={<RollbackOutlined />}
-        className="absolute top-8 right-8 z-1"
-        onClick={() => onExit()}
-      />
-      <svg
-        className="w-full h-full absolute color-primary"
-        onMouseDown={handleEditorClick}
-        onContextMenu={(e) => e.preventDefault()}
+    <div className="select-none fixed left-0 top-0 right-0 bottom-0 bg-[var(--ant-color-bg-mask)] z-2000">
+      <Space.Compact className="absolute top-8 right-8 z--1">
+        <RefreshImageButton />
+        <Button
+          type="primary"
+          icon={<RollbackOutlined />}
+          onClick={() => onExit()}
+        >
+          {t("mappings.swipe.setting.back")}
+        </Button>
+      </Space.Compact>
+      <div
+        className="absolute border border-solid border-primary"
+        style={{
+          left: maskArea.left - 1,
+          top: maskArea.top - 1,
+          width: maskArea.width,
+          height: maskArea.height,
+        }}
       >
-        <defs>
-          <marker
-            id="arrow"
-            markerWidth="8"
-            markerHeight="7"
-            refX="8"
-            refY="3.5"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M0,0 L8,3.5 L0,7 Z" fill="currentColor" />
-          </marker>
-        </defs>
-        {positions.map((pos, index) => {
-          if (index === positions.length - 1) return null;
-          const { x: x1, y: y1 } = mappingButtonPosition(
-            pos.x,
-            pos.y,
-            originalSize.width,
-            originalSize.height,
-            maskArea.width,
-            maskArea.height
-          );
-          const { x: x2, y: y2 } = mappingButtonPosition(
-            positions[index + 1].x,
-            positions[index + 1].y,
-            originalSize.width,
-            originalSize.height,
-            maskArea.width,
-            maskArea.height
-          );
+        <DeviceBackground alpha={0} />
+        <svg
+          className="w-full h-full absolute color-primary"
+          onMouseDown={handleEditorClick}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          <defs>
+            <marker
+              id="arrow"
+              markerWidth="8"
+              markerHeight="7"
+              refX="8"
+              refY="3.5"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
+              <path d="M0,0 L8,3.5 L0,7 Z" fill="currentColor" />
+            </marker>
+          </defs>
+          {positions.map((pos, index) => {
+            if (index === positions.length - 1) return null;
+            const { x: x1, y: y1 } = mappingButtonPosition(
+              pos.x,
+              pos.y,
+              originalSize.width,
+              originalSize.height,
+              maskArea.width,
+              maskArea.height
+            );
+            const { x: x2, y: y2 } = mappingButtonPosition(
+              positions[index + 1].x,
+              positions[index + 1].y,
+              originalSize.width,
+              originalSize.height,
+              maskArea.width,
+              maskArea.height
+            );
 
-          return (
-            <line
-              key={index}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="currentColor"
-              strokeWidth="2"
-              markerEnd="url(#arrow)"
-            />
-          );
-        })}
-      </svg>
-      {positions.map((position, index) => (
-        <PositonEditorItem
-          key={index}
-          position={position}
-          index={index}
-          onItemChange={handleItemChange}
-          onItemDelete={handleItemDelete}
-          maskArea={maskArea}
-          originalSize={originalSize}
-        />
-      ))}
+            return (
+              <line
+                key={index}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="currentColor"
+                strokeWidth="2"
+                markerEnd="url(#arrow)"
+              />
+            );
+          })}
+        </svg>
+        {positions.map((position, index) => (
+          <PositonEditorItem
+            key={index}
+            position={position}
+            index={index}
+            onItemChange={handleItemChange}
+            onItemDelete={handleItemDelete}
+            maskArea={maskArea}
+            originalSize={originalSize}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -420,7 +427,7 @@ function PositonEditor({
 function Setting({
   config,
   onConfigChange,
-  onConfigDelete: onDelete,
+  onConfigDelete,
   originalSize,
   isEditing,
   onIsEditingChange,
@@ -472,7 +479,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onDelete} />
+        <SettingDelete onDelete={onConfigDelete} />
       </ItemBoxContainer>
     </div>
   );

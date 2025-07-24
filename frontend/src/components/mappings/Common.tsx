@@ -1,4 +1,8 @@
-import { EditOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  CloseCircleOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
 import {
   Input,
   Badge,
@@ -12,7 +16,14 @@ import {
   Select,
   type SelectProps,
 } from "antd";
-import { useState, useRef, useEffect, type PropsWithChildren } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  type PropsWithChildren,
+  forwardRef,
+  type ComponentPropsWithoutRef,
+} from "react";
 import IconButton from "../common/IconButton";
 
 import type { ButtonBinding } from "./mapping";
@@ -20,6 +31,8 @@ import { EVENT_CODE_TO_KEY_CODE, KEY_NAMES } from "./keyCode";
 import { debounce } from "../../utils";
 import { useTranslation } from "react-i18next";
 import { ItemBox } from "../common/ItemBox";
+import { useAppSelector } from "../../store/store";
+import { useRefreshBackgroundImage } from "../../hooks";
 
 const MOUSE_BUTTONS = ["M-Left", "M-Middle", "M-Right", "M-Forward", "M-Back"];
 
@@ -327,5 +340,55 @@ export function InputBinding({
     <ManualInputBinding bind={bind} onBindChange={onBindChange} />
   ) : (
     <AutoInputBinding bind={bind} onBindChange={onBindChange} />
+  );
+}
+
+export function DeviceBackground({ alpha }: { alpha?: number }) {
+  const backgroundImage = useAppSelector(
+    (state) => state.other.backgroundImage
+  );
+
+  alpha = alpha ?? 0.4;
+
+  return (
+    <div
+      className="absolute w-full h-full bg-[length:100%_100%] bg-origin-content bg-no-repeat"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+      }}
+    >
+      <div
+        className="w-full h-full"
+        style={{ backgroundColor: `rgba(0,0,0,${alpha})` }}
+      ></div>
+    </div>
+  );
+}
+
+export const CursorPos = forwardRef<
+  HTMLDivElement,
+  ComponentPropsWithoutRef<"div">
+>((props, ref) => {
+  return (
+    <div
+      style={props.style}
+      ref={ref}
+      className="absolute cursor-default color-text-secondary font-bold z-10"
+    ></div>
+  );
+});
+
+export function RefreshImageButton() {
+  const { t } = useTranslation();
+  const refreshBackground = useRefreshBackgroundImage();
+
+  return (
+    <Button
+      type="primary"
+      icon={<SyncOutlined />}
+      onClick={() => refreshBackground()}
+    >
+      {t("mappings.common.refreshBackground")}
+    </Button>
   );
 }

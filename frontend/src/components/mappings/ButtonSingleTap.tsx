@@ -111,7 +111,7 @@ export default function ButtonSingleTap({
 function Setting({
   config,
   onConfigChange,
-  onConfigDelete: onDelete,
+  onConfigDelete,
 }: {
   config: SingleTapConfig;
   onConfigChange: (config: SingleTapConfig) => void;
@@ -159,7 +159,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onDelete} />
+        <SettingDelete onDelete={onConfigDelete} />
       </ItemBoxContainer>
     </div>
   );

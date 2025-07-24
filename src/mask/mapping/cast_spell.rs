@@ -190,7 +190,8 @@ fn cal_mouse_cast_spell_current_pos(
     drag_radius = drag_radius / original_size.y * mask_size.y;
 
     let mut delta = cursor_pos - center_pos;
-    let scale = if horizontal_scale_factor >= vertical_scale_factor {
+    // set the larger ratio to 1
+    let scale = if horizontal_scale_factor > vertical_scale_factor {
         let r = vertical_scale_factor / horizontal_scale_factor;
         cast_radius *= r;
         Vec2::new(1.0, r)

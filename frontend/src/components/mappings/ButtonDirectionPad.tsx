@@ -192,7 +192,7 @@ const gamepadAxisOptions = AXIS_NAMES.map((axis) => ({
 function Setting({
   config,
   onConfigChange,
-  onConfigDelete: onDelete,
+  onConfigDelete,
 }: {
   config: DirectionPadConfig;
   onConfigChange: (config: DirectionPadConfig) => void;
@@ -359,7 +359,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onDelete} />
+        <SettingDelete onDelete={onConfigDelete} />
       </ItemBoxContainer>
     </div>
   );

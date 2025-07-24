@@ -11,7 +11,7 @@ import {
   Table,
   type TableProps,
 } from "antd";
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/store";
 import {
   CheckCircleOutlined,
@@ -23,11 +23,10 @@ import {
   SaveOutlined,
   SettingOutlined,
   SnippetsOutlined,
-  SyncOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
 import { deepClone, throttle } from "../../utils";
-import { useMessageContext } from "../../hooks";
+import { useMessageContext, useRefreshBackgroundImage } from "../../hooks";
 import ButtonSingleTap from "./ButtonSingleTap";
 import { setMaskArea } from "../../store/other";
 import ButtonRepeatTap from "./ButtonRepeatTap";
@@ -35,6 +34,8 @@ import ButtonMultipleTap from "./ButtonMultipleTap";
 import { clientPositionToMappingPosition } from "./tools";
 import ButtonSwipe from "./ButtonSwipe";
 import ButtonDirectionPad from "./ButtonDirectionPad";
+import ButtonMouseCastSpell from "./ButtonMouseCastSpell";
+import { CursorPos, DeviceBackground, RefreshImageButton } from "./Common";
 
 type MappingFileTabelItem = {
   file: string;
@@ -159,21 +160,13 @@ type EditState = {
   old: MappingConfig;
 };
 
-const CursorPos = forwardRef<HTMLDivElement>((_props, ref) => {
-  return (
-    <div
-      ref={ref}
-      className="absolute cursor-default color-text-secondary font-bold z-10"
-    ></div>
-  );
-});
-
 const mappingButtonMap = {
   SingleTap: ButtonSingleTap,
   RepeatTap: ButtonRepeatTap,
   MultipleTap: ButtonMultipleTap,
   Swipe: ButtonSwipe,
   DirectionPad: ButtonDirectionPad,
+  MouseCastSpell: ButtonMouseCastSpell,
 };
 
 function Displayer({
@@ -185,6 +178,7 @@ function Displayer({
 }) {
   const dispatch = useAppDispatch();
   const maskArea = useAppSelector((state) => state.other.maskArea);
+
   const cursorPosRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -266,6 +260,7 @@ function Displayer({
       className="w-full h-full border-text-quaternary border-solid border relative select-none"
       onMouseMove={handleMouseMove}
     >
+      <DeviceBackground />
       <Dropdown
         menu={{
           items: [
@@ -277,7 +272,7 @@ function Displayer({
         }}
         trigger={["contextMenu"]}
       >
-        <div className="w-full h-full absolute"></div>
+        <div className="w-full h-full absolute bg-transparent"></div>
       </Dropdown>
       <CursorPos ref={cursorPosRef} />
       {state.current.mappings.map((mapping, index) => {
@@ -306,6 +301,7 @@ export default function Mappings() {
   const activeMappingFile = useAppSelector(
     (state) => state.localConfig.activeMappingFile
   );
+  const refreshBackground = useRefreshBackgroundImage();
 
   const [displayedMappingFile, setDisplayedMappingFile] = useState("");
   const [isManagerOpen, setIsManagerOpen] = useState(false);
@@ -327,6 +323,8 @@ export default function Mappings() {
   useEffect(() => {
     setMappingList(mappingListTMP);
     setDisplayedMapping(activeMappingFile);
+
+    refreshBackground();
   }, []);
 
   async function setDisplayedMapping(file: string) {
@@ -398,13 +396,7 @@ export default function Mappings() {
               管理
             </Button>
           </Space.Compact>
-          <Button
-            type="primary"
-            icon={<SyncOutlined />}
-            onClick={() => console.log("刷新mapping列表")}
-          >
-            重载背景
-          </Button>
+          <RefreshImageButton />
         </Flex>
       </section>
       <section className="flex-grow-1 flex-shrink-0 pb-4">
@@ -583,7 +575,7 @@ const mappingConfigTMP: MappingConfig = {
         y: 815,
       },
       drag_radius: 150,
-      horizontal_scale_factor: 1,
+      horizontal_scale_factor: 7,
       note: "MouseCastSpell (no direction)",
       pointer_id: 3,
       position: {
@@ -592,7 +584,7 @@ const mappingConfigTMP: MappingConfig = {
       },
       release_mode: "OnRelease",
       type: "MouseCastSpell",
-      vertical_scale_factor: 0.699999988079071,
+      vertical_scale_factor: 10,
     },
     {
       bind: ["KeyQ"],
@@ -603,7 +595,7 @@ const mappingConfigTMP: MappingConfig = {
         y: 815,
       },
       drag_radius: 150,
-      horizontal_scale_factor: 1,
+      horizontal_scale_factor: 7,
       note: "MouseCastSpell (press to release)",
       pointer_id: 3,
       position: {
@@ -612,7 +604,7 @@ const mappingConfigTMP: MappingConfig = {
       },
       release_mode: "OnPress",
       type: "MouseCastSpell",
-      vertical_scale_factor: 0.699999988079071,
+      vertical_scale_factor: 10,
     },
     {
       bind: ["AltLeft"],
@@ -623,7 +615,7 @@ const mappingConfigTMP: MappingConfig = {
         y: 815,
       },
       drag_radius: 150,
-      horizontal_scale_factor: 1,
+      horizontal_scale_factor: 7,
       note: "MouseCastSpell (second press to release)",
       pointer_id: 3,
       position: {
@@ -632,7 +624,7 @@ const mappingConfigTMP: MappingConfig = {
       },
       release_mode: "OnSecondPress",
       type: "MouseCastSpell",
-      vertical_scale_factor: 0.699999988079071,
+      vertical_scale_factor: 10,
     },
     {
       bind: ["M-Back"],
@@ -643,7 +635,7 @@ const mappingConfigTMP: MappingConfig = {
         y: 815,
       },
       drag_radius: 150,
-      horizontal_scale_factor: 1,
+      horizontal_scale_factor: 7,
       note: "MouseCastSpell",
       pointer_id: 3,
       position: {
@@ -652,7 +644,7 @@ const mappingConfigTMP: MappingConfig = {
       },
       release_mode: "OnRelease",
       type: "MouseCastSpell",
-      vertical_scale_factor: 0.699999988079071,
+      vertical_scale_factor: 10,
     },
     {
       bind: ["KeyJ"],

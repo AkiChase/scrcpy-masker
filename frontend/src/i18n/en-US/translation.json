@@ -52,7 +52,9 @@
       },
       "delete": {
         "label": "Delete"
-      }
+      },
+      "refreshBackground": "Refresh background",
+      "refreshBgFail": "Failed to refresh background image: {0}"
     },
     "singleTap": {
       "setting": {
@@ -77,7 +79,8 @@
         "wait": "Wait",
         "edit": "Edit",
         "operations": "Operation sequence",
-        "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button"
+        "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
+        "back": "Back"
       }
     },
     "swipe": {
@@ -87,7 +90,8 @@
         "positonsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
         "edit": "Edit",
         "delete": "Delete",
-        "positions": "Position sequence"
+        "positions": "Position sequence",
+        "back": "Back"
       }
     },
     "directionPad": {
@@ -103,6 +107,27 @@
         "maxOffset": "Maximum offset",
         "right": "Right",
         "up": "Up"
+      }
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "Mapping Configuration - MouseCastSpell",
+        "center": "Cast center",
+        "scaleFactor": "Scale factors",
+        "castRadius": "Cast range",
+        "dragRadius": "Drag range",
+        "releaseMode": {
+          "label": "Release timing",
+          "onRelease": "OnRelease",
+          "onPress": "OnPress",
+          "onSecondPress": "onSecondPress"
+        },
+        "castNoDirection": "Non-directional cast",
+        "editLabel": "Advanced editing",
+        "edit": "Edit",
+        "editHelp": "Drag with the left mouse button and edit with the right mouse button",
+        "setCenter": "Center",
+        "back": "Back"
       }
     }
   }

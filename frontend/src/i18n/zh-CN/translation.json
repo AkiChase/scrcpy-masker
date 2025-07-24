@@ -52,7 +52,9 @@
       },
       "delete": {
         "label": "删除"
-      }
+      },
+      "refreshBackground": "刷新背景",
+      "refreshBgFail": "刷新背景图片失败: {0}"
     },
     "singleTap": {
       "setting": {
@@ -77,7 +79,8 @@
         "delete": "删除",
         "operations": "操作序列",
         "operationsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
-        "edit": "编辑"
+        "edit": "编辑",
+        "back": "返回"
       }
     },
     "swipe": {
@@ -87,7 +90,8 @@
         "title": "映射配置 - 滑动",
         "positions": "坐标序列",
         "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
-        "edit": "编辑"
+        "edit": "编辑",
+        "back": "返回"
       }
     },
     "directionPad": {
@@ -103,6 +107,27 @@
         "right": "右",
         "maxOffset": "最大偏移量",
         "initDuration": "首次滑动时长"
+      }
+    },
+    "mouseCastSpell": {
+      "setting": {
+        "title": "映射配置 - 鼠标施法",
+        "center": "施法中心",
+        "scaleFactor": "缩放因子",
+        "castRadius": "施法范围",
+        "dragRadius": "拖动范围",
+        "releaseMode": {
+          "label": "释放时机",
+          "onPress": "按下",
+          "onRelease": "抬起",
+          "onSecondPress": "二次按下"
+        },
+        "castNoDirection": "无方向施法",
+        "editLabel": "高级编辑",
+        "edit": "编辑",
+        "editHelp": "使用鼠标左键拖动，鼠标右键进行编辑",
+        "setCenter": "中心",
+        "back": "返回"
       }
     }
   }

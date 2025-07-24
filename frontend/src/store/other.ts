@@ -7,6 +7,7 @@ export interface OtherState {
     left: number;
     top: number;
   };
+  backgroundImage: string;
 }
 
 const initialState: OtherState = {
@@ -16,6 +17,7 @@ const initialState: OtherState = {
     left: 0,
     top: 0,
   },
+  backgroundImage: "",
 };
 
 const otherSlice = createSlice({
@@ -25,9 +27,15 @@ const otherSlice = createSlice({
     setMaskArea: (state, action: PayloadAction<OtherState["maskArea"]>) => {
       state.maskArea = action.payload;
     },
+    setBackgroundImage: (
+      state,
+      action: PayloadAction<OtherState["backgroundImage"]>
+    ) => {
+      state.backgroundImage = action.payload;
+    },
   },
 });
 
-export const { setMaskArea } = otherSlice.actions;
+export const { setMaskArea, setBackgroundImage } = otherSlice.actions;
 
 export default otherSlice.reducer;

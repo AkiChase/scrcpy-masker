@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import type { MultipleTapConfig, MultipleTapItem } from "./mapping";
-import { Button, Flex, InputNumber, Popover, Tooltip, Typography } from "antd";
+import {
+  Button,
+  Flex,
+  InputNumber,
+  Popover,
+  Space,
+  Tooltip,
+  Typography,
+} from "antd";
 import {
   clientPositionToMappingPosition,
   mappingButtonDragFactory,
@@ -10,6 +18,8 @@ import {
 import { useAppSelector } from "../../store/store";
 import { ItemBoxContainer, ItemBox } from "../common/ItemBox";
 import {
+  DeviceBackground,
+  RefreshImageButton,
   SettingBind,
   SettingDelete,
   SettingModal,
@@ -304,34 +314,45 @@ function PositonEditor({
   }
 
   return (
-    <div
-      className="select-none fixed bg-[var(--ant-color-bg-mask)] z-2000 border border-solid border-primary"
-      style={{
-        left: maskArea.left - 1,
-        top: maskArea.top - 1,
-        width: maskArea.width,
-        height: maskArea.height,
-      }}
-      onMouseDown={handleEditorClick}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      <Button
-        shape="circle"
-        type="primary"
-        icon={<RollbackOutlined />}
-        className="absolute top-8 left-8 z--1"
-        onClick={() => onExit()}
-      />
-      {items.map((item, index) => (
-        <PositonEditorItem
-          item={item}
-          index={index}
-          onItemChange={handleItemChange}
-          onItemDelete={handleItemDelete}
-          maskArea={maskArea}
-          originalSize={originalSize}
-        />
-      ))}
+    <div className="select-none fixed left-0 top-0 right-0 bottom-0 bg-[var(--ant-color-bg-mask)] z-2000">
+      <Space.Compact className="absolute top-8 right-8 z--1">
+        <RefreshImageButton />
+        <Button
+          type="primary"
+          icon={<RollbackOutlined />}
+          onClick={() => onExit()}
+        >
+          {t("mappings.multipleTap.setting.back")}
+        </Button>
+      </Space.Compact>
+      <div
+        className="absolute border border-solid border-primary"
+        style={{
+          left: maskArea.left - 1,
+          top: maskArea.top - 1,
+          width: maskArea.width,
+          height: maskArea.height,
+        }}
+      >
+        <DeviceBackground alpha={0} />
+        <div
+          className="w-full h-full absolute"
+          onMouseDown={handleEditorClick}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {items.map((item, index) => (
+            <PositonEditorItem
+              key={index}
+              item={item}
+              index={index}
+              onItemChange={handleItemChange}
+              onItemDelete={handleItemDelete}
+              maskArea={maskArea}
+              originalSize={originalSize}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -339,7 +360,7 @@ function PositonEditor({
 function Setting({
   config,
   onConfigChange,
-  onConfigDelete: onDelete,
+  onConfigDelete,
   originalSize,
   isEditing,
   onIsEditingChange,
@@ -395,7 +416,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onDelete} />
+        <SettingDelete onDelete={onConfigDelete} />
       </ItemBoxContainer>
     </div>
   );
