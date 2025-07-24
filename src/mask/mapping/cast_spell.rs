@@ -410,7 +410,7 @@ impl From<MappingPadCastSpell> for BindMappingPadCastSpell {
             release_mode: value.release_mode,
             drag_radius: value.drag_radius,
             block_direction_pad: value.block_direction_pad,
-            pad_action: value.pad_action,
+            pad_action: MappingAction::PadCastDirection1, // temp value
             pad_bind: value.pad_bind.clone(),
             pad_input_binding: value.pad_bind.into(),
             bind: value.bind.clone(),
@@ -427,7 +427,6 @@ pub struct MappingPadCastSpell {
     pub release_mode: PadCastReleaseMode,
     pub drag_radius: f32,
     pub block_direction_pad: bool,
-    pub pad_action: MappingAction,
     pub pad_bind: DirectionBinding,
     pub bind: ButtonBinding,
 }

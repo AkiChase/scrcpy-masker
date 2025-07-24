@@ -129,6 +129,27 @@
         "setCenter": "中心",
         "back": "返回"
       }
+    },
+    "padCastSpell": {
+      "setting": {
+        "padBindLabel": "轮盘绑定",
+        "joyStick": "操纵杆",
+        "button": "按键",
+        "title": "映射配置 - 方向轮盘施法",
+        "xAxis": "X轴",
+        "yAxis": "Y轴",
+        "up": "上",
+        "down": "下",
+        "left": "左",
+        "right": "右",
+        "dragRadius": "拖动范围",
+        "block": "屏蔽方向轮盘",
+        "releaseMode": {
+          "label": "释放时机",
+          "onRelease": "抬起",
+          "onSecondPress": "二次按下"
+        }
+      }
     }
   }
 }

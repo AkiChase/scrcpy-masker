@@ -36,6 +36,7 @@ import ButtonSwipe from "./ButtonSwipe";
 import ButtonDirectionPad from "./ButtonDirectionPad";
 import ButtonMouseCastSpell from "./ButtonMouseCastSpell";
 import { CursorPos, DeviceBackground, RefreshImageButton } from "./Common";
+import ButtonPadCastSpell from "./ButtonPadCastSpell";
 
 type MappingFileTabelItem = {
   file: string;
@@ -167,6 +168,7 @@ const mappingButtonMap = {
   Swipe: ButtonSwipe,
   DirectionPad: ButtonDirectionPad,
   MouseCastSpell: ButtonMouseCastSpell,
+  PadCastSpell: ButtonPadCastSpell,
 };
 
 function Displayer({
@@ -651,7 +653,6 @@ const mappingConfigTMP: MappingConfig = {
       block_direction_pad: true,
       drag_radius: 150,
       note: "PadCastSpell",
-      pad_action: "PadCastDirection1",
       pad_bind: {
         down: ["KeyS"],
         left: ["KeyA"],

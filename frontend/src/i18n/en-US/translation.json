@@ -129,6 +129,27 @@
         "setCenter": "Center",
         "back": "Back"
       }
+    },
+    "padCastSpell": {
+      "setting": {
+        "button": "Button",
+        "down": "Down",
+        "joyStick": "JoyStick",
+        "left": "Left",
+        "padBindLabel": "Pad bind",
+        "right": "Right",
+        "title": "Mapping Configuration - PadCastSpell",
+        "up": "Up",
+        "xAxis": "X-axis",
+        "yAxis": "Y-axis",
+        "dragRadius": "Drag range",
+        "block": "Block direction pad",
+        "releaseMode": {
+          "label": "Release timing",
+          "onRelease": "OnRelease",
+          "onSecondPress": "OnSecondPress"
+        }
+      }
     }
   }
 }

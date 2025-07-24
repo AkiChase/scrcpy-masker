@@ -239,7 +239,15 @@ impl From<MappingConfig> for BindMappingConfig {
                 .or_insert(1);
             let action_name = format!("{}{}", name, count);
             let action = MappingAction::from_str(&action_name).unwrap();
-            mappings.insert(action, mapping.into());
+
+            if let MappingType::PadCastSpell(mapping_pad_cast_spell) = mapping {
+                let pad_action_name = format!("PadCastDirection{count}");
+                let mut bind_mapping: BindMappingPadCastSpell = mapping_pad_cast_spell.into();
+                bind_mapping.pad_action = MappingAction::from_str(&pad_action_name).unwrap();
+                mappings.insert(action, BindMappingType::PadCastSpell(bind_mapping));
+            } else {
+                mappings.insert(action, mapping.into());
+            }
         }
 
         Self {
@@ -469,7 +477,6 @@ pub fn default_mapping_config() -> MappingConfig {
                 release_mode: PadCastReleaseMode::OnRelease,
                 drag_radius: 150.0,
                 block_direction_pad: true,
-                pad_action: MappingAction::PadCastDirection1,
                 pad_bind: DirectionBinding::Button {
                     up: ButtonBinding::new(vec![KeyCode::KeyW.into()]),
                     down: ButtonBinding::new(vec![KeyCode::KeyS.into()]),

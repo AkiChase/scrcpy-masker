@@ -125,8 +125,7 @@ export interface PadCastSpellConfig {
   block_direction_pad: boolean;
   drag_radius: number;
   note: string;
-  pad_action: string;
-  pad_bind: DirectionButtonBinding;
+  pad_bind: DirectionBinding;
   pointer_id: number;
   position: Position;
   release_mode: PadCastReleaseMode;
