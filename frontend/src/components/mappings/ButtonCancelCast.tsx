@@ -1,0 +1,139 @@
+import { useEffect, useState } from "react";
+import type { CancelCastConfig } from "./mapping";
+import { Flex, Tooltip, Typography } from "antd";
+import {
+  mappingButtonDragFactory,
+  mappingButtonPresetStyle,
+  mappingButtonTransformStyle,
+} from "./tools";
+import { useAppSelector } from "../../store/store";
+import { ItemBoxContainer } from "../common/ItemBox";
+import {
+  SettingBind,
+  SettingDelete,
+  SettingModal,
+  SettingNote,
+} from "./Common";
+import { useTranslation } from "react-i18next";
+
+const PRESET_STYLE = mappingButtonPresetStyle(52);
+
+export default function ButtonCancelCast({
+  index,
+  config,
+  originalSize,
+  onConfigChange,
+  onConfigDelete,
+}: {
+  index: number;
+  config: CancelCastConfig;
+  originalSize: { width: number; height: number };
+  onConfigChange: (config: CancelCastConfig) => void;
+  onConfigDelete: () => void;
+}) {
+  const id = `mapping-single-tap-${index}`;
+  const bindText = config.bind.join("+");
+  const className =
+    "rounded-full absolute box-border border-solid border-2 color-text " +
+    (config.bind.length > 0
+      ? "border-text-secondary hover:border-text"
+      : "border-primary hover:border-primary-hover");
+
+  const maskArea = useAppSelector((state) => state.other.maskArea);
+  const [showSetting, setShowSetting] = useState(false);
+
+  useEffect(() => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.style.transform = mappingButtonTransformStyle(
+        config.position.x,
+        config.position.y,
+        originalSize.width,
+        originalSize.height,
+        maskArea.width,
+        maskArea.height
+      );
+    }
+  }, [maskArea, index, config, originalSize]);
+
+  const handleDrag = mappingButtonDragFactory(
+    maskArea,
+    originalSize,
+    ({ x, y }) => {
+      onConfigChange({
+        ...config,
+        position: {
+          x,
+          y,
+        },
+      });
+    }
+  );
+
+  const handleSetting = (e: React.MouseEvent) => {
+    if (e.button != 0) return;
+    e.preventDefault();
+    setShowSetting(true);
+  };
+
+  return (
+    <>
+      <SettingModal open={showSetting} onClose={() => setShowSetting(false)}>
+        <Setting
+          config={config}
+          onConfigChange={onConfigChange}
+          onConfigDelete={() => {
+            setShowSetting(false);
+            onConfigDelete();
+          }}
+        />
+      </SettingModal>
+      <Flex
+        id={id}
+        style={PRESET_STYLE}
+        className={className}
+        onMouseDown={handleDrag}
+        onDoubleClick={handleSetting}
+        justify="center"
+        align="center"
+      >
+        <Tooltip trigger="click" title={`${config.type}: ${bindText}`}>
+          <Typography.Text ellipsis={true} className="text-2.5 font-bold">
+            {bindText}
+          </Typography.Text>
+        </Tooltip>
+      </Flex>
+    </>
+  );
+}
+
+function Setting({
+  config,
+  onConfigChange,
+  onConfigDelete,
+}: {
+  config: CancelCastConfig;
+  onConfigChange: (config: CancelCastConfig) => void;
+  onConfigDelete: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h1 className="title-with-line">
+        {t("mappings.cancelCast.setting.title")}
+      </h1>
+      <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
+        <SettingBind
+          bind={config.bind}
+          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+        />
+        <SettingNote
+          note={config.note}
+          onNoteChange={(note) => onConfigChange({ ...config, note })}
+        />
+        <SettingDelete onDelete={onConfigDelete} />
+      </ItemBoxContainer>
+    </div>
+  );
+}

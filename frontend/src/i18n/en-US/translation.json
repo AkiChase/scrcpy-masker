@@ -150,6 +150,34 @@
           "onSecondPress": "OnSecondPress"
         }
       }
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "Mapping Configuration - CancelCast"
+      }
+    },
+    "fire": {
+      "setting": {
+        "sensitivity": "Sensitivity",
+        "title": "Mapping Configuration - Fire"
+      }
+    },
+    "fps": {
+      "setting": {
+        "sensitivity": "Sensitivity",
+        "title": "Mapping Configuration - FPS"
+      }
+    },
+    "observation": {
+      "setting": {
+        "sensitivity": "Sensitivity",
+        "title": "Mapping Configuration - Observation"
+      }
+    },
+    "rawInput": {
+      "setting": {
+        "title": "Mapping Configuration - RawInput"
+      }
     }
   }
 }

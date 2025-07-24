@@ -37,6 +37,10 @@ import ButtonDirectionPad from "./ButtonDirectionPad";
 import ButtonMouseCastSpell from "./ButtonMouseCastSpell";
 import { CursorPos, DeviceBackground, RefreshImageButton } from "./Common";
 import ButtonPadCastSpell from "./ButtonPadCastSpell";
+import ButtonCancelCast from "./ButtonCancelCast";
+import ButtonObservation from "./ButtonObservation";
+import ButtonFps from "./ButtonFPS";
+import ButtonRawInput from "./ButtonRawInput";
 
 type MappingFileTabelItem = {
   file: string;
@@ -169,6 +173,10 @@ const mappingButtonMap = {
   DirectionPad: ButtonDirectionPad,
   MouseCastSpell: ButtonMouseCastSpell,
   PadCastSpell: ButtonPadCastSpell,
+  CancelCast: ButtonCancelCast,
+  Observation: ButtonObservation,
+  Fps: ButtonFps,
+  RawInput: ButtonRawInput,
 };
 
 function Displayer({

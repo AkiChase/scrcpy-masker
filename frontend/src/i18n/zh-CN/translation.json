@@ -150,6 +150,34 @@
           "onSecondPress": "二次按下"
         }
       }
+    },
+    "cancelCast": {
+      "setting": {
+        "title": "映射配置 - 取消施法"
+      }
+    },
+    "observation": {
+      "setting": {
+        "title": "映射配置 - 观察视角",
+        "sensitivity": "灵敏度"
+      }
+    },
+    "fps": {
+      "setting": {
+        "title": "映射配置 - FPS模式",
+        "sensitivity": "灵敏度"
+      }
+    },
+    "fire": {
+      "setting": {
+        "title": "映射配置 - 开火",
+        "sensitivity": "灵敏度"
+      }
+    },
+    "rawInput": {
+      "setting": {
+        "title": "映射配置 - 直控模式"
+      }
     }
   }
 }
