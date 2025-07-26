@@ -5,6 +5,7 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
+use bevy::math::Vec2;
 use flume::Sender;
 use serde::Deserialize;
 use serde_json::json;
@@ -14,7 +15,8 @@ use crate::{
     config::LocalConfig,
     mask::{
         mapping::config::{
-            MappingConfig, load_mapping_config, save_mapping_config, validate_mapping_config,
+            MappingConfig, MappingType, load_mapping_config, save_mapping_config,
+            validate_mapping_config,
         },
         mask_command::MaskCommand,
     },
@@ -31,10 +33,13 @@ pub fn routers(m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>
     Router::new()
         .route("/change_active_mapping", post(change_active_mapping))
         .route("/create_mapping", post(create_mapping))
+        .route("/rename_mapping", post(rename_mapping))
+        .route("/duplicate_mapping", post(duplicate_mapping))
         .route("/delete_mapping", post(delete_mapping))
         .route("/update_mapping", post(update_mapping))
         .route("/read_mapping", post(read_mapping))
         .route("/get_mapping_list", get(get_mapping_list))
+        .route("/migrate_mapping", post(migrate_mapping))
         .with_state(AppStatMapping { m_tx })
 }
 
@@ -86,19 +91,16 @@ struct PostDataNewMapping {
 async fn create_mapping(
     Json(payload): Json<PostDataNewMapping>,
 ) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
     if !is_safe_file_name(payload.file.as_ref()) {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config name is not safe: {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
     }
 
     let config_path = relate_to_root_path(["local", "mapping", &payload.file]);
     if config_path.exists() {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config already exists: {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config already exists: {}", payload.file));
     }
 
     validate_mapping_config(&payload.config).map_err(|e| WebServerError::bad_request(e))?;
@@ -123,11 +125,11 @@ async fn delete_mapping(
     State(state): State<AppStatMapping>,
     Json(payload): Json<PostDataMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
     if !is_safe_file_name(payload.file.as_ref()) {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config name is not safe: {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
     }
 
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
@@ -138,16 +140,11 @@ async fn delete_mapping(
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
     if file == payload.file {
-        return Err(WebServerError::bad_request(
-            "Cannot delete active mapping".to_string(),
-        ));
+        return bad_request("Cannot delete active mapping".to_string());
     }
     let file_path = relate_to_root_path(["local", "mapping", &payload.file]);
     if !file_path.exists() {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config not exists: {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config not exists: {}", payload.file));
     }
     fs::remove_file(file_path).map_err(|e| {
         WebServerError::bad_request(format!(
@@ -163,15 +160,171 @@ async fn delete_mapping(
     ))
 }
 
+#[derive(Deserialize)]
+struct PostDataRenameMappingFile {
+    file: String,
+    new_file: String,
+}
+
+async fn rename_mapping(
+    State(state): State<AppStatMapping>,
+    Json(payload): Json<PostDataRenameMappingFile>,
+) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
+    if !is_safe_file_name(payload.file.as_ref()) {
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
+    }
+    if !is_safe_file_name(payload.new_file.as_ref()) {
+        return bad_request(format!(
+            "New mapping config name is not safe: {}",
+            payload.new_file
+        ));
+    }
+
+    // rename file
+    let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    if !old_path.exists() {
+        return bad_request(format!(
+            "Mapping config not found: {}",
+            old_path.to_str().unwrap()
+        ));
+    }
+    let new_path = relate_to_root_path(["local", "mapping", &payload.new_file]);
+    if new_path.exists() {
+        return bad_request(format!(
+            "Mapping config already exists: {}",
+            new_path.to_str().unwrap()
+        ));
+    }
+    fs::rename(old_path, new_path).map_err(|e| WebServerError::internal_error(e.to_string()))?;
+
+    // get active mapping file
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    state
+        .m_tx
+        .send_async((MaskCommand::GetActiveMapping, oneshot_tx))
+        .await
+        .unwrap();
+    let file = oneshot_rx.await.unwrap().unwrap();
+    if file == payload.file {
+        // if active, set new active mapping
+        match load_mapping_config(&payload.new_file) {
+            Ok((mapping_config, input_config)) => {
+                log::info!("[Mask] Using mapping config {}", payload.new_file,);
+                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+                state
+                    .m_tx
+                    .send_async((
+                        MaskCommand::ActiveMappingChange {
+                            mapping: mapping_config,
+                            input: input_config,
+                            file: payload.new_file.clone(),
+                        },
+                        oneshot_tx,
+                    ))
+                    .await
+                    .unwrap();
+                match oneshot_rx.await.unwrap() {
+                    Ok(msg) => {
+                        LocalConfig::set_active_mapping_file(payload.new_file.clone());
+                        return Ok(JsonResponse::success(
+                            format!(
+                                "Successfully rename mapping config from {} to {}. {}",
+                                payload.file, payload.new_file, msg
+                            ),
+                            None,
+                        ));
+                    }
+                    Err(e) => {
+                        return bad_request(e);
+                    }
+                }
+            }
+            Err(e) => {
+                return bad_request(format!(
+                    "Failed to load renamed mapping config {}. {}",
+                    payload.new_file, e
+                ));
+            }
+        }
+    }
+    log::info!(
+        "[WebServer] Rename mapping config from {} to {}",
+        payload.file,
+        payload.new_file
+    );
+    Ok(JsonResponse::success(
+        format!(
+            "Successfully rename mapping config from {} to {}",
+            payload.file, payload.new_file
+        ),
+        None,
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataDuplicateMappingFile {
+    file: String,
+    new_file: String,
+}
+
+async fn duplicate_mapping(
+    Json(payload): Json<PostDataDuplicateMappingFile>,
+) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
+    if !is_safe_file_name(payload.file.as_ref()) {
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
+    }
+    if !is_safe_file_name(payload.new_file.as_ref()) {
+        return bad_request(format!(
+            "New mapping config name is not safe: {}",
+            payload.new_file
+        ));
+    }
+
+    // rename file
+    let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    if !old_path.exists() {
+        return bad_request(format!(
+            "Mapping config not found: {}",
+            old_path.to_str().unwrap()
+        ));
+    }
+    let new_path = relate_to_root_path(["local", "mapping", &payload.new_file]);
+    if new_path.exists() {
+        return bad_request(format!(
+            "Mapping config already exists: {}",
+            new_path.to_str().unwrap()
+        ));
+    }
+    fs::copy(old_path, new_path).map_err(|e| WebServerError::internal_error(e.to_string()))?;
+    log::info!(
+        "[WebServer] Copy mapping config from {} to {}",
+        payload.file,
+        payload.new_file
+    );
+    Ok(JsonResponse::success(
+        format!(
+            "Successfully copy mapping config from {} to {}",
+            payload.file, payload.new_file
+        ),
+        None,
+    ))
+}
+
 async fn update_mapping(
     State(state): State<AppStatMapping>,
     Json(payload): Json<PostDataNewMapping>,
 ) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
     if !is_safe_file_name(payload.file.as_ref()) {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config name is not safe: {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
     }
 
     validate_mapping_config(&payload.config).map_err(|e| WebServerError::bad_request(e))?;
@@ -192,11 +345,7 @@ async fn update_mapping(
         // if active, refresh active mapping
         match load_mapping_config(&payload.file) {
             Ok((mapping_config, input_config)) => {
-                log::info!(
-                    "[Mask] Using mapping config {}: {}",
-                    payload.file,
-                    mapping_config.title
-                );
+                log::info!("[Mask] Using mapping config {}", payload.file,);
                 let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
                 state
                     .m_tx
@@ -212,36 +361,35 @@ async fn update_mapping(
                     .unwrap();
                 match oneshot_rx.await.unwrap() {
                     Ok(msg) => {
-                        LocalConfig::set_active_mapping_file(payload.file.clone());
-                        return Ok(JsonResponse::success(
+                        log::info!("[WebServer] Update mapping config {}", payload.file);
+                        Ok(JsonResponse::success(
                             format!(
                                 "Successfully update mapping config {}. {}",
                                 payload.file, msg
                             ),
                             None,
-                        ));
+                        ))
                     }
-                    Err(e) => {
-                        return Err(WebServerError::bad_request(e));
-                    }
+                    Err(e) => bad_request(e),
                 }
             }
-            Err(e) => {
-                return Err(WebServerError::bad_request(format!(
-                    "Failed to load updated mapping config {}. {}",
-                    payload.file, e
-                )));
-            }
+            Err(e) => bad_request(format!(
+                "Failed to load updated mapping config {}. {}",
+                payload.file, e
+            )),
         }
+    } else {
+        log::info!("[WebServer] Update mapping config {}", payload.file);
+        Ok(JsonResponse::success(
+            format!("Successfully update mapping config {}", payload.file),
+            None,
+        ))
     }
-    log::info!("[WebServer] Update mapping config {}", payload.file);
-    Ok(JsonResponse::success(
-        format!("Successfully update mapping config {}", payload.file),
-        None,
-    ))
 }
 
-async fn get_mapping_list() -> Result<JsonResponse, WebServerError> {
+async fn get_mapping_list(
+    State(state): State<AppStatMapping>,
+) -> Result<JsonResponse, WebServerError> {
     let dir_path = relate_to_root_path(["local", "mapping"]);
     let entries = fs::read_dir(dir_path).map_err(|e| {
         WebServerError::bad_request(format!("Unable to read mapping config dir: {}", e))
@@ -262,10 +410,20 @@ async fn get_mapping_list() -> Result<JsonResponse, WebServerError> {
         }
     }
 
+    // get active mapping file
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    state
+        .m_tx
+        .send_async((MaskCommand::GetActiveMapping, oneshot_tx))
+        .await
+        .unwrap();
+    let file = oneshot_rx.await.unwrap().unwrap();
+
     Ok(JsonResponse::success(
         "Successfully read mapping list",
         Some(json!({
             "mapping_list": mapping_files,
+            "active_mapping": file,
         })),
     ))
 }
@@ -273,20 +431,17 @@ async fn get_mapping_list() -> Result<JsonResponse, WebServerError> {
 async fn read_mapping(
     Json(payload): Json<PostDataMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
     if !is_safe_file_name(payload.file.as_ref()) {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config name is not safe: {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
     }
 
     // load from file
     let path = relate_to_root_path(["local", "mapping", &payload.file]);
     if !path.exists() {
-        return Err(WebServerError::bad_request(format!(
-            "Mapping config not found {}",
-            payload.file
-        )));
+        return bad_request(format!("Mapping config not found {}", payload.file));
     }
     let config_string = std::fs::read_to_string(path).map_err(|e| {
         WebServerError::bad_request(format!(
@@ -310,5 +465,133 @@ async fn read_mapping(
         Some(json!({
             "mapping_config": mapping_config,
         })),
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataMigrateMappingFile {
+    file: String,
+    new_file: String,
+    width: u32,
+    height: u32,
+}
+
+async fn migrate_mapping(
+    Json(payload): Json<PostDataMigrateMappingFile>,
+) -> Result<JsonResponse, WebServerError> {
+    let bad_request =
+        |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
+
+    if !is_safe_file_name(payload.file.as_ref()) {
+        return bad_request(format!("Mapping config name is not safe: {}", payload.file));
+    }
+
+    let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    if !old_path.exists() {
+        return bad_request(format!("Mapping config does not exist: {}", payload.file));
+    }
+
+    let new_path = relate_to_root_path(["local", "mapping", &payload.new_file]);
+    if new_path.exists() {
+        return bad_request(format!(
+            "Mapping config already exists: {}",
+            payload.new_file
+        ));
+    }
+
+    let config_string = std::fs::read_to_string(old_path).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "Cannot read mapping config {}: {}",
+            payload.file, e
+        ))
+    })?;
+    let mut mapping_config: MappingConfig = serde_json::from_str(&config_string).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "Cannot deserialize mapping config {}: {}",
+            payload.file, e
+        ))
+    })?;
+
+    if payload.width == 0 || payload.height == 0 {
+        return bad_request(format!(
+            "Invalid size: {}, {}",
+            payload.width, payload.height
+        ));
+    }
+
+    let scale = Vec2::new(
+        payload.width as f32 / mapping_config.original_size.width as f32,
+        payload.height as f32 / mapping_config.original_size.height as f32,
+    );
+
+    mapping_config.original_size.width = payload.width;
+    mapping_config.original_size.height = payload.height;
+
+    mapping_config
+        .mappings
+        .iter_mut()
+        .for_each(|mapping| match mapping {
+            MappingType::SingleTap(m) => {
+                m.position *= scale;
+            }
+            MappingType::RepeatTap(m) => {
+                m.position *= scale;
+            }
+            MappingType::MultipleTap(m) => {
+                m.items.iter_mut().for_each(|item| {
+                    item.position *= scale;
+                });
+            }
+            MappingType::Swipe(m) => {
+                m.positions.iter_mut().for_each(|p| {
+                    *p *= scale;
+                });
+            }
+            MappingType::DirectionPad(m) => {
+                m.position *= scale;
+                m.max_offset_x *= scale.x;
+                m.max_offset_y *= scale.y;
+            }
+            MappingType::MouseCastSpell(m) => {
+                m.position *= scale;
+                m.cast_radius *= scale.y;
+                m.center *= scale;
+                m.drag_radius *= scale.y;
+            }
+            MappingType::PadCastSpell(m) => {
+                m.drag_radius *= scale.y;
+                m.position *= scale;
+            }
+            MappingType::CancelCast(m) => {
+                m.position *= scale;
+            }
+            MappingType::Observation(m) => {
+                m.position *= scale;
+            }
+            MappingType::Fps(m) => {
+                m.position *= scale;
+            }
+            MappingType::Fire(m) => {
+                m.position *= scale;
+            }
+            MappingType::RawInput(m) => {
+                m.position *= scale;
+            }
+        });
+
+    // save to file
+    save_mapping_config(&mapping_config, &new_path).map_err(|e| WebServerError::bad_request(e))?;
+
+    log::info!(
+        "[WebServer] Migrate mapping config from {} to {}",
+        payload.file,
+        payload.new_file
+    );
+    Ok(JsonResponse::success(
+        format!(
+            "Successfully migrate mapping config from {} to {}",
+            payload.file, payload.new_file
+        ),
+        None,
     ))
 }

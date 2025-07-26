@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseCastSpellConfig, Position } from "./mapping";
 import {
   Button,
@@ -61,19 +61,23 @@ export default function ButtonMouseCastSpell({
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        originalSize.width,
-        originalSize.height,
-        maskArea.width,
-        maskArea.height
+        scale
       );
     }
-  }, [maskArea, index, config, originalSize]);
+  }, [index, config, scale]);
 
   const handleDrag = mappingButtonDragFactory(
     maskArea,
@@ -185,14 +189,12 @@ function CastCenter({
 
     const d1 = d(30, 150);
     const d2 = d(60, 120);
-    const transform = mappingButtonTransformStyle(
-      center.x,
-      center.y,
-      originalSize.width,
-      originalSize.height,
-      maskArea.width,
-      maskArea.height
-    );
+    const scale = {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+
+    const transform = mappingButtonTransformStyle(center.x, center.y, scale);
 
     return { d1, d2, transform };
   })();
@@ -319,14 +321,11 @@ function SkillButton({
     200
   );
 
-  const transform = mappingButtonTransformStyle(
-    position.x,
-    position.y,
-    originalSize.width,
-    originalSize.height,
-    maskArea.width,
-    maskArea.height
-  );
+  const scale = {
+    x: maskArea.width / originalSize.width,
+    y: maskArea.height / originalSize.height,
+  };
+  const transform = mappingButtonTransformStyle(position.x, position.y, scale);
   const maskRadius = (radius / originalSize.height) * maskArea.height;
 
   return (
@@ -386,10 +385,7 @@ function SkillEditor({
       const { x, y } = clientPositionToMappingPosition(
         e.clientX,
         e.clientY,
-        maskArea.left,
-        maskArea.top,
-        maskArea.width,
-        maskArea.height,
+        maskArea,
         originalSize.width,
         originalSize.height
       );
@@ -423,7 +419,7 @@ function SkillEditor({
       >
         <DeviceBackground alpha={0} />
         <div className="w-full h-full absolute" onMouseMove={handleMouseMove}>
-          <CursorPos ref={cursorPosRef} style={{ top: -22 }} />
+          <CursorPos ref={cursorPosRef} className="top--6" />
           <svg className="w-full h-full">
             {!config.cast_no_direction && (
               <CastCenter

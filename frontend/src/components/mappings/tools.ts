@@ -15,45 +15,36 @@ export function mappingButtonPresetStyle(
 export function clientPositionToMappingPosition(
   cX: number,
   cY: number,
-  mL: number,
-  mT: number,
-  mW: number,
-  mH: number,
+  maskArea: { width: number; height: number; left: number; top: number },
   oW: number,
   oH: number
 ) {
-  const mX = Math.max(0, Math.min(mW, cX - mL));
-  const mY = Math.max(0, Math.min(mH, cY - mT));
+  const mX = Math.max(0, Math.min(maskArea.width, cX - maskArea.left));
+  const mY = Math.max(0, Math.min(maskArea.height, cY - maskArea.top));
   return {
-    x: Math.round((mX / mW) * oW),
-    y: Math.round((mY / mH) * oH),
+    x: Math.round((mX / maskArea.width) * oW),
+    y: Math.round((mY / maskArea.height) * oH),
   };
 }
 
 export function mappingButtonPosition(
   oX: number,
   oY: number,
-  oW: number,
-  oH: number,
-  mW: number,
-  mH: number
+  scale: { x: number; y: number }
 ) {
   return {
-    x: Math.round((oX / oW) * mW),
-    y: Math.round((oY / oH) * mH),
+    x: Math.round(oX * scale.x),
+    y: Math.round(oY * scale.y),
   };
 }
 
 export function mappingButtonTransformStyle(
   oX: number,
   oY: number,
-  oW: number,
-  oH: number,
-  mW: number,
-  mH: number
+  scale: { x: number; y: number }
 ): string {
-  const x = Math.round((oX / oW) * mW);
-  const y = Math.round((oY / oH) * mH);
+  const x = Math.round(oX * scale.x);
+  const y = Math.round(oY * scale.y);
   return `translate(${x}px, ${y}px)`;
 }
 

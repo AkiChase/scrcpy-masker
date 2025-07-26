@@ -19,8 +19,7 @@ fn setup(mut commands: Commands, mut window: Single<&mut Window>) {
 
 fn border(mut commands: Commands) {
     let border_thickness = 1.0; // logical size
-    let border_color = Color::linear_rgba(0.0, 0.0, 0.0, 255.0);
-
+    let border_color = Color::srgba_u8(183, 42, 32, 255);
     commands.spawn((
         Node {
             width: Val::Percent(100.),

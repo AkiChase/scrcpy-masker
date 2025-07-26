@@ -1,7 +1,7 @@
 import "./App.scss";
-import { Layout, message } from "antd";
+import { Layout, message, Spin } from "antd";
 import { MessageContext } from "./hooks";
-import { useAppDispatch } from "./store/store";
+import { useAppDispatch, useAppSelector } from "./store/store";
 import { forceSetLocalConfig } from "./store/localConfig";
 import { useEffect } from "react";
 import { Content } from "antd/es/layout/layout";
@@ -9,37 +9,27 @@ import Sider from "./components/Sider";
 import { useLocation, useOutlet } from "react-router-dom";
 import KeepAlive, { useKeepAliveRef } from "keepalive-for-react";
 import LoadingWrapper from "./components/common/LoadingWrapper";
+import { requestGet } from "./utils";
+import { setIsLoading } from "./store/other";
 
 function App() {
   const dispatch = useAppDispatch();
   const [messageApi, contextHolder] = message.useMessage();
-
+  const isLoading = useAppSelector((state) => state.other.isLoading);
   const location = useLocation();
   const aliveRef = useKeepAliveRef();
 
   const outlet = useOutlet();
 
   async function loadLocalConfig() {
+    dispatch(setIsLoading(true));
     try {
-      // TODO 临时数据
-      // const res = await requestGet("/api/config/get_config");
-      const res: any = {
-        data: {
-          webPort: 1234,
-          controllerPort: 1234,
-          adbPath: "adb",
-          verticalScreenHeight: 720,
-          horizontalScreenWidth: 1280,
-          verticalPosition: [800, 300],
-          horizontalPosition: [300, 300],
-          activeMappingFile: "test.json",
-          mappingLabelOpacity: 0.3,
-        },
-      };
+      const res = await requestGet("/api/config/get_config");
       dispatch(forceSetLocalConfig(res.data));
     } catch (err: any) {
       messageApi.error(err);
     }
+    dispatch(setIsLoading(false));
   }
 
   useEffect(() => {
@@ -60,6 +50,7 @@ function App() {
   return (
     <MessageContext.Provider value={messageApi}>
       {contextHolder}
+      <Spin spinning={isLoading} fullscreen delay={200} />
       <Layout className="min-h-100vh">
         <Sider />
         <Layout>

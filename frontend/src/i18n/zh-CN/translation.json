@@ -30,9 +30,13 @@
     },
     "otherDevices": {
       "title": "其他设备",
-      "action": "操作",
       "status": "状态",
-      "actionControl": "控制设备"
+      "actionControl": "控制设备",
+      "video": "视频",
+      "audio": "音频"
+    },
+    "common": {
+      "refresh": "刷新设备"
     }
   },
   "mappings": {
@@ -54,7 +58,9 @@
         "label": "删除"
       },
       "refreshBackground": "刷新背景",
-      "refreshBgFail": "刷新背景图片失败: {0}"
+      "refreshBgFail": "刷新背景图片失败: {0}",
+      "refreshSuccess": "刷新背景图片成功",
+      "noMainDevice": "未找到受控的主设备，请在设备页面控制设备"
     },
     "singleTap": {
       "setting": {
@@ -178,6 +184,36 @@
       "setting": {
         "title": "映射配置 - 直控模式"
       }
+    },
+    "home": {
+      "emptyBind": "存在未设置快捷键的按键！",
+      "save": "保存",
+      "restore": "还原",
+      "activate": "启用",
+      "refresh": "刷新",
+      "manage": "管理",
+      "file": "文件",
+      "create": "新建",
+      "edit": "编辑",
+      "action": "操作",
+      "delete": "删除",
+      "duplicate": "复制",
+      "manager": "配置管理",
+      "active": "启用",
+      "migration": "迁移到当前主设备尺寸",
+      "editing": "编辑",
+      "rename": "重命名",
+      "createTitle": "创建新配置",
+      "confirmYes": "是",
+      "confirmNo": "否",
+      "renameTitle": "重命名配置",
+      "fileInputPlaceholder": "请输入新配置名称",
+      "deleteTitle": "删除配置",
+      "deletePrompt": "确定要删除吗？",
+      "migrationTitle": "迁移配置",
+      "size": "尺寸",
+      "differentName": "新配置名不能与当前文件名相同！",
+      "duplicateTitle": "复制配置"
     }
   }
 }

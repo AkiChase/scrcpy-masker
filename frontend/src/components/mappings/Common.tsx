@@ -369,13 +369,11 @@ export const CursorPos = forwardRef<
   HTMLDivElement,
   ComponentPropsWithoutRef<"div">
 >((props, ref) => {
-  return (
-    <div
-      style={props.style}
-      ref={ref}
-      className="absolute cursor-default color-text-secondary font-bold z-10"
-    ></div>
-  );
+  const className =
+    "absolute cursor-default color-text-secondary font-bold z-10 " +
+    (props.className ?? "");
+
+  return <div style={props.style} ref={ref} className={className} />;
 });
 
 export function RefreshImageButton() {

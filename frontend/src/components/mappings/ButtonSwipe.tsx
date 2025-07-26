@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SwipeConfig } from "./mapping";
 import { Button, Flex, Popover, Space, Tooltip, Typography } from "antd";
 import {
@@ -52,6 +52,13 @@ export default function ButtonSwipe({
   const [showSetting, setShowSetting] = useState(false);
   const [isEditingPos, setIsEditingPos] = useState(false);
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
@@ -59,13 +66,10 @@ export default function ButtonSwipe({
       element.style.transform = mappingButtonTransformStyle(
         position.x,
         position.y,
-        originalSize.width,
-        originalSize.height,
-        maskArea.width,
-        maskArea.height
+        scale
       );
     }
-  }, [maskArea, index, config, originalSize]);
+  }, [index, config, scale]);
 
   const handleDrag = mappingButtonDragFactory(
     maskArea,
@@ -133,6 +137,12 @@ function Background({
   originalSize: { width: number; height: number };
 }) {
   const maskArea = useAppSelector((state) => state.other.maskArea);
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
 
   return (
     <div
@@ -160,21 +170,11 @@ function Background({
         </defs>
         {positions.map((pos, index) => {
           if (index === positions.length - 1) return null;
-          const { x: x1, y: y1 } = mappingButtonPosition(
-            pos.x,
-            pos.y,
-            originalSize.width,
-            originalSize.height,
-            maskArea.width,
-            maskArea.height
-          );
+          const { x: x1, y: y1 } = mappingButtonPosition(pos.x, pos.y, scale);
           const { x: x2, y: y2 } = mappingButtonPosition(
             positions[index + 1].x,
             positions[index + 1].y,
-            originalSize.width,
-            originalSize.height,
-            maskArea.width,
-            maskArea.height
+            scale
           );
 
           return (
@@ -200,10 +200,7 @@ function Background({
               transform: mappingButtonTransformStyle(
                 position.x,
                 position.y,
-                originalSize.width,
-                originalSize.height,
-                maskArea.width,
-                maskArea.height
+                scale
               ),
             }}
           >
@@ -243,6 +240,13 @@ function PositonEditorItem({
     100
   );
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   return (
     <Popover
       destroyOnHidden
@@ -269,14 +273,7 @@ function PositonEditorItem({
       <div
         className="rounded-full w-3 h-3 bg-primary absolute left--1.5 top--1.5 text-center text-bold hover:bg-primary-hover active:bg-primary-active"
         style={{
-          transform: mappingButtonTransformStyle(
-            position.x,
-            position.y,
-            originalSize.width,
-            originalSize.height,
-            maskArea.width,
-            maskArea.height
-          ),
+          transform: mappingButtonTransformStyle(position.x, position.y, scale),
         }}
         onMouseDown={handleDrag}
       >
@@ -301,6 +298,13 @@ function PositonEditor({
   const messageApi = useMessageContext();
   const { t } = useTranslation();
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   function handleItemDelete(index: number) {
     if (positions.length === 1) {
       messageApi?.warning(t("mappings.swipe.setting.keepLastOne"));
@@ -324,10 +328,7 @@ function PositonEditor({
         clientPositionToMappingPosition(
           e.clientX,
           e.clientY,
-          maskArea.left,
-          maskArea.top,
-          maskArea.width,
-          maskArea.height,
+          maskArea,
           originalSize.width,
           originalSize.height
         ),
@@ -377,21 +378,11 @@ function PositonEditor({
           </defs>
           {positions.map((pos, index) => {
             if (index === positions.length - 1) return null;
-            const { x: x1, y: y1 } = mappingButtonPosition(
-              pos.x,
-              pos.y,
-              originalSize.width,
-              originalSize.height,
-              maskArea.width,
-              maskArea.height
-            );
+            const { x: x1, y: y1 } = mappingButtonPosition(pos.x, pos.y, scale);
             const { x: x2, y: y2 } = mappingButtonPosition(
               positions[index + 1].x,
               positions[index + 1].y,
-              originalSize.width,
-              originalSize.height,
-              maskArea.width,
-              maskArea.height
+              scale
             );
 
             return (

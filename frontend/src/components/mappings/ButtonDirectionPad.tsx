@@ -117,9 +117,20 @@ export default function ButtonDirectionPad({
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   const buttonStyle = useMemo(
-    () => mappingButtonPresetStyle(config.max_offset_x, config.max_offset_y),
-    [config.max_offset_x, config.max_offset_y]
+    () =>
+      mappingButtonPresetStyle(
+        Math.round(config.max_offset_x * scale.x),
+        Math.round(config.max_offset_y * scale.y)
+      ),
+    [config.max_offset_x, config.max_offset_y, scale]
   );
 
   useEffect(() => {
@@ -128,13 +139,10 @@ export default function ButtonDirectionPad({
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        originalSize.width,
-        originalSize.height,
-        maskArea.width,
-        maskArea.height
+        scale
       );
     }
-  }, [maskArea, index, config, originalSize]);
+  }, [index, config, scale]);
 
   const handleDrag = mappingButtonDragFactory(
     maskArea,
@@ -265,8 +273,8 @@ function Setting({
               <span>{t("mappings.common.bind.settingLabel")}</span>
               <Switch
                 size="small"
-                checkedChildren={t('mappings.directionPad.setting.joyStick')}
-                unCheckedChildren={t('mappings.directionPad.setting.button')}
+                checkedChildren={t("mappings.directionPad.setting.joyStick")}
+                unCheckedChildren={t("mappings.directionPad.setting.button")}
                 checked={isJoyStick}
                 onChange={toggleBindMode}
               />
@@ -275,7 +283,7 @@ function Setting({
         >
           {isJoyStick ? (
             <ItemBoxContainer gap={12} className="pl-8">
-              <ItemBox label={t('mappings.directionPad.setting.xAxis')}>
+              <ItemBox label={t("mappings.directionPad.setting.xAxis")}>
                 <Select
                   className="w-full"
                   value={(config.bind as DirectionJoyStickBinding).x}
@@ -283,7 +291,7 @@ function Setting({
                   options={gamepadAxisOptions}
                 />
               </ItemBox>
-              <ItemBox label={t('mappings.directionPad.setting.yAxis')}>
+              <ItemBox label={t("mappings.directionPad.setting.yAxis")}>
                 <Select
                   className="w-full"
                   value={(config.bind as DirectionJoyStickBinding).y}
@@ -295,22 +303,22 @@ function Setting({
           ) : (
             <ItemBoxContainer gap={12} className="pl-8">
               <SettingBind
-                label={t('mappings.directionPad.setting.up')}
+                label={t("mappings.directionPad.setting.up")}
                 bind={(config.bind as DirectionButtonBinding).up}
                 onBindChange={(bind) => handleBindChange("up", bind)}
               />
               <SettingBind
-                label={t('mappings.directionPad.setting.down')}
+                label={t("mappings.directionPad.setting.down")}
                 bind={(config.bind as DirectionButtonBinding).down}
                 onBindChange={(bind) => handleBindChange("down", bind)}
               />
               <SettingBind
-                label={t('mappings.directionPad.setting.left')}
+                label={t("mappings.directionPad.setting.left")}
                 bind={(config.bind as DirectionButtonBinding).left}
                 onBindChange={(bind) => handleBindChange("left", bind)}
               />
               <SettingBind
-                label={t('mappings.directionPad.setting.right')}
+                label={t("mappings.directionPad.setting.right")}
                 bind={(config.bind as DirectionButtonBinding).right}
                 onBindChange={(bind) => handleBindChange("right", bind)}
               />
@@ -323,7 +331,7 @@ function Setting({
             onConfigChange({ ...config, pointer_id: pointerId })
           }
         />
-        <ItemBox label={t('mappings.directionPad.setting.maxOffset')}>
+        <ItemBox label={t("mappings.directionPad.setting.maxOffset")}>
           <Space.Compact className="w-full">
             <InputNumber
               className="w-full"
@@ -345,7 +353,7 @@ function Setting({
             />
           </Space.Compact>
         </ItemBox>
-        <ItemBox label={t('mappings.directionPad.setting.initDuration')}>
+        <ItemBox label={t("mappings.directionPad.setting.initDuration")}>
           <InputNumber
             className="w-full"
             value={config.initial_duration}

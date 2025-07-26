@@ -34,6 +34,13 @@ impl Device {
         Ok(())
     }
 
+    pub fn pull(id: &str, src: String, output: &mut dyn Write) -> Result<(), String> {
+        let mut device = Device::new_server_device(id);
+        device
+            .pull(&src, output)
+            .map_err(|e| format!("Failed to pull file '{}' from device '{}': {}", src, id, e))
+    }
+
     pub fn reverse(id: &str, remote: &str, local: &str) -> Result<(), String> {
         let mut device = Device::new_server_device(id);
         device
@@ -74,6 +81,19 @@ impl Device {
         });
 
         h
+    }
+
+    pub fn shell<S>(id: &str, shell_args: S, output: &mut dyn Write) -> Result<(), String>
+    where
+        S: IntoIterator,
+        S::Item: Into<String>,
+    {
+        let mut device = Device::new_server_device(id);
+        let shell_args: Vec<String> = shell_args.into_iter().map(|s| s.into()).collect();
+        let shell_args: Vec<&str> = shell_args.iter().map(|s| s.as_str()).collect();
+        device
+            .shell_command(&shell_args, output)
+            .map_err(|e| e.to_string())
     }
 
     pub fn screen_size(id: &str) -> Result<(u32, u32), String> {
@@ -156,7 +176,16 @@ impl Adb {
             .connect_device(socket_addr)
             .map_err(|e| format!("Failed to connect to device '{}': {}", address, e))
     }
-    // pub fn push(&mut self)
+
+    pub fn pair_device(&mut self, address: &str, code: &str) -> Result<(), String> {
+        let socket_addr = address
+            .parse::<SocketAddrV4>()
+            .map_err(|e| format!("Failed to parse device address: {}", e))?;
+
+        self.server
+            .pair(socket_addr, code.to_string())
+            .map_err(|e| format!("Failed to pair with device '{}': {}", address, e))
+    }
 }
 
 struct ChannelWriter {

@@ -237,13 +237,13 @@ impl ScrcpyConnection {
 
     pub async fn handle_video(&mut self, token: CancellationToken, _v_tx: Sender<Vec<u8>>) {
         // TODO handle scrcpy video connection
-        log::debug!("[Controller] handle scrcpy vedio connection...");
+        log::debug!("[Controller] handle scrcpy video connection...");
         tokio::select! {
             // _ = self.control_loop(csb_rx)=>{
-            //     log::error!("Scrcpy vedio connection shutdown unexpectedly");
+            //     log::error!("Scrcpy video connection shutdown unexpectedly");
             // }
             _ = token.cancelled()=>{
-                log::info!("[Controller] Scrcpy vedio connection cancelled manually");
+                log::info!("[Controller] Scrcpy video connection cancelled manually");
             }
         };
         self.socket.shutdown().await.unwrap();

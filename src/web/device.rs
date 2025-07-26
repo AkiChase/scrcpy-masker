@@ -3,6 +3,8 @@ use std::time::Duration;
 use axum::{
     Json, Router,
     extract::State,
+    http::{HeaderMap, HeaderValue, StatusCode},
+    response::IntoResponse,
     routing::{get, post},
 };
 use rand::Rng;
@@ -39,6 +41,9 @@ pub fn routers(
         .route("/control_device", post(control_device))
         .route("/decontrol_device", post(decontrol_device))
         .route("/control/set_display_power", post(set_display_power))
+        .route("/adb_connect", post(adb_connect))
+        .route("/adb_pair", post(adb_pair))
+        .route("/adb_screenshot", post(adb_screenshot))
         .with_state(AppStateDevice { cs_tx, d_tx })
 }
 
@@ -69,7 +74,7 @@ fn gen_scid() -> String {
 #[derive(Deserialize)]
 struct PostDataControlDevice {
     device_id: String,
-    vedio: bool,
+    video: bool,
     audio: bool,
 }
 
@@ -78,7 +83,7 @@ async fn control_device(
     Json(payload): Json<PostDataControlDevice>,
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = payload.device_id;
-    let vedio = payload.vedio;
+    let video = payload.video;
     let audio = payload.audio;
 
     let device_list = ControlledDevice::get_device_list().await;
@@ -115,7 +120,7 @@ async fn control_device(
     let mut socket_id: Vec<String> = Vec::new();
     let mut commands: Vec<ControllerCommand> = Vec::new();
     if main {
-        if vedio {
+        if video {
             socket_id.push("main_video".to_string());
             commands.push(ControllerCommand::ConnectMainVideo(scid.clone()));
         }
@@ -148,7 +153,7 @@ async fn control_device(
             "com.genymobile.scrcpy.Server",
             version,
             &format!("scid={}", scid),
-            &format!("video={}", vedio),
+            &format!("video={}", video),
             &format!("audio={}", audio),
         ],
     );
@@ -226,4 +231,84 @@ async fn set_display_power(
     ))
 }
 
-// TODO get screenshot of one device by serial_id (for mapping setting)
+#[derive(Deserialize)]
+struct PostDataAddress {
+    address: String,
+}
+
+async fn adb_connect(Json(payload): Json<PostDataAddress>) -> Result<JsonResponse, WebServerError> {
+    let config = LocalConfig::get();
+    match Adb::new(config.adb_path).connect_device(&payload.address) {
+        Ok(_) => Ok(JsonResponse::success(
+            format!("Adb connect {} successfully", payload.address),
+            None,
+        )),
+        Err(e) => Err(WebServerError::bad_request(format!(
+            "Adb connect {} failed: {}",
+            payload.address, e
+        ))),
+    }
+}
+
+#[derive(Deserialize)]
+struct PostDataAdbPair {
+    address: String,
+    code: String,
+}
+
+async fn adb_pair(Json(payload): Json<PostDataAdbPair>) -> Result<JsonResponse, WebServerError> {
+    let config = LocalConfig::get();
+    match Adb::new(config.adb_path).pair_device(&payload.address, &payload.code) {
+        Ok(_) => Ok(JsonResponse::success(
+            format!(
+                "Adb pair {} with code {} successfully",
+                payload.address, payload.code
+            ),
+            None,
+        )),
+        Err(e) => Err(WebServerError::bad_request(format!(
+            "Adb pair {} with code {} failed: {}",
+            payload.address, payload.code, e
+        ))),
+    }
+}
+
+#[derive(Deserialize)]
+struct PostDataId {
+    id: String,
+}
+
+async fn adb_screenshot(
+    Json(payload): Json<PostDataId>,
+) -> Result<impl IntoResponse, WebServerError> {
+    let src = "/data/local/tmp/_screenshot_scrcpy_masker.png";
+
+    Device::shell(
+        &payload.id,
+        ["screencap", "-p", src],
+        &mut std::io::stdout(),
+    )
+    .map_err(|e| {
+        WebServerError::bad_request(format!(
+            "Failed to take screenshot for device {}: {}",
+            payload.id, e
+        ))
+    })?;
+
+    let mut image_bytes = Vec::<u8>::new();
+    Device::pull(&payload.id, src.to_string(), &mut image_bytes)
+        .map_err(|e| WebServerError::bad_request(format!("Failed get screenshot file. {}", e)))?;
+
+    Device::shell(&payload.id, ["rm", src], &mut std::io::stdout()).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "Failed to remove screenshot file for device {}: {}",
+            payload.id, e
+        ))
+    })?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert("Content-Type", HeaderValue::from_static("image/png"));
+    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
+
+    Ok((StatusCode::OK, headers, image_bytes))
+}

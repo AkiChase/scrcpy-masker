@@ -1,17 +1,27 @@
-import type { MappingConfig, MappingType } from "./mapping";
+import type { DirectionBinding, MappingConfig, MappingType } from "./mapping";
 
 import {
   Badge,
   Button,
   Dropdown,
   Flex,
+  Input,
+  InputNumber,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
   type TableProps,
 } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
 import { useAppDispatch, useAppSelector } from "../../store/store";
 import {
   CheckCircleOutlined,
@@ -20,15 +30,17 @@ import {
   EditOutlined,
   FileAddOutlined,
   FileSyncOutlined,
+  FileTextOutlined,
+  RollbackOutlined,
   SaveOutlined,
   SettingOutlined,
   SnippetsOutlined,
 } from "@ant-design/icons";
 import IconButton from "../common/IconButton";
-import { deepClone, throttle } from "../../utils";
+import { deepClone, requestGet, requestPost, throttle } from "../../utils";
 import { useMessageContext, useRefreshBackgroundImage } from "../../hooks";
 import ButtonSingleTap from "./ButtonSingleTap";
-import { setMaskArea } from "../../store/other";
+import { setIsLoading, setMaskArea } from "../../store/other";
 import ButtonRepeatTap from "./ButtonRepeatTap";
 import ButtonMultipleTap from "./ButtonMultipleTap";
 import { clientPositionToMappingPosition } from "./tools";
@@ -39,14 +51,60 @@ import { CursorPos, DeviceBackground, RefreshImageButton } from "./Common";
 import ButtonPadCastSpell from "./ButtonPadCastSpell";
 import ButtonCancelCast from "./ButtonCancelCast";
 import ButtonObservation from "./ButtonObservation";
-import ButtonFps from "./ButtonFPS";
+import ButtonFps from "./ButtonFps";
 import ButtonRawInput from "./ButtonRawInput";
+import { setActiveMappingFile } from "../../store/localConfig";
+import { useTranslation } from "react-i18next";
+import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 
 type MappingFileTabelItem = {
   file: string;
   active: boolean;
   displayed: boolean;
 };
+
+type ConfirmProps = PropsWithChildren<{
+  title: string;
+  defaultValue: string;
+  extral?: ReactNode;
+  onConfirm: (value: string) => void;
+}>;
+
+function Confirm({
+  title,
+  defaultValue,
+  extral,
+  onConfirm,
+  children,
+}: ConfirmProps) {
+  const { t } = useTranslation();
+  defaultValue = defaultValue ?? "";
+  const [newFile, setNewFile] = useState(defaultValue);
+
+  return (
+    <Popconfirm
+      title={title}
+      destroyOnHidden
+      description={
+        <ItemBoxContainer gap={8}>
+          <ItemBox label={t("mappings.home.file")}>
+            <Input
+              placeholder={t("mappings.home.fileInputPlaceholder")}
+              value={newFile}
+              onChange={(e) => setNewFile(e.target.value)}
+            />
+          </ItemBox>
+          {extral}
+        </ItemBoxContainer>
+      }
+      onConfirm={() => onConfirm(newFile)}
+      okText={t("mappings.home.confirmYes")}
+      cancelText={t("mappings.home.confirmNo")}
+    >
+      {children}
+    </Popconfirm>
+  );
+}
 
 function Manager({
   open,
@@ -55,6 +113,11 @@ function Manager({
   displayedMapping,
   onActiveAction,
   onDisplayAction,
+  onDuplicateAction,
+  onDeleteAction,
+  onCreateAction,
+  onRenameAction,
+  onMigrateAction,
 }: {
   open: boolean;
   onCancel: () => void;
@@ -62,10 +125,32 @@ function Manager({
   displayedMapping: string;
   onActiveAction: (file: string) => void;
   onDisplayAction: (file: string) => void;
+  onDuplicateAction: (file: string, newFile: string) => void;
+  onDeleteAction: (file: string) => void;
+  onCreateAction: (
+    file: string,
+    size: { width: number; height: number }
+  ) => void;
+  onRenameAction: (file: string, newFile: string) => void;
+  onMigrateAction: (
+    file: string,
+    newFile: string,
+    size: { width: number; height: number }
+  ) => void;
 }) {
+  const { t } = useTranslation();
+  const messageApi = useMessageContext();
   const activeMappingFile = useAppSelector(
     (state) => state.localConfig.activeMappingFile
   );
+  const controlledDevices = useAppSelector(
+    (state) => state.other.controlledDevices
+  );
+
+  const [newSize, setNewSize] = useState<{ width: number; height: number }>({
+    width: 1280,
+    height: 720,
+  });
 
   const mappingFiles = useMemo<MappingFileTabelItem[]>(() => {
     return mappingList.map((file) => {
@@ -81,8 +166,51 @@ function Manager({
     {
       title: (
         <Space size="large">
-          文件
-          <IconButton color="info" tooltip="新建" icon={<FileAddOutlined />} />
+          {t("mappings.home.file")}
+          <Confirm
+            title={t("mappings.home.createTitle")}
+            onConfirm={(newFile) => onCreateAction(newFile, newSize)}
+            defaultValue=""
+            extral={
+              <ItemBox label={t("mappings.home.size")}>
+                <Space.Compact className="w-full">
+                  <InputNumber
+                    className="w-full"
+                    prefix="W:"
+                    value={newSize.width}
+                    min={1}
+                    onChange={(v) =>
+                      v !== null && setNewSize({ ...newSize, width: v })
+                    }
+                  />
+                  <InputNumber
+                    className="w-full"
+                    prefix="H:"
+                    value={newSize.height}
+                    min={1}
+                    onChange={(v) =>
+                      v !== null && setNewSize({ ...newSize, height: v })
+                    }
+                  />
+                </Space.Compact>
+              </ItemBox>
+            }
+          >
+            <IconButton
+              color="info"
+              tooltip={t("mappings.home.create")}
+              icon={<FileAddOutlined />}
+              onClick={() => {
+                const mainDevice = controlledDevices.find((d) => d.main);
+                if (mainDevice) {
+                  setNewSize({
+                    width: mainDevice.device_size[0],
+                    height: mainDevice.device_size[1],
+                  });
+                }
+              }}
+            />
+          </Confirm>
         </Space>
       ),
       dataIndex: "file",
@@ -91,14 +219,18 @@ function Manager({
         <Flex align="center" justify="space-between" className="p-r-3">
           <span>{record.file}</span>
           <Space size={32}>
-            {record.displayed && <Badge status="processing" text="编辑" />}
-            {record.active && <Badge status="success" text="启用" />}
+            {record.displayed && (
+              <Badge status="processing" text={t("mappings.home.editing")} />
+            )}
+            {record.active && (
+              <Badge status="success" text={t("mappings.home.active")} />
+            )}
           </Space>
         </Flex>
       ),
     },
     {
-      title: "操作",
+      title: t("mappings.home.action"),
       key: "action",
       align: "center",
       width: 1,
@@ -106,34 +238,116 @@ function Manager({
         <Space size="middle" className="text-4">
           <IconButton
             color="info"
-            icon={<EditOutlined />}
-            tooltip="编辑"
-            onClick={() => onActiveAction(record.file)}
+            icon={<FileTextOutlined />}
+            tooltip={t("mappings.home.edit")}
+            onClick={() => onDisplayAction(record.file)}
           />
           <IconButton
             color="success"
-            tooltip="启用"
+            tooltip={t("mappings.home.activate")}
             icon={<CheckCircleOutlined />}
-            onClick={() => onDisplayAction(record.file)}
+            onClick={() => onActiveAction(record.file)}
           />
-          <IconButton
-            color="error"
-            tooltip="删除"
-            icon={<DeleteOutlined />}
-            onClick={() => onDisplayAction(record.file)}
-          />
-          <IconButton
-            color="info"
-            tooltip="复制"
-            icon={<CopyOutlined />}
-            onClick={() => onDisplayAction(record.file)}
-          />
-          <IconButton
-            color="info"
-            tooltip="迁移到当前设备尺寸"
-            icon={<SnippetsOutlined />}
-            onClick={() => onDisplayAction(record.file)}
-          />
+          <Confirm
+            title={t("mappings.home.renameTitle")}
+            onConfirm={(newFile) => {
+              if (newFile === record.file) {
+                messageApi?.warning(t("mappings.home.differentName"));
+              } else {
+                onRenameAction(record.file, newFile);
+              }
+            }}
+            defaultValue={record.file}
+          >
+            <IconButton
+              color="warning"
+              icon={<EditOutlined />}
+              tooltip={t("mappings.home.rename")}
+            />
+          </Confirm>
+          <Popconfirm
+            title={t("mappings.home.deleteTitle")}
+            destroyOnHidden
+            description={t("mappings.home.deletePrompt")}
+            onConfirm={() => onDeleteAction(record.file)}
+            okText={t("mappings.home.confirmYes")}
+            cancelText={t("mappings.home.confirmNo")}
+          >
+            <IconButton
+              color="error"
+              tooltip={t("mappings.home.delete")}
+              icon={<DeleteOutlined />}
+            />
+          </Popconfirm>
+          <Confirm
+            title={t("mappings.home.duplicateTitle")}
+            onConfirm={(newFile) => {
+              if (newFile === record.file) {
+                messageApi?.warning(t("mappings.home.differentName"));
+              } else {
+                onDuplicateAction(record.file, newFile);
+              }
+            }}
+            defaultValue={record.file}
+          >
+            <IconButton
+              color="info"
+              tooltip={t("mappings.home.duplicate")}
+              icon={<CopyOutlined />}
+            />
+          </Confirm>
+          <Confirm
+            title={t("mappings.home.migrationTitle")}
+            onConfirm={(newFile) => {
+              if (newFile === record.file) {
+                messageApi?.warning(t("mappings.home.differentName"));
+              } else {
+                onMigrateAction(record.file, newFile, newSize);
+              }
+            }}
+            defaultValue={record.file}
+            extral={
+              <ItemBox label={t("mappings.home.size")}>
+                <Space.Compact className="w-full">
+                  <InputNumber
+                    className="w-full"
+                    prefix="W:"
+                    value={newSize.width}
+                    min={1}
+                    onChange={(v) =>
+                      v !== null && setNewSize({ ...newSize, width: v })
+                    }
+                  />
+                  <InputNumber
+                    className="w-full"
+                    prefix="H:"
+                    value={newSize.height}
+                    min={1}
+                    onChange={(v) =>
+                      v !== null && setNewSize({ ...newSize, height: v })
+                    }
+                  />
+                </Space.Compact>
+              </ItemBox>
+            }
+          >
+            <IconButton
+              color="warning"
+              tooltip={t("mappings.home.migration")}
+              icon={<SnippetsOutlined />}
+              onClick={() => {
+                const mainDevice = controlledDevices.find((d) => d.main);
+                if (mainDevice) {
+                  setNewSize({
+                    width: mainDevice.device_size[0],
+                    height: mainDevice.device_size[1],
+                  });
+                } else {
+                  messageApi?.warning(t("mappings.common.noMainDevice"));
+                }
+              }}
+            />
+          </Confirm>
         </Space>
       ),
     },
@@ -141,7 +355,7 @@ function Manager({
 
   return (
     <Modal
-      title="配置管理"
+      title={t("mappings.home.manager")}
       className="min-w-50vw"
       open={open}
       onCancel={onCancel}
@@ -190,11 +404,11 @@ function Displayer({
   const maskArea = useAppSelector((state) => state.other.maskArea);
 
   const cursorPosRef = useRef<HTMLDivElement>(null);
+  const displayerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const displayerElement = document.getElementById(
-      "mapping-displayer"
-    ) as HTMLElement;
+    const displayerElement = displayerRef.current;
+    if (!displayerElement) return;
 
     const observer = new ResizeObserver(() => {
       const rect = displayerElement.getBoundingClientRect();
@@ -212,7 +426,7 @@ function Displayer({
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [displayerRef.current]);
 
   function updateMapping(index: number, config: MappingType) {
     setState((prev) => {
@@ -231,7 +445,7 @@ function Displayer({
     });
   }
 
-  function deleteMapping(index: number) {
+  function deleteMappingButton(index: number) {
     setState((prev) => {
       if (prev === null) return null;
       const newMappings = [...prev.current.mappings];
@@ -253,10 +467,7 @@ function Displayer({
       const { x, y } = clientPositionToMappingPosition(
         e.clientX,
         e.clientY,
-        maskArea.left,
-        maskArea.top,
-        maskArea.width,
-        maskArea.height,
+        maskArea,
         state.current.original_size.width,
         state.current.original_size.height
       );
@@ -266,7 +477,7 @@ function Displayer({
 
   return (
     <div
-      id="mapping-displayer"
+      ref={displayerRef}
       className="w-full h-full border-text-quaternary border-solid border relative select-none"
       onMouseMove={handleMouseMove}
     >
@@ -275,7 +486,7 @@ function Displayer({
         menu={{
           items: [
             {
-              label: "添加按钮",
+              label: "TODO添加按钮",
               key: "1",
             },
           ],
@@ -284,14 +495,17 @@ function Displayer({
       >
         <div className="w-full h-full absolute bg-transparent"></div>
       </Dropdown>
-      <CursorPos ref={cursorPosRef} />
+      <CursorPos ref={cursorPosRef} className="top--6" />
+      <div className="absolute color-text-secondary font-bold top--6 right-0">
+        {`[${state.current.original_size.width} x ${state.current.original_size.height}]`}
+      </div>
       {state.current.mappings.map((mapping, index) => {
         const props: any = {
           originalSize: state.current.original_size,
           index,
           config: mapping,
           onConfigChange: (config: any) => updateMapping(index, config),
-          onConfigDelete: () => deleteMapping(index),
+          onConfigDelete: () => deleteMappingButton(index),
         };
 
         if (mapping.type in mappingButtonMap) {
@@ -312,6 +526,8 @@ export default function Mappings() {
     (state) => state.localConfig.activeMappingFile
   );
   const refreshBackground = useRefreshBackgroundImage();
+  const dispatch = useAppDispatch();
+  const { t } = useTranslation();
 
   const [displayedMappingFile, setDisplayedMappingFile] = useState("");
   const [isManagerOpen, setIsManagerOpen] = useState(false);
@@ -323,7 +539,9 @@ export default function Mappings() {
       label: (
         <Flex justify="space-between" align="center">
           <span>{item}</span>
-          {activeMappingFile === item && <Badge color="green" text="启用" />}
+          {activeMappingFile === item && (
+            <Badge color="green" text={t("mappings.home.active")} />
+          )}
         </Flex>
       ),
       value: item,
@@ -331,19 +549,55 @@ export default function Mappings() {
   }, [mappingList]);
 
   useEffect(() => {
-    setMappingList(mappingListTMP);
-    setDisplayedMapping(activeMappingFile);
-
-    refreshBackground();
+    loadMappingList();
+    refreshBackground(true);
   }, []);
 
-  async function setDisplayedMapping(file: string) {
+  useEffect(() => {
+    if (displayedMappingFile === "" && activeMappingFile !== "") {
+      changeDisplayedMapping(activeMappingFile);
+    }
+  }, [activeMappingFile]);
+
+  async function loadMappingList(silent: boolean = false) {
+    if (!silent) dispatch(setIsLoading(true));
     try {
-      // TODO 发送请求获取mappingconfig
-      const mappingConfig = deepClone(mappingConfigTMP);
+      const res = await requestGet<{
+        mapping_list: string[];
+        active_mapping: string;
+      }>("/api/mapping/get_mapping_list");
+      setMappingList(res.data.mapping_list);
+      if (activeMappingFile !== res.data.active_mapping)
+        dispatch(setActiveMappingFile(res.data.active_mapping));
+
+      // current displayed file is not in the list
+      if (
+        res.data.mapping_list.findIndex(
+          (file) => file === displayedMappingFile
+        ) == -1
+      ) {
+        setDisplayedMappingFile(res.data.active_mapping);
+      }
+    } catch (error: any) {
+      if (!silent) messageApi?.error(error);
+    }
+    if (!silent) dispatch(setIsLoading(false));
+  }
+
+  async function changeDisplayedMapping(file: string) {
+    if (!file) return;
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost<{ mapping_config: MappingConfig }>(
+        "/api/mapping/read_mapping",
+        {
+          file,
+        }
+      );
+      const mappingConfig = res.data.mapping_config;
       setDisplayedMappingFile(file);
       setEditState({
-        file: displayedMappingFile,
+        file,
         edited: false,
         current: mappingConfig,
         old: deepClone(mappingConfig),
@@ -351,6 +605,181 @@ export default function Mappings() {
     } catch (error: any) {
       messageApi?.error(error);
     }
+    dispatch(setIsLoading(false));
+  }
+
+  async function changeActiveMapping(file: string) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/change_active_mapping", {
+        file,
+      });
+      dispatch(setActiveMappingFile(file));
+      messageApi?.success(res.message);
+    } catch (error: any) {
+      messageApi?.error(error);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function updateMappingFile() {
+    if (editState) {
+      const errorMag = t("mappings.home.emptyBind");
+      const curConfig = editState.current;
+      const validateDirectionBind = (bind: DirectionBinding) => {
+        if (bind.type === "Button") {
+          for (const b of [bind.up, bind.down, bind.left, bind.right]) {
+            if (b.length === 0) {
+              messageApi?.error(errorMag);
+              return false;
+            }
+          }
+        } else {
+          if (bind.x === "" || bind.y === "") {
+            messageApi?.error(errorMag);
+            return false;
+          }
+        }
+        return true;
+      };
+      for (const mapping of curConfig.mappings) {
+        if (Array.isArray(mapping.bind)) {
+          if (mapping.bind.length === 0) {
+            messageApi?.error(errorMag);
+            return;
+          }
+        } else {
+          if (!validateDirectionBind(mapping.bind)) {
+            return;
+          }
+        }
+
+        if ("pad_bind" in mapping) {
+          if (!validateDirectionBind(mapping.pad_bind)) {
+            return;
+          }
+        }
+      }
+
+      dispatch(setIsLoading(true));
+      try {
+        const res = await requestPost("/api/mapping/update_mapping", {
+          file: editState.file,
+          config: curConfig,
+        });
+        messageApi?.success(res.message);
+        setEditState({
+          file: editState.file,
+          edited: false,
+          current: curConfig,
+          old: deepClone(curConfig),
+        });
+      } catch (error) {
+        messageApi?.error(error as string);
+      }
+      dispatch(setIsLoading(false));
+    }
+  }
+
+  async function restoreMappingFile() {
+    if (editState) {
+      setEditState({
+        old: editState.old,
+        current: deepClone(editState.old),
+        edited: false,
+        file: editState.file,
+      });
+    }
+  }
+
+  async function duplicateMappingFile(file: string, newFile: string) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/duplicate_mapping", {
+        file,
+        new_file: newFile,
+      });
+      await loadMappingList(true);
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function deleteMappingFile(file: string) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/delete_mapping", {
+        file,
+      });
+      await loadMappingList(true);
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function createMappingFile(
+    file: string,
+    size: { width: number; height: number }
+  ) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/create_mapping", {
+        file,
+        config: {
+          version: "0.0.1",
+          original_size: size,
+          mappings: [],
+        },
+      });
+      await loadMappingList(true);
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function renameMappingFile(file: string, newFile: string) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/rename_mapping", {
+        file,
+        new_file: newFile,
+      });
+      await loadMappingList(true);
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function migrateMappingFile(
+    file: string,
+    newFile: string,
+    size: {
+      width: number;
+      height: number;
+    }
+  ) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/mapping/migrate_mapping", {
+        file,
+        new_file: newFile,
+        width: size.width,
+        height: size.height,
+      });
+      await loadMappingList(true);
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
   }
 
   return (
@@ -360,8 +789,13 @@ export default function Mappings() {
         onCancel={() => setIsManagerOpen(false)}
         mappingList={mappingList}
         displayedMapping={displayedMappingFile}
-        onActiveAction={(file) => console.log("active change", file)}
-        onDisplayAction={(file) => console.log("display change", file)}
+        onActiveAction={changeActiveMapping}
+        onDisplayAction={changeDisplayedMapping}
+        onDuplicateAction={duplicateMappingFile}
+        onDeleteAction={deleteMappingFile}
+        onCreateAction={createMappingFile}
+        onRenameAction={renameMappingFile}
+        onMigrateAction={migrateMappingFile}
       />
       <section>
         <Flex justify="space-between" align="center">
@@ -370,40 +804,45 @@ export default function Mappings() {
               className="w-80"
               showSearch
               value={displayedMappingFile}
-              onChange={(value) => setDisplayedMapping(value)}
+              onChange={(value) => changeDisplayedMapping(value)}
               options={mappingListOptions}
             />
             <Button
               type="primary"
               disabled={editState === null || editState.edited === false}
               icon={<SaveOutlined />}
-              onClick={() =>
-                console.log("保存当前映射文件，注意进行校验特别是按键合法性")
-              }
+              onClick={updateMappingFile}
             >
-              保存
+              {t("mappings.home.save")}
+            </Button>
+            <Button
+              type="primary"
+              disabled={editState === null || editState.edited === false}
+              icon={<RollbackOutlined />}
+              onClick={restoreMappingFile}
+            >
+              {t("mappings.home.restore")}
             </Button>
             <Button
               type="primary"
               icon={<CheckCircleOutlined />}
-              onClick={() => console.log("启用当前映射文件")}
+              onClick={() => changeActiveMapping(displayedMappingFile)}
             >
-              启用
+              {t("mappings.home.activate")}
             </Button>
             <Button
               type="primary"
               icon={<FileSyncOutlined />}
-              onClick={() => console.log("刷新mapping列表")}
+              onClick={() => loadMappingList()}
             >
-              刷新
+              {t("mappings.home.refresh")}
             </Button>
-
             <Button
               type="primary"
               icon={<SettingOutlined />}
               onClick={() => setIsManagerOpen(true)}
             >
-              管理
+              {t("mappings.home.manage")}
             </Button>
           </Space.Compact>
           <RefreshImageButton />
@@ -415,326 +854,3 @@ export default function Mappings() {
     </Flex>
   );
 }
-
-const mappingListTMP = [
-  "test.json",
-  "default.json",
-  "test2.json",
-  "test3.json",
-  "test4.json",
-  "test5.json",
-  "test6.json",
-  "test7.json",
-  "test8.json",
-  "test9.json",
-  "test10.json",
-  "test11.json",
-  "test12.json",
-  "test13.json",
-  "test14.json",
-  "test15.json",
-  "test16.json",
-  "test17.json",
-  "test18.json",
-];
-const mappingConfigTMP: MappingConfig = {
-  mappings: [
-    {
-      bind: ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5"],
-      duration: 1000,
-      note: "SingleTap",
-      pointer_id: 1,
-      position: {
-        x: 100,
-        y: 100,
-      },
-      sync: false,
-      type: "SingleTap",
-    },
-    {
-      bind: ["Digit2"],
-      duration: 0,
-      note: "SingleTap (sync)",
-      pointer_id: 1,
-      position: {
-        x: 200,
-        y: 100,
-      },
-      sync: true,
-      type: "SingleTap",
-    },
-    {
-      bind: ["Digit3"],
-      duration: 30,
-      interval: 100,
-      note: "RepeatTap",
-      pointer_id: 1,
-      position: {
-        x: 250,
-        y: 200,
-      },
-      type: "RepeatTap",
-    },
-    {
-      bind: ["ControlLeft", "Digit3"],
-      duration: 30,
-      interval: 100,
-      note: "RepeatTap (multi-binding)",
-      pointer_id: 2,
-      position: {
-        x: 250,
-        y: 250,
-      },
-      type: "RepeatTap",
-    },
-    {
-      bind: ["Digit4"],
-      items: [
-        {
-          duration: 500,
-          position: {
-            x: 100,
-            y: 100,
-          },
-          wait: 0,
-        },
-        {
-          duration: 500,
-          position: {
-            x: 200,
-            y: 200,
-          },
-          wait: 1000,
-        },
-        {
-          duration: 500,
-          position: {
-            x: 300,
-            y: 300,
-          },
-          wait: 1000,
-        },
-      ],
-      note: "MultipleTap",
-      pointer_id: 1,
-      type: "MultipleTap",
-    },
-    {
-      bind: ["Digit5"],
-      interval: 1000,
-      note: "Swipe",
-      pointer_id: 1,
-      positions: [
-        {
-          x: 100,
-          y: 100,
-        },
-        {
-          x: 200,
-          y: 200,
-        },
-        {
-          x: 300,
-          y: 300,
-        },
-      ],
-      type: "Swipe",
-    },
-    {
-      bind: {
-        down: ["KeyS"],
-        left: ["KeyA"],
-        right: ["KeyD"],
-        type: "Button",
-        up: ["KeyW"],
-      },
-      initial_duration: 100,
-      max_offset_x: 100,
-      max_offset_y: 100,
-      note: "DirectionPad",
-      pointer_id: 9,
-      position: {
-        x: 300,
-        y: 1000,
-      },
-      type: "DirectionPad",
-    },
-    {
-      bind: {
-        type: "JoyStick",
-        x: "LeftStickX",
-        y: "LeftStickY",
-      },
-      initial_duration: 300,
-      max_offset_x: 100,
-      max_offset_y: 100,
-      note: "DirectionPad gamepad",
-      pointer_id: 9,
-      position: {
-        x: 500,
-        y: 1000,
-      },
-      type: "DirectionPad",
-    },
-    {
-      bind: ["KeyE"],
-      cast_no_direction: true,
-      cast_radius: 625,
-      center: {
-        x: 1280,
-        y: 815,
-      },
-      drag_radius: 150,
-      horizontal_scale_factor: 7,
-      note: "MouseCastSpell (no direction)",
-      pointer_id: 3,
-      position: {
-        x: 1900,
-        y: 1150,
-      },
-      release_mode: "OnRelease",
-      type: "MouseCastSpell",
-      vertical_scale_factor: 10,
-    },
-    {
-      bind: ["KeyQ"],
-      cast_no_direction: false,
-      cast_radius: 625,
-      center: {
-        x: 1280,
-        y: 815,
-      },
-      drag_radius: 150,
-      horizontal_scale_factor: 7,
-      note: "MouseCastSpell (press to release)",
-      pointer_id: 3,
-      position: {
-        x: 1900,
-        y: 1150,
-      },
-      release_mode: "OnPress",
-      type: "MouseCastSpell",
-      vertical_scale_factor: 10,
-    },
-    {
-      bind: ["AltLeft"],
-      cast_no_direction: true,
-      cast_radius: 625,
-      center: {
-        x: 1280,
-        y: 815,
-      },
-      drag_radius: 150,
-      horizontal_scale_factor: 7,
-      note: "MouseCastSpell (second press to release)",
-      pointer_id: 3,
-      position: {
-        x: 2100,
-        y: 1030,
-      },
-      release_mode: "OnSecondPress",
-      type: "MouseCastSpell",
-      vertical_scale_factor: 10,
-    },
-    {
-      bind: ["M-Back"],
-      cast_no_direction: false,
-      cast_radius: 625,
-      center: {
-        x: 1280,
-        y: 815,
-      },
-      drag_radius: 150,
-      horizontal_scale_factor: 7,
-      note: "MouseCastSpell",
-      pointer_id: 3,
-      position: {
-        x: 2250,
-        y: 900,
-      },
-      release_mode: "OnRelease",
-      type: "MouseCastSpell",
-      vertical_scale_factor: 10,
-    },
-    {
-      bind: ["KeyJ"],
-      block_direction_pad: true,
-      drag_radius: 150,
-      note: "PadCastSpell",
-      pad_bind: {
-        down: ["KeyS"],
-        left: ["KeyA"],
-        right: ["KeyD"],
-        type: "Button",
-        up: ["KeyW"],
-      },
-      pointer_id: 3,
-      position: {
-        x: 2000,
-        y: 750,
-      },
-      release_mode: "OnRelease",
-      type: "PadCastSpell",
-    },
-    {
-      bind: ["Space"],
-      note: "CancelCast",
-      position: {
-        x: 2200,
-        y: 175,
-      },
-      type: "CancelCast",
-    },
-    {
-      bind: ["M-Forward"],
-      note: "Observation",
-      pointer_id: 4,
-      position: {
-        x: 2000,
-        y: 300,
-      },
-      sensitivity_x: 0.5,
-      sensitivity_y: 0.5,
-      type: "Observation",
-    },
-    {
-      bind: ["Backquote"],
-      note: "FPS",
-      pointer_id: 0,
-      position: {
-        x: 1280,
-        y: 720,
-      },
-      sensitivity_x: 1.2000000476837158,
-      sensitivity_y: 1,
-      type: "Fps",
-    },
-    {
-      bind: ["M-Left"],
-      note: "Fire",
-      pointer_id: 1,
-      position: {
-        x: 2000,
-        y: 1000,
-      },
-      sensitivity_x: 1,
-      sensitivity_y: 0.5,
-      type: "Fire",
-    },
-    {
-      bind: ["Enter"],
-      note: "RawInput",
-      position: {
-        x: 2000,
-        y: 300,
-      },
-      type: "RawInput",
-    },
-  ],
-  original_size: {
-    height: 1440,
-    width: 2560,
-  },
-  title: "Default",
-  version: "0.0.1",
-};

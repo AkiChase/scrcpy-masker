@@ -87,7 +87,7 @@ pub fn handle_mask_command(
                 input,
                 file,
             } => {
-                log::info!("[Mask] Using mapping config {}: {}", file, mapping.title);
+                log::info!("[Mask] Using mapping config {}", file);
                 let report = ineffable.validate(&input);
                 if !report.is_empty() {
                     report.dump_to_log();

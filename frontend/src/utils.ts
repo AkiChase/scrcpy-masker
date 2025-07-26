@@ -1,11 +1,15 @@
-import axios, { type AxiosResponse } from "axios";
+import axios, { type AxiosResponse, type ResponseType } from "axios";
 
 async function handleRequest<D = any>(
   req: () => Promise<AxiosResponse>
 ): Promise<{ message: string; data: D }> {
   try {
     const res = await req();
-    return { message: res.data.message, data: res.data.data };
+    if (res.headers["content-type"] === "application/json") {
+      return { message: res.data.message, data: res.data.data };
+    } else {
+      return { message: "", data: res.data };
+    }
   } catch (err: any) {
     let msg = "Request failed";
     if (err?.response) {
@@ -28,17 +32,31 @@ async function handleRequest<D = any>(
 
 export async function requestGet<D = any>(
   url: string,
-  params?: Record<string, string | number>
+  params?: Record<string, string | number>,
+  responseType?: ResponseType
 ): Promise<{ message: string; data: D }> {
-  return await handleRequest(() => axios.get(url, { params }));
+  return await handleRequest(() => {
+    const opt: any = { params };
+    if (responseType) {
+      opt.responseType = responseType;
+    }
+    return axios.get(url, opt);
+  });
 }
 
-export async function requestPost(
+export async function requestPost<D = any>(
   url: string,
   data?: Record<string, any>,
-  params?: Record<string, string | number>
-): Promise<{ message: string; data: any }> {
-  return await handleRequest(() => axios.post(url, data, { params }));
+  params?: Record<string, string | number>,
+  responseType?: ResponseType
+): Promise<{ message: string; data: D }> {
+  return await handleRequest(() => {
+    const opt: any = { params };
+    if (responseType) {
+      opt.responseType = responseType;
+    }
+    return axios.post(url, data, opt);
+  });
 }
 
 export interface ControlledDevice {
@@ -151,4 +169,8 @@ export function debounce<T extends (...args: any[]) => void>(
       fn(...args);
     }, delay);
   };
+}
+
+export function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }

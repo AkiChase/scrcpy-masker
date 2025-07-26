@@ -1,5 +1,4 @@
 export interface MappingConfig {
-  title: string;
   version: string;
   original_size: {
     width: number;

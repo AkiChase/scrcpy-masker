@@ -102,29 +102,30 @@ impl Plugin for MappingPlugins {
 fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappingConfig>) {
     let config = LocalConfig::get();
 
-    let (bind_mapping_config, input_config) = match load_mapping_config(&config.active_mapping_file)
-    {
-        Ok((mapping_config, input_config)) => {
-            log::info!(
-                "[Mask] Using mapping config {}: {}",
-                config.active_mapping_file,
-                mapping_config.title
-            );
-            (mapping_config, input_config)
-        }
-        Err(e) => {
-            log::error!("{}", e);
-            log::info!("[Mask] Using default mapping config");
-            let default_mapping = default_mapping_config();
-            let config_path = relate_to_root_path(["local", "mapping", "default.json"]);
-            save_mapping_config(&default_mapping, &config_path).unwrap();
-            LocalConfig::set_active_mapping_file("default.json".to_string());
-            let default_bind_mapping: BindMappingConfig = default_mapping.into();
-            let input_config: InputConfig = InputConfig::from(&default_bind_mapping);
-            (default_bind_mapping, input_config)
-        }
-    };
+    let (bind_mapping_config, input_config, file) =
+        match load_mapping_config(&config.active_mapping_file) {
+            Ok((mapping_config, input_config)) => {
+                log::info!("[Mask] Using mapping config {}", config.active_mapping_file,);
+                (mapping_config, input_config, config.active_mapping_file)
+            }
+            Err(e) => {
+                log::error!("{}", e);
+                log::info!("[Mask] Using default mapping config");
+                let default_mapping = default_mapping_config();
+                let config_path = relate_to_root_path(["local", "mapping", "default.json"]);
+                save_mapping_config(&default_mapping, &config_path).unwrap();
+                LocalConfig::set_active_mapping_file("default.json".to_string());
+                let default_bind_mapping: BindMappingConfig = default_mapping.into();
+                let input_config: InputConfig = InputConfig::from(&default_bind_mapping);
+                (
+                    default_bind_mapping,
+                    input_config,
+                    "default.json".to_string(),
+                )
+            }
+        };
     active_mapping.0 = Some(bind_mapping_config);
+    active_mapping.1 = file;
     ineffable.set_config(&input_config);
 }
 

@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { requestPost } from "../utils";
+import { requestPost, toCamelCase } from "../utils";
 
 async function _updateLocalConfig(key: string, value: any) {
   try {
@@ -61,8 +61,9 @@ const localConfigSlice = createSlice({
   reducers: {
     forceSetLocalConfig: (state, action: PayloadAction<LocalConfigState>) => {
       for (const [key, value] of Object.entries(action.payload)) {
-        if (key in state) {
-          (state as any)[key] = value;
+        const curKey = toCamelCase(key);
+        if (curKey in state) {
+          (state as any)[curKey] = value;
         }
       }
     },

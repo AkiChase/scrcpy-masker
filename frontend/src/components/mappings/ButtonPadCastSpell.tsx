@@ -117,10 +117,12 @@ export default function ButtonPadCastSpell({
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
 
-  const buttonStyle = useMemo(
-    () => mappingButtonPresetStyle(config.drag_radius, config.drag_radius),
-    [config.drag_radius]
-  );
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
 
   useEffect(() => {
     const element = document.getElementById(id);
@@ -128,13 +130,19 @@ export default function ButtonPadCastSpell({
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        originalSize.width,
-        originalSize.height,
-        maskArea.width,
-        maskArea.height
+        scale
       );
     }
-  }, [maskArea, index, config, originalSize]);
+  }, [index, config, scale]);
+
+  const buttonStyle = useMemo(
+    () =>
+      mappingButtonPresetStyle(
+        Math.round(config.drag_radius * scale.y),
+        Math.round(config.drag_radius * scale.y)
+      ),
+    [config.drag_radius, scale]
+  );
 
   const handleDrag = mappingButtonDragFactory(
     maskArea,

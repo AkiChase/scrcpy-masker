@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FireConfig } from "./mapping";
 import { Flex, InputNumber, Space, Tooltip, Typography } from "antd";
 import {
@@ -43,19 +43,23 @@ export default function ButtonFire({
   const maskArea = useAppSelector((state) => state.other.maskArea);
   const [showSetting, setShowSetting] = useState(false);
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
       element.style.transform = mappingButtonTransformStyle(
         config.position.x,
         config.position.y,
-        originalSize.width,
-        originalSize.height,
-        maskArea.width,
-        maskArea.height
+        scale
       );
     }
-  }, [maskArea, index, config, originalSize]);
+  }, [index, config, scale]);
 
   const handleDrag = mappingButtonDragFactory(
     maskArea,

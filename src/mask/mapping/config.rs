@@ -214,7 +214,6 @@ impl_mapping_related! {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MappingConfig {
     pub version: String,
-    pub title: String,
     pub original_size: Size,
     pub mappings: Vec<MappingType>,
 }
@@ -222,7 +221,6 @@ pub struct MappingConfig {
 #[derive(Debug, Clone)]
 pub struct BindMappingConfig {
     pub version: String,
-    pub title: String,
     pub original_size: Size,
     pub mappings: HashMap<MappingAction, BindMappingType>,
 }
@@ -252,7 +250,6 @@ impl From<MappingConfig> for BindMappingConfig {
 
         Self {
             version: value.version,
-            title: value.title,
             original_size: value.original_size,
             mappings,
         }
@@ -314,7 +311,6 @@ pub struct ActiveMappingConfig(pub Option<BindMappingConfig>, pub String);
 pub fn default_mapping_config() -> MappingConfig {
     MappingConfig {
         version: "0.0.1".to_string(),
-        title: "Default".to_string(),
         original_size: Size {
             width: 2560,
             height: 1440,

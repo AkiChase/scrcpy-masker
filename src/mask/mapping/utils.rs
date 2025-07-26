@@ -1,3 +1,5 @@
+use std::ops::MulAssign;
+
 use bevy::math::Vec2;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
@@ -52,6 +54,13 @@ impl From<(i32, i32)> for Position {
 impl From<Position> for Vec2 {
     fn from(pos: Position) -> Self {
         Vec2::new(pos.x as f32, pos.y as f32)
+    }
+}
+
+impl MulAssign<Vec2> for Position {
+    fn mul_assign(&mut self, rhs: Vec2) {
+        self.x = ((self.x as f32) * rhs.x).round() as i32;
+        self.y = ((self.y as f32) * rhs.y).round() as i32;
     }
 }
 

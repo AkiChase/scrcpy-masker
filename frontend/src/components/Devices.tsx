@@ -1,7 +1,9 @@
 import {
   Badge,
   Button,
+  Checkbox,
   Descriptions,
+  Flex,
   Input,
   Popover,
   Space,
@@ -9,51 +11,47 @@ import {
   type TableProps,
 } from "antd";
 import { useTranslation } from "react-i18next";
-import type { AdbDevice, ControlledDevice, requestGet } from "../utils";
 import {
-  CloseCircleOutlined,
+  requestGet,
+  requestPost,
+  type AdbDevice,
+  type ControlledDevice,
+} from "../utils";
+import {
+  DisconnectOutlined,
   InfoCircleOutlined,
   LinkOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 import IconButton from "./common/IconButton";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { ItemBox, ItemBoxContainer } from "./common/ItemBox";
+import { setControlledDevices, setIsLoading } from "../store/other";
+import { useMessageContext } from "../hooks";
+import { useAppDispatch, useAppSelector } from "../store/store";
+import { useLocation } from "react-router-dom";
 
-const res: Awaited<
-  ReturnType<
-    typeof requestGet<{
-      adb_devices: AdbDevice[];
-      controlled_devices: ControlledDevice[];
-    }>
-  >
-> = {
-  message: "Successfully obtained device list",
-  data: {
-    adb_devices: [
-      {
-        id: "127.0.0.1:26624",
-        status: "device",
-      },
-      {
-        id: "emulator-5554",
-        status: "device",
-      },
-    ],
-    controlled_devices: [
-      {
-        device_id: "127.0.0.1:26624",
-        device_size: [2560, 1440],
-        main: true,
-        name: "2308CPXD0C",
-        scid: "10464217",
-        socket_ids: ["main_control", "sub_control_10464217", "test3"],
-      },
-    ],
-  },
-};
-
-function ControlledDevices() {
+function ControlledDevices({ refresh }: { refresh: () => void }) {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const messageApi = useMessageContext();
+  const controlledDevices = useAppSelector(
+    (state) => state.other.controlledDevices
+  );
+
+  async function decontrolDevice(device_id: string) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/device/decontrol_device", {
+        device_id,
+      });
+      messageApi?.success(res.message);
+      setTimeout(refresh, 1000);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
 
   const columns: TableProps<ControlledDevice>["columns"] = [
     {
@@ -128,8 +126,9 @@ function ControlledDevices() {
           <IconButton
             tooltip={t("devices.controlledDevices.actionClose")}
             size={18}
-            color="error"
-            icon={<CloseCircleOutlined />}
+            color="primary"
+            icon={<DisconnectOutlined />}
+            onClick={() => decontrolDevice(record.device_id)}
           />
         </Space>
       ),
@@ -141,24 +140,40 @@ function ControlledDevices() {
       rowKey={(record) => record.device_id}
       pagination={{ pageSize: 5 }}
       columns={columns}
-      dataSource={res.data.controlled_devices}
+      dataSource={controlledDevices}
     />
   );
 }
 
-function OtherDevices() {
+function OtherDevices({
+  otherDevices,
+  refresh,
+}: {
+  otherDevices: AdbDevice[];
+  refresh: () => void;
+}) {
   const { t } = useTranslation();
-  const otherDevices = useMemo(
-    () =>
-      res.data.adb_devices.filter(
-        (device: AdbDevice) =>
-          res.data.controlled_devices.findIndex(
-            (controlledDevice: ControlledDevice) =>
-              controlledDevice.device_id === device.id
-          ) === -1
-      ),
-    [res.data.adb_devices]
-  );
+  const dispatch = useAppDispatch();
+  const messageApi = useMessageContext();
+
+  const [isVideo, setIsVideo] = useState(false);
+  const [isAudio, setIsAudio] = useState(false);
+
+  async function controlDevice(device: AdbDevice) {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/device/control_device", {
+        device_id: device.id,
+        video: isVideo,
+        audio: isAudio,
+      });
+      messageApi?.success(res.message);
+      setTimeout(refresh, 1000);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
 
   const columns: TableProps<AdbDevice>["columns"] = [
     {
@@ -172,9 +187,25 @@ function OtherDevices() {
       key: "status",
     },
     {
-      title: t("devices.otherDevices.action"),
+      title: (
+        <Flex justify="center" align="center" gap={8}>
+          <Checkbox
+            checked={isVideo}
+            onChange={(e) => setIsVideo(e.target.checked)}
+          >
+            {t("devices.otherDevices.video")}
+          </Checkbox>
+          <Checkbox
+            checked={isAudio}
+            onChange={(e) => setIsAudio(e.target.checked)}
+          >
+            {t("devices.otherDevices.audio")}
+          </Checkbox>
+        </Flex>
+      ),
       key: "action",
       align: "center",
+      width: "18.5%",
       render: (_, record) => (
         <Space size="middle" className="text-4">
           <IconButton
@@ -182,7 +213,7 @@ function OtherDevices() {
             tooltip={t("devices.otherDevices.actionControl")}
             size={18}
             icon={<LinkOutlined />}
-            onClick={() => console.log(record)}
+            onClick={() => controlDevice(record)}
           />
         </Space>
       ),
@@ -201,6 +232,71 @@ function OtherDevices() {
 
 export default function Devices() {
   const { t } = useTranslation();
+  const messageApi = useMessageContext();
+  const dispatch = useAppDispatch();
+  const location = useLocation();
+
+  const [connectAddr, setConnectAddr] = useState("");
+  const [pairAddr, setPairAddr] = useState("");
+  const [pairCode, setPairCode] = useState("");
+
+  const [otherDevices, setOtherDevices] = useState<AdbDevice[]>([]);
+
+  useEffect(() => {
+    if (location.pathname === "/devices") refreshDevices();
+  }, [location.pathname]);
+
+  async function refreshDevices() {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestGet<{
+        controlled_devices: ControlledDevice[];
+        adb_devices: AdbDevice[];
+      }>("/api/device/device_list");
+      dispatch(setControlledDevices(res.data.controlled_devices));
+      const controlled_id_set = new Set(
+        res.data.controlled_devices.map((device) => device.device_id)
+      );
+      setOtherDevices(
+        res.data.adb_devices.filter(
+          (device) => !(device.id in controlled_id_set)
+        )
+      );
+      messageApi?.success(res.message);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function pairDevice() {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/device/adb_pair", {
+        address: pairAddr,
+        code: pairCode,
+      });
+      messageApi?.success(res.message);
+      setTimeout(refreshDevices, 1000);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
+
+  async function connectDevice() {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestPost("/api/device/adb_connect", {
+        address: connectAddr,
+      });
+      messageApi?.success(res.message);
+      setTimeout(refreshDevices, 1000);
+    } catch (error) {
+      messageApi?.error(error as string);
+    }
+    dispatch(setIsLoading(false));
+  }
 
   return (
     <div className="page-container">
@@ -209,15 +305,29 @@ export default function Devices() {
         <ItemBoxContainer className="mb-6">
           <ItemBox label={t("devices.adbTools.pair.label")}>
             <Space.Compact>
-              <Input placeholder="ip:port" />
-              <Input placeholder="code" />
-              <Button type="primary">{t("devices.adbTools.pair.btn")}</Button>
+              <Input
+                placeholder="ip:port"
+                value={pairAddr}
+                onChange={(e) => setPairAddr(e.target.value)}
+              />
+              <Input
+                placeholder="code"
+                value={pairCode}
+                onChange={(e) => setPairCode(e.target.value)}
+              />
+              <Button type="primary" onClick={pairDevice}>
+                {t("devices.adbTools.pair.btn")}
+              </Button>
             </Space.Compact>
           </ItemBox>
           <ItemBox label={t("devices.adbTools.connect.label")}>
             <Space.Compact>
-              <Input placeholder="ip:port" />
-              <Button type="primary">
+              <Input
+                placeholder="ip:port"
+                value={connectAddr}
+                onChange={(e) => setConnectAddr(e.target.value)}
+              />
+              <Button type="primary" onClick={connectDevice}>
                 {t("devices.adbTools.connect.btn")}
               </Button>
             </Space.Compact>
@@ -225,14 +335,32 @@ export default function Devices() {
         </ItemBoxContainer>
       </section>
       <section>
-        <h2 className="title-with-line">
-          {t("devices.controlledDevices.title")}
-        </h2>
-        <ControlledDevices />
+        <Flex justify="space-between" align="start">
+          <h2 className="title-with-line">
+            {t("devices.controlledDevices.title")}
+          </h2>
+          <Button
+            type="primary"
+            icon={<SyncOutlined />}
+            onClick={() => refreshDevices()}
+          >
+            {t("devices.common.refresh")}
+          </Button>
+        </Flex>
+        <ControlledDevices refresh={refreshDevices} />
       </section>
-      <section>
-        <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
-        <OtherDevices />
+      <section className="mt-4">
+        <Flex justify="space-between" align="start">
+          <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
+          <Button
+            type="primary"
+            icon={<SyncOutlined />}
+            onClick={() => refreshDevices()}
+          >
+            {t("devices.common.refresh")}
+          </Button>
+        </Flex>
+        <OtherDevices otherDevices={otherDevices} refresh={refreshDevices} />
       </section>
     </div>
   );

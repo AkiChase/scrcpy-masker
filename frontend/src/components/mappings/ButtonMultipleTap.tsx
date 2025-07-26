@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MultipleTapConfig, MultipleTapItem } from "./mapping";
 import {
   Button,
@@ -57,6 +57,13 @@ export default function ButtonMultipleTap({
   const [showSetting, setShowSetting] = useState(false);
   const [isEditingPos, setIsEditingPos] = useState(false);
 
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
+
   useEffect(() => {
     const element = document.getElementById(id);
     if (element) {
@@ -64,13 +71,10 @@ export default function ButtonMultipleTap({
       element.style.transform = mappingButtonTransformStyle(
         position.x,
         position.y,
-        originalSize.width,
-        originalSize.height,
-        maskArea.width,
-        maskArea.height
+        scale
       );
     }
-  }, [maskArea, index, config, originalSize]);
+  }, [index, config, scale]);
 
   const handleDrag = mappingButtonDragFactory(
     maskArea,
@@ -138,6 +142,12 @@ function Background({
   originalSize: { width: number; height: number };
 }) {
   const maskArea = useAppSelector((state) => state.other.maskArea);
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
 
   return (
     <div
@@ -158,10 +168,7 @@ function Background({
               transform: mappingButtonTransformStyle(
                 item.position.x,
                 item.position.y,
-                originalSize.width,
-                originalSize.height,
-                maskArea.width,
-                maskArea.height
+                scale
               ),
             }}
           >
@@ -200,6 +207,13 @@ function PositonEditorItem({
     (pos) => onItemChange(index, { ...item, position: pos }),
     100
   );
+
+  const scale = useMemo(() => {
+    return {
+      x: maskArea.width / originalSize.width,
+      y: maskArea.height / originalSize.height,
+    };
+  }, [originalSize, maskArea]);
 
   return (
     <Popover
@@ -250,10 +264,7 @@ function PositonEditorItem({
           transform: mappingButtonTransformStyle(
             item.position.x,
             item.position.y,
-            originalSize.width,
-            originalSize.height,
-            maskArea.width,
-            maskArea.height
+            scale
           ),
         }}
         onMouseDown={handleDrag}
@@ -300,10 +311,7 @@ function PositonEditor({
           position: clientPositionToMappingPosition(
             e.clientX,
             e.clientY,
-            maskArea.left,
-            maskArea.top,
-            maskArea.width,
-            maskArea.height,
+            maskArea,
             originalSize.width,
             originalSize.height
           ),
