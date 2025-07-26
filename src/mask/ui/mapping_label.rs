@@ -124,6 +124,9 @@ fn update_labels(
     mut text_query: Query<&mut TextColor>,
     mut child_query: Query<&Children>,
 ) {
+    // TODO 有时候切换的时候没有执行渲染
+    // TODO 标签的坐标应该减去标签尺寸的一半
+
     for (label, mut bg, mut node, cp_node, node_children) in query.iter_mut() {
         let scale = window.scale_factor();
         let new_pos =
