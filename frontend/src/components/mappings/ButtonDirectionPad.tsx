@@ -4,6 +4,7 @@ import type {
   DirectionButtonBinding,
   DirectionJoyStickBinding,
   DirectionPadConfig,
+  MappingUpdater,
 } from "./mapping";
 import {
   Flex,
@@ -23,7 +24,7 @@ import { useAppSelector } from "../../store/store";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import {
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -86,12 +87,14 @@ export default function ButtonDirectionPad({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: DirectionPadConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: DirectionPadConfig) => void;
+  onConfigChange: MappingUpdater<DirectionPadConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-direction-pad-${index}`;
   const className = useMemo(() => {
@@ -159,7 +162,6 @@ export default function ButtonDirectionPad({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -174,6 +176,10 @@ export default function ButtonDirectionPad({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
         />
       </SettingModal>
       <Flex
@@ -181,7 +187,7 @@ export default function ButtonDirectionPad({
         style={buttonStyle}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
         vertical
@@ -201,10 +207,12 @@ function Setting({
   config,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   config: DirectionPadConfig;
-  onConfigChange: (config: DirectionPadConfig) => void;
+  onConfigChange: MappingUpdater<DirectionPadConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -252,13 +260,13 @@ function Setting({
     } else {
       bindValueRef.current.Button[type] = value as string[];
     }
-    onConfigChange({
-      ...config,
+    onConfigChange((pre) => ({
+      ...pre,
       bind: {
         ...config.bind,
         [type]: value,
       },
-    });
+    }));
   }
 
   return (
@@ -367,7 +375,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

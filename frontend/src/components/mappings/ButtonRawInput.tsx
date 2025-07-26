@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { RawInputConfig } from "./mapping";
+import type { MappingUpdater, RawInputConfig } from "./mapping";
 import { Flex, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
@@ -10,7 +10,7 @@ import { useAppSelector } from "../../store/store";
 import { ItemBoxContainer } from "../common/ItemBox";
 import {
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
 } from "./Common";
@@ -24,12 +24,14 @@ export default function ButtonRawInput({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: RawInputConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: RawInputConfig) => void;
+  onConfigChange: MappingUpdater<RawInputConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-single-tap-${index}`;
   const bindText = config.bind.join("+");
@@ -75,7 +77,6 @@ export default function ButtonRawInput({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -90,6 +91,10 @@ export default function ButtonRawInput({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
         />
       </SettingModal>
       <Flex
@@ -97,7 +102,7 @@ export default function ButtonRawInput({
         style={PRESET_STYLE}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
       >
@@ -115,10 +120,12 @@ function Setting({
   config,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   config: RawInputConfig;
-  onConfigChange: (config: RawInputConfig) => void;
+  onConfigChange: MappingUpdater<RawInputConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -130,13 +137,13 @@ function Setting({
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingBind
           bind={config.bind}
-          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+          onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
         <SettingNote
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

@@ -38,6 +38,18 @@ export interface SingleTapConfig {
   type: "SingleTap";
 }
 
+export function newSingleTap(position: Position): SingleTapConfig {
+  return {
+    bind: [],
+    duration: 50,
+    note: "",
+    pointer_id: 1,
+    position,
+    sync: false,
+    type: "SingleTap",
+  };
+}
+
 export interface RepeatTapConfig {
   bind: ButtonBinding;
   duration: number;
@@ -46,6 +58,18 @@ export interface RepeatTapConfig {
   pointer_id: number;
   position: Position;
   type: "RepeatTap";
+}
+
+export function newRepeatTap(position: Position): RepeatTapConfig {
+  return {
+    bind: [],
+    duration: 50,
+    interval: 100,
+    note: "",
+    pointer_id: 1,
+    position,
+    type: "RepeatTap",
+  };
 }
 
 export interface MultipleTapItem {
@@ -62,6 +86,22 @@ export interface MultipleTapConfig {
   type: "MultipleTap";
 }
 
+export function newMultipleTap(position: Position): MultipleTapConfig {
+  return {
+    bind: [],
+    items: [
+      {
+        duration: 50,
+        position,
+        wait: 0,
+      },
+    ],
+    note: "",
+    pointer_id: 1,
+    type: "MultipleTap",
+  };
+}
+
 export interface SwipeConfig {
   bind: ButtonBinding;
   interval: number;
@@ -69,6 +109,17 @@ export interface SwipeConfig {
   pointer_id: number;
   positions: Position[];
   type: "Swipe";
+}
+
+export function newSwipe(position: Position): SwipeConfig {
+  return {
+    bind: [],
+    interval: 100,
+    note: "",
+    pointer_id: 1,
+    positions: [position],
+    type: "Swipe",
+  };
 }
 
 export interface DirectionButtonBinding {
@@ -100,6 +151,25 @@ export interface DirectionPadConfig {
   type: "DirectionPad";
 }
 
+export function newDirectionPad(position: Position): DirectionPadConfig {
+  return {
+    bind: {
+      type: "Button",
+      up: [],
+      down: [],
+      left: [],
+      right: [],
+    },
+    initial_duration: 0,
+    max_offset_x: 200,
+    max_offset_y: 200,
+    note: "",
+    pointer_id: 2,
+    position,
+    type: "DirectionPad",
+  };
+}
+
 export type MouseCastReleaseMode = "OnPress" | "OnRelease" | "OnSecondPress";
 
 export interface MouseCastSpellConfig {
@@ -117,6 +187,26 @@ export interface MouseCastSpellConfig {
   type: "MouseCastSpell";
 }
 
+export function newMouseCastSpell(
+  position: Position,
+  center: Position
+): MouseCastSpellConfig {
+  return {
+    bind: [],
+    cast_no_direction: false,
+    cast_radius: 200,
+    center,
+    drag_radius: 150,
+    horizontal_scale_factor: 7,
+    vertical_scale_factor: 10,
+    note: "",
+    pointer_id: 3,
+    position,
+    release_mode: "OnRelease",
+    type: "MouseCastSpell",
+  };
+}
+
 export type PadCastReleaseMode = "OnRelease" | "OnSecondPress";
 
 export interface PadCastSpellConfig {
@@ -131,11 +221,40 @@ export interface PadCastSpellConfig {
   type: "PadCastSpell";
 }
 
+export function newPadCastSpell(position: Position): PadCastSpellConfig {
+  return {
+    bind: [],
+    block_direction_pad: false,
+    drag_radius: 150,
+    note: "",
+    pad_bind: {
+      type: "Button",
+      up: [],
+      down: [],
+      left: [],
+      right: [],
+    },
+    pointer_id: 3,
+    position,
+    release_mode: "OnRelease",
+    type: "PadCastSpell",
+  };
+}
+
 export interface CancelCastConfig {
   bind: ButtonBinding;
   note: string;
   position: Position;
   type: "CancelCast";
+}
+
+export function newCancelCast(position: Position): CancelCastConfig {
+  return {
+    bind: [],
+    note: "",
+    position,
+    type: "CancelCast",
+  };
 }
 
 export interface ObservationConfig {
@@ -148,6 +267,18 @@ export interface ObservationConfig {
   type: "Observation";
 }
 
+export function newObservation(position: Position): ObservationConfig {
+  return {
+    bind: [],
+    note: "",
+    pointer_id: 4,
+    position,
+    sensitivity_x: 1,
+    sensitivity_y: 1,
+    type: "Observation",
+  };
+}
+
 export interface FpsConfig {
   bind: ButtonBinding;
   note: string;
@@ -156,6 +287,18 @@ export interface FpsConfig {
   sensitivity_x: number;
   sensitivity_y: number;
   type: "Fps";
+}
+
+export function newFps(position: Position): FpsConfig {
+  return {
+    bind: [],
+    note: "",
+    pointer_id: 0,
+    position,
+    sensitivity_x: 1,
+    sensitivity_y: 1,
+    type: "Fps",
+  };
 }
 
 export interface FireConfig {
@@ -168,9 +311,32 @@ export interface FireConfig {
   type: "Fire";
 }
 
+export function newFire(position: Position): FireConfig {
+  return {
+    bind: [],
+    note: "",
+    pointer_id: 0,
+    position,
+    sensitivity_x: 1,
+    sensitivity_y: 1,
+    type: "Fire",
+  };
+}
+
 export interface RawInputConfig {
   bind: ButtonBinding;
   note: string;
   position: Position;
   type: "RawInput";
 }
+
+export function newRawInput(position: Position): RawInputConfig {
+  return {
+    bind: [],
+    note: "",
+    position,
+    type: "RawInput",
+  };
+}
+
+export type MappingUpdater<T> = (updater: T | ((pre: T) => T)) => void;

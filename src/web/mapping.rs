@@ -50,8 +50,12 @@ struct PostDataChangeActiveMapping {
 
 async fn change_active_mapping(
     State(state): State<AppStatMapping>,
-    Json(payload): Json<PostDataChangeActiveMapping>,
+    Json(mut payload): Json<PostDataChangeActiveMapping>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
     match load_mapping_config(&payload.file) {
         Ok((mapping_config, input_config)) => {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
@@ -89,8 +93,12 @@ struct PostDataNewMapping {
 }
 
 async fn create_mapping(
-    Json(payload): Json<PostDataNewMapping>,
+    Json(mut payload): Json<PostDataNewMapping>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 
@@ -123,8 +131,12 @@ struct PostDataMappingFile {
 
 async fn delete_mapping(
     State(state): State<AppStatMapping>,
-    Json(payload): Json<PostDataMappingFile>,
+    Json(mut payload): Json<PostDataMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 
@@ -168,8 +180,16 @@ struct PostDataRenameMappingFile {
 
 async fn rename_mapping(
     State(state): State<AppStatMapping>,
-    Json(payload): Json<PostDataRenameMappingFile>,
+    Json(mut payload): Json<PostDataRenameMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
+    if !payload.new_file.ends_with(".json") {
+        payload.new_file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 
@@ -271,8 +291,16 @@ struct PostDataDuplicateMappingFile {
 }
 
 async fn duplicate_mapping(
-    Json(payload): Json<PostDataDuplicateMappingFile>,
+    Json(mut payload): Json<PostDataDuplicateMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
+    if !payload.new_file.ends_with(".json") {
+        payload.new_file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 
@@ -318,8 +346,12 @@ async fn duplicate_mapping(
 
 async fn update_mapping(
     State(state): State<AppStatMapping>,
-    Json(payload): Json<PostDataNewMapping>,
+    Json(mut payload): Json<PostDataNewMapping>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 
@@ -429,8 +461,12 @@ async fn get_mapping_list(
 }
 
 async fn read_mapping(
-    Json(payload): Json<PostDataMappingFile>,
+    Json(mut payload): Json<PostDataMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 
@@ -477,8 +513,16 @@ struct PostDataMigrateMappingFile {
 }
 
 async fn migrate_mapping(
-    Json(payload): Json<PostDataMigrateMappingFile>,
+    Json(mut payload): Json<PostDataMigrateMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
+    if !payload.file.ends_with(".json") {
+        payload.file.push_str(".json");
+    }
+
+    if !payload.new_file.ends_with(".json") {
+        payload.new_file.push_str(".json");
+    }
+
     let bad_request =
         |msg| -> Result<JsonResponse, WebServerError> { Err(WebServerError::bad_request(msg)) };
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { SwipeConfig } from "./mapping";
+import type { MappingUpdater, SwipeConfig } from "./mapping";
 import { Button, Flex, Popover, Space, Tooltip, Typography } from "antd";
 import {
   clientPositionToMappingPosition,
@@ -14,7 +14,7 @@ import {
   DeviceBackground,
   RefreshImageButton,
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -33,12 +33,14 @@ export default function ButtonSwipe({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: SwipeConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: SwipeConfig) => void;
+  onConfigChange: MappingUpdater<SwipeConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-single-tap-${index}`;
   const bindText = config.bind.join("+");
@@ -87,7 +89,6 @@ export default function ButtonSwipe({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -102,6 +103,10 @@ export default function ButtonSwipe({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
           originalSize={originalSize}
           isEditing={isEditingPos}
           onIsEditingChange={(v) => setIsEditingPos(v)}
@@ -112,7 +117,7 @@ export default function ButtonSwipe({
         style={PRESET_STYLE}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
       >
@@ -419,13 +424,15 @@ function Setting({
   config,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
   originalSize,
   isEditing,
   onIsEditingChange,
 }: {
   config: SwipeConfig;
-  onConfigChange: (config: SwipeConfig) => void;
+  onConfigChange: MappingUpdater<SwipeConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
   originalSize: { width: number; height: number };
   isEditing: boolean;
   onIsEditingChange: (v: boolean) => void;
@@ -447,7 +454,7 @@ function Setting({
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingBind
           bind={config.bind}
-          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+          onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
         <SettingPointerId
           pointerId={config.pointer_id}
@@ -457,7 +464,7 @@ function Setting({
         />
         <ItemBox label={t("mappings.swipe.setting.positions")}>
           <Button
-            type="primary"
+            type="dashed"
             onClick={() => {
               messageApi?.info(t("mappings.swipe.setting.positonsHelp"));
               onIsEditingChange(true);
@@ -470,7 +477,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

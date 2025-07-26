@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseCastSpellConfig, Position } from "./mapping";
+import type { MappingUpdater, MouseCastSpellConfig, Position } from "./mapping";
 import {
   Button,
   Flex,
@@ -25,7 +25,7 @@ import {
   DeviceBackground,
   RefreshImageButton,
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -43,12 +43,14 @@ export default function ButtonMouseCastSpell({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: MouseCastSpellConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: MouseCastSpellConfig) => void;
+  onConfigChange: MappingUpdater<MouseCastSpellConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-mouse-cast-spell-${index}`;
   const bindText = config.bind.join("+");
@@ -94,7 +96,6 @@ export default function ButtonMouseCastSpell({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -110,6 +111,10 @@ export default function ButtonMouseCastSpell({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
         />
       </SettingModal>
       <Flex
@@ -117,7 +122,7 @@ export default function ButtonMouseCastSpell({
         style={PRESET_STYLE}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
       >
@@ -336,7 +341,6 @@ function SkillButton({
           <ItemBox label={t("mappings.mouseCastSpell.setting.dragRadius")}>
             <InputNumber
               className="w-full"
-              prefix="Y:"
               value={radius}
               min={1}
               onChange={(v) => v !== null && onRadiusChange(v)}
@@ -458,11 +462,13 @@ function Setting({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   config: MouseCastSpellConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (c: MouseCastSpellConfig) => void;
+  onConfigChange: MappingUpdater<MouseCastSpellConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
   const messageApi = useMessageContext();
@@ -484,7 +490,7 @@ function Setting({
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingBind
           bind={config.bind}
-          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+          onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
         <SettingPointerId
           pointerId={config.pointer_id}
@@ -527,7 +533,7 @@ function Setting({
         </ItemBox>
         <ItemBox label={t("mappings.mouseCastSpell.setting.editLabel")}>
           <Button
-            type="primary"
+            type="dashed"
             onClick={() => {
               messageApi?.info(t("mappings.mouseCastSpell.setting.editHelp"));
               setIsEditing(true);
@@ -540,7 +546,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

@@ -60,21 +60,26 @@
       "refreshBackground": "Refresh background",
       "refreshBgFail": "Failed to refresh background image: {0}",
       "refreshSuccess": "Refresh background image successfully",
-      "noMainDevice": "Main controlled device not found, please control the device on the devices page"
+      "noMainDevice": "Main controlled device not found, please control the device on the devices page",
+      "copy": {
+        "label": "Duplicate"
+      }
     },
     "singleTap": {
       "setting": {
         "title": "Mapping Configuration - SingleTap",
         "sync": "Sync",
         "duration": "Duration"
-      }
+      },
+      "name": "SingleTap"
     },
     "repeatTap": {
       "setting": {
         "title": "Mapping Configuration - RepeatTap",
         "duration": "Duration",
         "interval": "Interval"
-      }
+      },
+      "name": "RepeatTap"
     },
     "multipleTap": {
       "setting": {
@@ -87,7 +92,8 @@
         "operations": "Operation sequence",
         "operationsHelp": "Drag with the left mouse button and add or edit with the right mouse button",
         "back": "Back"
-      }
+      },
+      "name": "MultipleTap"
     },
     "swipe": {
       "setting": {
@@ -98,7 +104,8 @@
         "delete": "Delete",
         "positions": "Position sequence",
         "back": "Back"
-      }
+      },
+      "name": "Swipe"
     },
     "directionPad": {
       "setting": {
@@ -113,7 +120,8 @@
         "maxOffset": "Maximum offset",
         "right": "Right",
         "up": "Up"
-      }
+      },
+      "name": "DirectionPad"
     },
     "mouseCastSpell": {
       "setting": {
@@ -134,7 +142,8 @@
         "editHelp": "Drag with the left mouse button and edit with the right mouse button",
         "setCenter": "Center",
         "back": "Back"
-      }
+      },
+      "name": "MouseCastSpell"
     },
     "padCastSpell": {
       "setting": {
@@ -155,35 +164,41 @@
           "onRelease": "OnRelease",
           "onSecondPress": "OnSecondPress"
         }
-      }
+      },
+      "name": "PadCastSpell"
     },
     "cancelCast": {
       "setting": {
         "title": "Mapping Configuration - CancelCast"
-      }
+      },
+      "name": "CancelCast"
     },
     "fire": {
       "setting": {
         "sensitivity": "Sensitivity",
         "title": "Mapping Configuration - Fire"
-      }
+      },
+      "name": "Fire"
     },
     "fps": {
       "setting": {
         "sensitivity": "Sensitivity",
         "title": "Mapping Configuration - FPS"
-      }
+      },
+      "name": "Fps"
     },
     "observation": {
       "setting": {
         "sensitivity": "Sensitivity",
         "title": "Mapping Configuration - Observation"
-      }
+      },
+      "name": "Observation"
     },
     "rawInput": {
       "setting": {
         "title": "Mapping Configuration - RawInput"
-      }
+      },
+      "name": "RawInput"
     },
     "home": {
       "emptyBind": "There are buttons without a bind configuration!",

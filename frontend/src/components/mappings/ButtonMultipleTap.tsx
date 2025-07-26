@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import type { MultipleTapConfig, MultipleTapItem } from "./mapping";
+import type {
+  MappingUpdater,
+  MultipleTapConfig,
+  MultipleTapItem,
+} from "./mapping";
 import {
   Button,
   Flex,
@@ -21,7 +25,7 @@ import {
   DeviceBackground,
   RefreshImageButton,
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -38,12 +42,14 @@ export default function ButtonMultipleTap({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: MultipleTapConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: MultipleTapConfig) => void;
+  onConfigChange: MappingUpdater<MultipleTapConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-multiple-tap-${index}`;
   const bindText = config.bind.join("+");
@@ -92,7 +98,6 @@ export default function ButtonMultipleTap({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -107,6 +112,10 @@ export default function ButtonMultipleTap({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
           originalSize={originalSize}
           isEditing={isEditingPos}
           onIsEditingChange={(v) => setIsEditingPos(v)}
@@ -117,7 +126,7 @@ export default function ButtonMultipleTap({
         style={PRESET_STYLE}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
       >
@@ -369,13 +378,15 @@ function Setting({
   config,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
   originalSize,
   isEditing,
   onIsEditingChange,
 }: {
   config: MultipleTapConfig;
-  onConfigChange: (config: MultipleTapConfig) => void;
+  onConfigChange: MappingUpdater<MultipleTapConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
   originalSize: { width: number; height: number };
   isEditing: boolean;
   onIsEditingChange: (v: boolean) => void;
@@ -399,7 +410,7 @@ function Setting({
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingBind
           bind={config.bind}
-          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+          onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
         <SettingPointerId
           pointerId={config.pointer_id}
@@ -409,7 +420,7 @@ function Setting({
         />
         <ItemBox label={t("mappings.multipleTap.setting.operations")}>
           <Button
-            type="primary"
+            type="dashed"
             onClick={() => {
               messageApi?.info(
                 t("mappings.multipleTap.setting.operationsHelp")
@@ -424,7 +435,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

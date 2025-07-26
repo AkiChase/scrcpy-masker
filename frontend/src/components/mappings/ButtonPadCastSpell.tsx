@@ -4,6 +4,7 @@ import type {
   DirectionBinding,
   DirectionButtonBinding,
   DirectionJoyStickBinding,
+  MappingUpdater,
   PadCastSpellConfig,
 } from "./mapping";
 import { Flex, InputNumber, Select, Switch, Tooltip, Typography } from "antd";
@@ -16,7 +17,7 @@ import { useAppSelector } from "../../store/store";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import {
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -86,12 +87,14 @@ export default function ButtonPadCastSpell({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: PadCastSpellConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: PadCastSpellConfig) => void;
+  onConfigChange: MappingUpdater<PadCastSpellConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-direction-pad-${index}`;
   const className = useMemo(() => {
@@ -159,7 +162,6 @@ export default function ButtonPadCastSpell({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -174,6 +176,10 @@ export default function ButtonPadCastSpell({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
         />
       </SettingModal>
       <Flex
@@ -181,7 +187,7 @@ export default function ButtonPadCastSpell({
         style={buttonStyle}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
         vertical
@@ -201,10 +207,12 @@ function Setting({
   config,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   config: PadCastSpellConfig;
-  onConfigChange: (config: PadCastSpellConfig) => void;
+  onConfigChange: MappingUpdater<PadCastSpellConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -252,13 +260,13 @@ function Setting({
     } else {
       padBindValueRef.current.Button[type] = value as string[];
     }
-    onConfigChange({
-      ...config,
+    onConfigChange((pre) => ({
+      ...pre,
       pad_bind: {
         ...config.pad_bind,
         [type]: value,
       },
-    });
+    }));
   }
 
   return (
@@ -269,7 +277,7 @@ function Setting({
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingBind
           bind={config.bind}
-          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+          onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
         <ItemBox
           label={
@@ -376,7 +384,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

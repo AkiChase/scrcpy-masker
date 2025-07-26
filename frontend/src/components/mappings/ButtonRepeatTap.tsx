@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { RepeatTapConfig } from "./mapping";
+import type { MappingUpdater, RepeatTapConfig } from "./mapping";
 import { Flex, InputNumber, Tooltip, Typography } from "antd";
 import {
   mappingButtonDragFactory,
@@ -10,7 +10,7 @@ import { useAppSelector } from "../../store/store";
 import { ItemBoxContainer, ItemBox } from "../common/ItemBox";
 import {
   SettingBind,
-  SettingDelete,
+  SettingFooter,
   SettingModal,
   SettingNote,
   SettingPointerId,
@@ -25,12 +25,14 @@ export default function ButtonRepeatTap({
   originalSize,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   index: number;
   config: RepeatTapConfig;
   originalSize: { width: number; height: number };
-  onConfigChange: (config: RepeatTapConfig) => void;
+  onConfigChange: MappingUpdater<RepeatTapConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const id = `mapping-repeat-tap-${index}`;
   const bindText = config.bind.join("+");
@@ -76,7 +78,6 @@ export default function ButtonRepeatTap({
   );
 
   const handleSetting = (e: React.MouseEvent) => {
-    if (e.button != 0) return;
     e.preventDefault();
     setShowSetting(true);
   };
@@ -91,6 +92,10 @@ export default function ButtonRepeatTap({
             setShowSetting(false);
             onConfigDelete();
           }}
+          onConfigCopy={() => {
+            setShowSetting(false);
+            onConfigCopy();
+          }}
         />
       </SettingModal>
       <Flex
@@ -98,7 +103,7 @@ export default function ButtonRepeatTap({
         style={PRESET_STYLE}
         className={className}
         onMouseDown={handleDrag}
-        onDoubleClick={handleSetting}
+        onContextMenu={handleSetting}
         justify="center"
         align="center"
       >
@@ -116,10 +121,12 @@ function Setting({
   config,
   onConfigChange,
   onConfigDelete,
+  onConfigCopy,
 }: {
   config: RepeatTapConfig;
-  onConfigChange: (config: RepeatTapConfig) => void;
+  onConfigChange: MappingUpdater<RepeatTapConfig>;
   onConfigDelete: () => void;
+  onConfigCopy: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -131,7 +138,7 @@ function Setting({
       <ItemBoxContainer className="max-h-70vh overflow-y-auto pr-2 scrollbar">
         <SettingBind
           bind={config.bind}
-          onBindChange={(bind) => onConfigChange({ ...config, bind })}
+          onBindChange={(bind) => onConfigChange((pre) => ({ ...pre, bind }))}
         />
         <SettingPointerId
           pointerId={config.pointer_id}
@@ -163,7 +170,7 @@ function Setting({
           note={config.note}
           onNoteChange={(note) => onConfigChange({ ...config, note })}
         />
-        <SettingDelete onDelete={onConfigDelete} />
+        <SettingFooter onDelete={onConfigDelete} onCopy={onConfigCopy} />
       </ItemBoxContainer>
     </div>
   );

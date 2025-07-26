@@ -1,4 +1,9 @@
-import type { DirectionBinding, MappingConfig, MappingType } from "./mapping";
+import {
+  type DirectionBinding,
+  type MappingConfig,
+  type MappingType,
+} from "./mapping";
+import * as MappingConstructor from "./mapping";
 
 import {
   Badge,
@@ -11,6 +16,7 @@ import {
   Popconfirm,
   Select,
   Space,
+  Splitter,
   Table,
   type TableProps,
 } from "antd";
@@ -56,6 +62,7 @@ import ButtonRawInput from "./ButtonRawInput";
 import { setActiveMappingFile } from "../../store/localConfig";
 import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
+import ButtonFire from "./ButtonFire";
 
 type MappingFileTabelItem = {
   file: string;
@@ -379,6 +386,21 @@ type EditState = {
   old: MappingConfig;
 };
 
+const buttonTypes = [
+  "SingleTap",
+  "RepeatTap",
+  "MultipleTap",
+  "Swipe",
+  "DirectionPad",
+  "MouseCastSpell",
+  "PadCastSpell",
+  "CancelCast",
+  "Observation",
+  "Fps",
+  "Fire",
+  "RawInput",
+];
+
 const mappingButtonMap = {
   SingleTap: ButtonSingleTap,
   RepeatTap: ButtonRepeatTap,
@@ -390,8 +412,21 @@ const mappingButtonMap = {
   CancelCast: ButtonCancelCast,
   Observation: ButtonObservation,
   Fps: ButtonFps,
+  Fire: ButtonFire,
   RawInput: ButtonRawInput,
 };
+
+const mappingConstructorMap: any = Object.fromEntries(
+  buttonTypes.map((key) => [
+    key,
+    MappingConstructor[`new${key}` as keyof typeof MappingConstructor],
+  ])
+);
+
+const menuItems = buttonTypes.map((key) => [
+  key,
+  `mappings.${key.charAt(0).toLowerCase() + key.slice(1)}.name`,
+]);
 
 function Displayer({
   state,
@@ -402,9 +437,11 @@ function Displayer({
 }) {
   const dispatch = useAppDispatch();
   const maskArea = useAppSelector((state) => state.other.maskArea);
+  const { t } = useTranslation();
 
   const cursorPosRef = useRef<HTMLDivElement>(null);
   const displayerRef = useRef<HTMLDivElement>(null);
+  const contextMenuPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     const displayerElement = displayerRef.current;
@@ -428,37 +465,52 @@ function Displayer({
     };
   }, [displayerRef.current]);
 
-  function updateMapping(index: number, config: MappingType) {
+  const { ratioStyle, originalSize } = useMemo(() => {
+    return {
+      originalSize: state.current.original_size,
+      ratioStyle: {
+        width: "100%",
+        aspectRatio: `${state.current.original_size.width} / ${state.current.original_size.height}`,
+      },
+    };
+  }, [state.current.original_size.width, state.current.original_size.height]);
+
+  function updateMapping(
+    index: number,
+    updater: MappingType | ((prev: any) => any)
+  ) {
     setState((prev) => {
       if (prev === null) return null;
-      const newMappings = [...prev.current.mappings];
-      newMappings[index] = deepClone(config);
+      const newState = { ...prev };
+      newState.edited = true;
+      newState.current.mappings[index] =
+        typeof updater === "function"
+          ? updater(newState.current.mappings[index])
+          : updater;
 
-      return {
-        ...prev,
-        edited: true,
-        current: {
-          ...prev.current,
-          mappings: newMappings,
-        },
-      };
+      return newState;
     });
   }
 
   function deleteMappingButton(index: number) {
     setState((prev) => {
       if (prev === null) return null;
-      const newMappings = [...prev.current.mappings];
-      newMappings.splice(index, 1);
+      const newState = { ...prev };
+      newState.edited = true;
+      newState.current.mappings.splice(index, 1);
 
-      return {
-        ...prev,
-        edited: true,
-        current: {
-          ...prev.current,
-          mappings: newMappings,
-        },
-      };
+      return newState;
+    });
+  }
+
+  function copyMappingButton(index: number) {
+    setState((prev) => {
+      if (prev === null) return null;
+      const newState = { ...prev };
+      newState.edited = true;
+      newState.current.mappings.push(newState.current.mappings[index]);
+
+      return newState;
     });
   }
 
@@ -478,34 +530,63 @@ function Displayer({
   return (
     <div
       ref={displayerRef}
-      className="w-full h-full border-text-quaternary border-solid border relative select-none"
+      className="w-full border-text-quaternary border-solid border relative select-none"
+      style={ratioStyle}
       onMouseMove={handleMouseMove}
     >
       <DeviceBackground />
       <Dropdown
         menu={{
-          items: [
-            {
-              label: "TODO添加按钮",
-              key: "1",
-            },
-          ],
+          items: menuItems.map(([key, tID]) => ({
+            key,
+            label: t(tID),
+          })),
+          onClick({ key }) {
+            let config: MappingType;
+            if (key === "MouseCastSpell") {
+              config = mappingConstructorMap.MouseCastSpell(
+                contextMenuPosRef.current,
+                {
+                  x: originalSize.width / 2,
+                  y: Math.round(originalSize.height * 0.566),
+                }
+              );
+            } else {
+              config = mappingConstructorMap[key](contextMenuPosRef.current);
+            }
+            const newState = { ...state, edited: true };
+            newState.current.mappings.push(config);
+            setState(newState);
+          },
         }}
         trigger={["contextMenu"]}
       >
-        <div className="w-full h-full absolute bg-transparent"></div>
+        <div
+          onContextMenu={(e) => {
+            contextMenuPosRef.current = clientPositionToMappingPosition(
+              e.clientX,
+              e.clientY,
+              maskArea,
+              originalSize.width,
+              originalSize.height
+            );
+          }}
+          className="w-full h-full absolute bg-transparent"
+        />
       </Dropdown>
       <CursorPos ref={cursorPosRef} className="top--6" />
       <div className="absolute color-text-secondary font-bold top--6 right-0">
-        {`[${state.current.original_size.width} x ${state.current.original_size.height}]`}
+        {`[${originalSize.width} x ${originalSize.height}]`}
       </div>
       {state.current.mappings.map((mapping, index) => {
         const props: any = {
-          originalSize: state.current.original_size,
+          originalSize,
           index,
           config: mapping,
-          onConfigChange: (config: any) => updateMapping(index, config),
+          onConfigChange: (updater: any | ((prev: any) => any)) =>
+            updateMapping(index, updater),
           onConfigDelete: () => deleteMappingButton(index),
+          onConfigCopy: () => copyMappingButton(index),
         };
 
         if (mapping.type in mappingButtonMap) {
@@ -546,7 +627,7 @@ export default function Mappings() {
       ),
       value: item,
     }));
-  }, [mappingList]);
+  }, [mappingList, activeMappingFile]);
 
   useEffect(() => {
     loadMappingList();
@@ -824,6 +905,7 @@ export default function Mappings() {
               {t("mappings.home.restore")}
             </Button>
             <Button
+              disabled={activeMappingFile === displayedMappingFile}
               type="primary"
               icon={<CheckCircleOutlined />}
               onClick={() => changeActiveMapping(displayedMappingFile)}
@@ -849,7 +931,19 @@ export default function Mappings() {
         </Flex>
       </section>
       <section className="flex-grow-1 flex-shrink-0 pb-4">
-        {editState && <Displayer state={editState} setState={setEditState} />}
+        {editState && (
+          <Splitter className="w-full h-full">
+            <Splitter.Panel
+              className="flex justify-center items-center"
+              defaultSize="95%"
+              min="5%"
+              max="99%"
+            >
+              <Displayer state={editState} setState={setEditState} />
+            </Splitter.Panel>
+            <Splitter.Panel />
+          </Splitter>
+        )}
       </section>
     </Flex>
   );

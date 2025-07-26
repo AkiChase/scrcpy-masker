@@ -2,6 +2,8 @@ import {
   EditOutlined,
   CloseCircleOutlined,
   SyncOutlined,
+  DeleteOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import {
   Input,
@@ -140,6 +142,26 @@ export function SettingDelete({ onDelete }: { onDelete: () => void }) {
         {t("mappings.common.delete.label")}
       </Button>
     </ItemBox>
+  );
+}
+
+export function SettingFooter({
+  onDelete,
+  onCopy,
+}: {
+  onDelete: () => void;
+  onCopy: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Flex align="center" justify="end" gap={12}>
+      <Button type="dashed" onClick={onCopy} icon={<CopyOutlined />}>
+        {t("mappings.common.copy.label")}
+      </Button>
+      <Button type="dashed" onClick={onDelete} icon={<DeleteOutlined />}>
+        {t("mappings.common.delete.label")}
+      </Button>
+    </Flex>
   );
 }
 

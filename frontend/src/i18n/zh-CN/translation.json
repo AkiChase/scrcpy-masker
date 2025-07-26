@@ -60,21 +60,26 @@
       "refreshBackground": "刷新背景",
       "refreshBgFail": "刷新背景图片失败: {0}",
       "refreshSuccess": "刷新背景图片成功",
-      "noMainDevice": "未找到受控的主设备，请在设备页面控制设备"
+      "noMainDevice": "未找到受控的主设备，请在设备页面控制设备",
+      "copy": {
+        "label": "复制"
+      }
     },
     "singleTap": {
       "setting": {
         "title": "映射配置 - 点击",
         "sync": "同步模式",
         "duration": "持续时长"
-      }
+      },
+      "name": "点击"
     },
     "repeatTap": {
       "setting": {
         "title": "映射配置 - 连点",
         "duration": "持续时长",
         "interval": "重复间隔"
-      }
+      },
+      "name": "连点"
     },
     "multipleTap": {
       "setting": {
@@ -87,7 +92,8 @@
         "operationsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
         "edit": "编辑",
         "back": "返回"
-      }
+      },
+      "name": "多点点击"
     },
     "swipe": {
       "setting": {
@@ -98,7 +104,8 @@
         "positonsHelp": "使用鼠标左键拖动，鼠标右键进行添加或编辑",
         "edit": "编辑",
         "back": "返回"
-      }
+      },
+      "name": "滑动"
     },
     "directionPad": {
       "setting": {
@@ -113,7 +120,8 @@
         "right": "右",
         "maxOffset": "最大偏移量",
         "initDuration": "首次滑动时长"
-      }
+      },
+      "name": "方向轮盘"
     },
     "mouseCastSpell": {
       "setting": {
@@ -134,7 +142,8 @@
         "editHelp": "使用鼠标左键拖动，鼠标右键进行编辑",
         "setCenter": "中心",
         "back": "返回"
-      }
+      },
+      "name": "鼠标施法"
     },
     "padCastSpell": {
       "setting": {
@@ -155,35 +164,41 @@
           "onRelease": "抬起",
           "onSecondPress": "二次按下"
         }
-      }
+      },
+      "name": "方向轮盘施法"
     },
     "cancelCast": {
       "setting": {
         "title": "映射配置 - 取消施法"
-      }
+      },
+      "name": "取消施法"
     },
     "observation": {
       "setting": {
         "title": "映射配置 - 观察视角",
         "sensitivity": "灵敏度"
-      }
+      },
+      "name": "观察视角"
     },
     "fps": {
       "setting": {
         "title": "映射配置 - FPS模式",
         "sensitivity": "灵敏度"
-      }
+      },
+      "name": "FPS模式"
     },
     "fire": {
       "setting": {
         "title": "映射配置 - 开火",
         "sensitivity": "灵敏度"
-      }
+      },
+      "name": "开火"
     },
     "rawInput": {
       "setting": {
         "title": "映射配置 - 直控模式"
-      }
+      },
+      "name": "直控模式"
     },
     "home": {
       "emptyBind": "存在未设置快捷键的按键！",
