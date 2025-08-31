@@ -14,10 +14,7 @@ use tokio::sync::oneshot;
 use crate::{
     config::LocalConfig,
     mask::{
-        mapping::config::{
-            MappingConfig, MappingType, load_mapping_config, save_mapping_config,
-            validate_mapping_config,
-        },
+        mapping::config::{MappingConfig, MappingType, save_mapping_config},
         mask_command::MaskCommand,
     },
     utils::{is_safe_file_name, relate_to_root_path},
@@ -56,28 +53,25 @@ async fn change_active_mapping(
         payload.file.push_str(".json");
     }
 
-    match load_mapping_config(&payload.file) {
-        Ok((mapping_config, input_config)) => {
-            let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-            state
-                .m_tx
-                .send_async((
-                    MaskCommand::ActiveMappingChange {
-                        mapping: mapping_config,
-                        input: input_config,
-                        file: payload.file.clone(),
-                    },
-                    oneshot_tx,
-                ))
-                .await
-                .unwrap();
-            match oneshot_rx.await.unwrap() {
-                Ok(msg) => {
-                    LocalConfig::set_active_mapping_file(payload.file);
-                    Ok(JsonResponse::success(msg, None))
-                }
-                Err(e) => Err(WebServerError::bad_request(e)),
-            }
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    state
+        .m_tx
+        .send_async((
+            MaskCommand::LoadAndActivateMappingConfig {
+                file_name: payload.file.clone(),
+            },
+            oneshot_tx,
+        ))
+        .await
+        .unwrap();
+    match oneshot_rx.await.unwrap() {
+        Ok(_) => {
+            LocalConfig::set_active_mapping_file(payload.file.clone());
+            log::info!("[WebServer] Set active mapping {}", payload.file);
+            Ok(JsonResponse::success(
+                format!("Successfully set active mapping {}", payload.file),
+                None,
+            ))
         }
         Err(e) => Err(WebServerError::bad_request(format!(
             "Failed to load mapping config {}. {}",
@@ -92,7 +86,27 @@ struct PostDataNewMapping {
     config: MappingConfig,
 }
 
+async fn validate_config(
+    m_tx: &Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    config: &MappingConfig,
+) -> Result<(), String> {
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    m_tx.send_async((
+        MaskCommand::ValidateMappingConfig {
+            config: config.clone(),
+        },
+        oneshot_tx,
+    ))
+    .await
+    .unwrap();
+    match oneshot_rx.await.unwrap() {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
 async fn create_mapping(
+    State(state): State<AppStatMapping>,
     Json(mut payload): Json<PostDataNewMapping>,
 ) -> Result<JsonResponse, WebServerError> {
     if !payload.file.ends_with(".json") {
@@ -111,7 +125,9 @@ async fn create_mapping(
         return bad_request(format!("Mapping config already exists: {}", payload.file));
     }
 
-    validate_mapping_config(&payload.config).map_err(|e| WebServerError::bad_request(e))?;
+    validate_config(&state.m_tx, &payload.config)
+        .await
+        .map_err(|e| WebServerError::bad_request(e))?;
 
     // save to file
     save_mapping_config(&payload.config, &config_path)
@@ -230,58 +246,42 @@ async fn rename_mapping(
     let file = oneshot_rx.await.unwrap().unwrap();
     if file == payload.file {
         // if active, set new active mapping
-        match load_mapping_config(&payload.new_file) {
-            Ok((mapping_config, input_config)) => {
-                log::info!("[Mask] Using mapping config {}", payload.new_file,);
-                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-                state
-                    .m_tx
-                    .send_async((
-                        MaskCommand::ActiveMappingChange {
-                            mapping: mapping_config,
-                            input: input_config,
-                            file: payload.new_file.clone(),
-                        },
-                        oneshot_tx,
-                    ))
-                    .await
-                    .unwrap();
-                match oneshot_rx.await.unwrap() {
-                    Ok(msg) => {
-                        LocalConfig::set_active_mapping_file(payload.new_file.clone());
-                        return Ok(JsonResponse::success(
-                            format!(
-                                "Successfully rename mapping config from {} to {}. {}",
-                                payload.file, payload.new_file, msg
-                            ),
-                            None,
-                        ));
-                    }
-                    Err(e) => {
-                        return bad_request(e);
-                    }
-                }
+        let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+        state
+            .m_tx
+            .send_async((
+                MaskCommand::LoadAndActivateMappingConfig {
+                    file_name: payload.new_file.clone(),
+                },
+                oneshot_tx,
+            ))
+            .await
+            .unwrap();
+        match oneshot_rx.await.unwrap() {
+            Ok(_) => {
+                LocalConfig::set_active_mapping_file(payload.new_file.clone());
+                let msg = format!(
+                    "Successfully rename mapping config from {} to {}. Successfully set active mapping {}",
+                    payload.file, payload.new_file, payload.new_file
+                );
+                log::info!("[WebServer] {}", msg);
+                return Ok(JsonResponse::success(msg, None));
             }
             Err(e) => {
-                return bad_request(format!(
-                    "Failed to load renamed mapping config {}. {}",
+                return Err(WebServerError::bad_request(format!(
+                    "Failed to load mapping config {}. {}",
                     payload.new_file, e
-                ));
+                )));
             }
         }
     }
-    log::info!(
-        "[WebServer] Rename mapping config from {} to {}",
-        payload.file,
-        payload.new_file
+
+    let msg = format!(
+        "Successfully rename mapping config from {} to {}",
+        payload.file, payload.new_file
     );
-    Ok(JsonResponse::success(
-        format!(
-            "Successfully rename mapping config from {} to {}",
-            payload.file, payload.new_file
-        ),
-        None,
-    ))
+    log::info!("[WebServer] {}", msg);
+    Ok(JsonResponse::success(msg, None))
 }
 
 #[derive(Deserialize)]
@@ -314,7 +314,6 @@ async fn duplicate_mapping(
         ));
     }
 
-    // rename file
     let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
     if !old_path.exists() {
         return bad_request(format!(
@@ -359,7 +358,10 @@ async fn update_mapping(
         return bad_request(format!("Mapping config name is not safe: {}", payload.file));
     }
 
-    validate_mapping_config(&payload.config).map_err(|e| WebServerError::bad_request(e))?;
+    validate_config(&state.m_tx, &payload.config)
+        .await
+        .map_err(|e| WebServerError::bad_request(e))?;
+
     // save to file
     let config_path = relate_to_root_path(["local", "mapping", &payload.file]);
     save_mapping_config(&payload.config, &config_path)
@@ -375,40 +377,31 @@ async fn update_mapping(
     let file = oneshot_rx.await.unwrap().unwrap();
     if file == payload.file {
         // if active, refresh active mapping
-        match load_mapping_config(&payload.file) {
-            Ok((mapping_config, input_config)) => {
-                log::info!("[Mask] Using mapping config {}", payload.file,);
-                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-                state
-                    .m_tx
-                    .send_async((
-                        MaskCommand::ActiveMappingChange {
-                            mapping: mapping_config,
-                            input: input_config,
-                            file: payload.file.clone(),
-                        },
-                        oneshot_tx,
-                    ))
-                    .await
-                    .unwrap();
-                match oneshot_rx.await.unwrap() {
-                    Ok(msg) => {
-                        log::info!("[WebServer] Update mapping config {}", payload.file);
-                        Ok(JsonResponse::success(
-                            format!(
-                                "Successfully update mapping config {}. {}",
-                                payload.file, msg
-                            ),
-                            None,
-                        ))
-                    }
-                    Err(e) => bad_request(e),
-                }
+        let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+        state
+            .m_tx
+            .send_async((
+                MaskCommand::LoadAndActivateMappingConfig {
+                    file_name: payload.file.clone(),
+                },
+                oneshot_tx,
+            ))
+            .await
+            .unwrap();
+        match oneshot_rx.await.unwrap() {
+            Ok(_) => {
+                LocalConfig::set_active_mapping_file(payload.file.clone());
+                let msg = format!(
+                    "Successfully update and activate mapping config {}",
+                    payload.file
+                );
+                log::info!("[WebServer] {}", msg);
+                Ok(JsonResponse::success(msg, None))
             }
-            Err(e) => bad_request(format!(
+            Err(e) => Err(WebServerError::bad_request(format!(
                 "Failed to load updated mapping config {}. {}",
                 payload.file, e
-            )),
+            ))),
         }
     } else {
         log::info!("[WebServer] Update mapping config {}", payload.file);
@@ -461,6 +454,7 @@ async fn get_mapping_list(
 }
 
 async fn read_mapping(
+    State(state): State<AppStatMapping>,
     Json(mut payload): Json<PostDataMappingFile>,
 ) -> Result<JsonResponse, WebServerError> {
     if !payload.file.ends_with(".json") {
@@ -492,9 +486,11 @@ async fn read_mapping(
         ))
     })?;
 
-    validate_mapping_config(&mapping_config).map_err(|e| {
-        WebServerError::bad_request(format!("Invalid mapping config {}: {}", payload.file, e))
-    })?;
+    validate_config(&state.m_tx, &mapping_config)
+        .await
+        .map_err(|e| {
+            WebServerError::bad_request(format!("Invalid mapping config {}: {}", payload.file, e))
+        })?;
 
     Ok(JsonResponse::success(
         format!("Successfully read mapping config {}", payload.file),
@@ -619,6 +615,9 @@ async fn migrate_mapping(
                 m.position *= scale;
             }
             MappingType::RawInput(m) => {
+                m.position *= scale;
+            }
+            MappingType::Script(m) => {
                 m.position *= scale;
             }
         });

@@ -34,6 +34,7 @@ use crate::{
         fire::{BindMappingFire, BindMappingFps, MappingFire, MappingFps},
         observation::{BindMappingObservation, MappingObservation},
         raw_input::{BindMappingRawInput, MappingRawInput},
+        script::{BindMappingScript, MappingScript},
         swipe::{BindMappingSwipe, MappingSwipe},
         tap::{
             BindMappingMultipleTap, BindMappingRepeatTap, BindMappingSingleTap, MappingMultipleTap,
@@ -75,6 +76,8 @@ seq!(N in 1..=32 {
             Fire~N,
             #[ineffable(pulse)]
             RawInput~N,
+            #[ineffable(continuous)]
+            Script~N,
         )*
     }
 
@@ -88,6 +91,7 @@ seq!(N in 1..=32 {
                     MappingAction::PadCastSpell~N => self.clone()._padcastspell~N(),
                     MappingAction::Observation~N => self.clone()._observation~N(),
                     MappingAction::Fire~N => self.clone()._fire~N(),
+                    MappingAction::Script~N => self.clone()._script~N(),
                 )*
                 _ => panic!("ineff_continuous called on non-continuous variant"),
             }
@@ -118,41 +122,26 @@ seq!(N in 1..=32 {
     }
 });
 
-#[derive(Serialize, Deserialize, Debug, Clone, AsRefStr)]
-#[serde(tag = "type")]
-pub enum MappingType {
-    SingleTap(MappingSingleTap),
-    RepeatTap(MappingRepeatTap),
-    MultipleTap(MappingMultipleTap),
-    Swipe(MappingSwipe),
-    DirectionPad(MappingDirectionPad),
-    MouseCastSpell(MappingMouseCastSpell),
-    PadCastSpell(MappingPadCastSpell),
-    CancelCast(MappingCancelCast),
-    Observation(MappingObservation),
-    Fps(MappingFps),
-    Fire(MappingFire),
-    RawInput(MappingRawInput),
-}
-
-#[derive(Debug, Clone)]
-pub enum BindMappingType {
-    SingleTap(BindMappingSingleTap),
-    RepeatTap(BindMappingRepeatTap),
-    MultipleTap(BindMappingMultipleTap),
-    Swipe(BindMappingSwipe),
-    DirectionPad(BindMappingDirectionPad),
-    MouseCastSpell(BindMappingMouseCastSpell),
-    PadCastSpell(BindMappingPadCastSpell),
-    CancelCast(BindMappingCancelCast),
-    Observation(BindMappingObservation),
-    Fps(BindMappingFps),
-    Fire(BindMappingFire),
-    RawInput(BindMappingRawInput),
-}
-
 macro_rules! impl_mapping_related {
     ( $($variant:ident),* $(,)? ) => {
+        paste! {
+            #[derive(Serialize, Deserialize, Debug, Clone, AsRefStr)]
+            #[serde(tag = "type")]
+            pub enum MappingType {
+                $(
+                    $variant([<Mapping $variant>]),
+                )*
+            }
+
+            #[derive(Debug, Clone)]
+            pub enum BindMappingType {
+                $(
+                    $variant([<BindMapping $variant>]),
+                )*
+            }
+        }
+
+
         impl ValidateMappingConfig for MappingType {
             fn validate(&self) -> Result<(), String> {
                 match self {
@@ -209,6 +198,7 @@ impl_mapping_related! {
     Fps,
     Fire,
     RawInput,
+    Script
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -277,6 +267,7 @@ impl BindMappingConfig {
                     BindMappingType::Fps(m) => (m.bind.to_string(), m.position.into()),
                     BindMappingType::Fire(m) => (m.bind.to_string(), m.position.into()),
                     BindMappingType::RawInput(m) => (m.bind.to_string(), m.position.into()),
+                    BindMappingType::Script(m) => (m.bind.to_string(), m.position.into()),
                 };
                 (mapping, binding, pos, size)
             })
@@ -534,7 +525,7 @@ pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), Str
         }
 
         if let Err(e) = mapping.validate() {
-            validate_errors.push(e);
+            validate_errors.push(format!("[{name}-{count}] {e}"));
         }
     }
 

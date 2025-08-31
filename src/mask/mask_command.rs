@@ -1,10 +1,12 @@
 use bevy::prelude::*;
-use bevy_ineffable::{config::InputConfig, prelude::IneffableCommands};
+use bevy_ineffable::prelude::IneffableCommands;
 
 use crate::{
     mask::mapping::{
         MappingState,
-        config::{ActiveMappingConfig, BindMappingConfig},
+        config::{
+            ActiveMappingConfig, MappingConfig, load_mapping_config, validate_mapping_config,
+        },
         cursor::CursorState,
     },
     utils::ChannelReceiverM,
@@ -21,12 +23,13 @@ pub enum MaskCommand {
     DeviceConnectionChange {
         connect: bool,
     },
-    ActiveMappingChange {
-        file: String,
-        mapping: BindMappingConfig,
-        input: InputConfig,
-    },
     GetActiveMapping,
+    ValidateMappingConfig {
+        config: MappingConfig,
+    },
+    LoadAndActivateMappingConfig {
+        file_name: String,
+    },
 }
 
 #[derive(Resource)]
@@ -82,32 +85,32 @@ pub fn handle_mask_command(
                 log::info!("[Mask] {}", msg);
                 oneshot_tx.send(Ok(msg)).unwrap();
             }
-            MaskCommand::ActiveMappingChange {
-                mapping,
-                input,
-                file,
-            } => {
-                log::info!("[Mask] Using mapping config {}", file);
-                let report = ineffable.validate(&input);
-                if !report.is_empty() {
-                    report.dump_to_log();
-                    oneshot_tx
-                        .send(Err(
-                            "Key mapping failed validation. Please check the logs for details."
-                                .to_string(),
-                        ))
-                        .unwrap();
-                } else {
-                    ineffable.set_config(&input);
-                    active_mapping.0 = Some(mapping);
-                    active_mapping.1 = file.clone();
-                    oneshot_tx
-                        .send(Ok(format!("Successfully set active mapping {}", file)))
-                        .unwrap();
-                }
-            }
             MaskCommand::GetActiveMapping => {
                 oneshot_tx.send(Ok(active_mapping.1.clone())).unwrap();
+            }
+            MaskCommand::ValidateMappingConfig { config } => {
+                match validate_mapping_config(&config) {
+                    Ok(_) => {
+                        oneshot_tx.send(Ok(String::new())).unwrap();
+                    }
+                    Err(err) => {
+                        oneshot_tx.send(Err(err)).unwrap();
+                    }
+                }
+            }
+            MaskCommand::LoadAndActivateMappingConfig { file_name } => {
+                log::info!("[Mapping] Load and activate mapping config: {}", file_name);
+                match load_mapping_config(&file_name) {
+                    Ok((mapping_config, input_config)) => {
+                        ineffable.set_config(&input_config);
+                        active_mapping.0 = Some(mapping_config);
+                        active_mapping.1 = file_name;
+                        oneshot_tx.send(Ok(String::new())).unwrap();
+                    }
+                    Err(e) => {
+                        oneshot_tx.send(Err(e)).unwrap();
+                    }
+                }
             }
         }
     }

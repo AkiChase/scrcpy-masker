@@ -104,4 +104,4 @@ fn start_servers(mut commands: Commands) {
     controller::Controller::start(controller_addr, cs_tx, v_tx, a_tx, d_rx, m_tx, ws_tx);
 }
 
-// TODO 构建为安装包 https://github.com/burtonageo/cargo-bundle 添加Github Action
+// TODO 构建跨平台压缩包即可，设置命令行启动方式(bat、sh)

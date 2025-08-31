@@ -6,6 +6,7 @@ pub mod direction_pad;
 pub mod fire;
 pub mod observation;
 pub mod raw_input;
+pub mod script;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
@@ -130,4 +131,3 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
 }
 
 // TODO fluent-rs 实现i8n，配置中添加语言选项，支持api来修改。用宏实现fluent-rs消息的获取（不存在panic， fluent有自带的Language优先级回退）
-// TODO 实现一个简单的解释器来完成宏代码的解析和运行
