@@ -63,6 +63,7 @@ import { setActiveMappingFile } from "../../store/localConfig";
 import { useTranslation } from "react-i18next";
 import { ItemBox, ItemBoxContainer } from "../common/ItemBox";
 import ButtonFire from "./ButtonFire";
+import ButtonScript from "./ButtonScript";
 
 type MappingFileTabelItem = {
   file: string;
@@ -399,6 +400,7 @@ const buttonTypes = [
   "Fps",
   "Fire",
   "RawInput",
+  "Script",
 ];
 
 const mappingButtonMap = {
@@ -414,6 +416,7 @@ const mappingButtonMap = {
   Fps: ButtonFps,
   Fire: ButtonFire,
   RawInput: ButtonRawInput,
+  Script: ButtonScript,
 };
 
 const mappingConstructorMap: any = Object.fromEntries(

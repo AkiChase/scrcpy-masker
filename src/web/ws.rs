@@ -51,7 +51,6 @@ enum WebSocketMsg {
     InjectKeycode {
         action: constant::KeyEventAction, // Enum name, e.g., Down, Up
         keycode: constant::Keycode,       // Enum name, e.g., Home, Back
-        repeat: u32,                      // Number of repeats during long press
         metastate: constant::MetaState,   // Enum name, e.g., NONE, CTRL_ON|SHIFT_ON
     },
     InjectText {
@@ -89,12 +88,11 @@ impl From<WebSocketMsg> for ScrcpyControlMsg {
             WebSocketMsg::InjectKeycode {
                 action,
                 keycode,
-                repeat,
                 metastate,
             } => ScrcpyControlMsg::InjectKeycode {
                 action,
                 keycode,
-                repeat,
+                repeat: 0,
                 metastate,
             },
             WebSocketMsg::InjectText { text } => ScrcpyControlMsg::InjectText { text },

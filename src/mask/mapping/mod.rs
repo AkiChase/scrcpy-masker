@@ -7,6 +7,7 @@ pub mod fire;
 pub mod observation;
 pub mod raw_input;
 pub mod script;
+pub mod script_helper;
 pub mod swipe;
 pub mod tap;
 pub mod utils;
@@ -52,6 +53,7 @@ impl Plugin for MappingPlugins {
                     cast_spell::cast_spell_init,
                     observation::init_observation,
                     raw_input::raw_input_init,
+                    script::script_init,
                 ),
             )
             // normal mapping mode
@@ -77,6 +79,8 @@ impl Plugin for MappingPlugins {
                     // fire only works in fps mode
                     (fire::handle_fire, fire::handle_fire_trigger)
                         .run_if(in_state(CursorState::Fps)),
+                    script::handle_script,
+                    script::handle_script_trigger,
                 )
                     .run_if(in_state(MappingState::Normal)),
             )

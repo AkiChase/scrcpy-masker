@@ -7,16 +7,18 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use flume::Sender;
 use rand::Rng;
 use serde::Deserialize;
 use serde_json::json;
 use tokio::{
-    sync::{broadcast, mpsc::UnboundedSender},
+    sync::{broadcast, mpsc::UnboundedSender, oneshot},
     time::sleep,
 };
 
 use crate::{
     config::LocalConfig,
+    mask::mask_command::MaskCommand,
     scrcpy::{
         adb::{Adb, Device},
         control_msg::ScrcpyControlMsg,
@@ -30,21 +32,24 @@ use crate::{
 pub struct AppStateDevice {
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
+    m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 }
 
 pub fn routers(
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
+    m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 ) -> Router {
     Router::new()
         .route("/device_list", get(device_list))
         .route("/control_device", post(control_device))
         .route("/decontrol_device", post(decontrol_device))
-        .route("/control/set_display_power", post(set_display_power))
         .route("/adb_connect", post(adb_connect))
         .route("/adb_pair", post(adb_pair))
         .route("/adb_screenshot", post(adb_screenshot))
-        .with_state(AppStateDevice { cs_tx, d_tx })
+        .route("/control/set_display_power", post(set_display_power))
+        .route("/control/eval_script", post(eval_script))
+        .with_state(AppStateDevice { cs_tx, d_tx, m_tx })
 }
 
 async fn device_list() -> Result<JsonResponse, WebServerError> {
@@ -210,28 +215,6 @@ async fn decontrol_device(
 }
 
 #[derive(Deserialize)]
-struct PostDataSetDisplayPower {
-    mode: bool,
-}
-async fn set_display_power(
-    State(state): State<AppStateDevice>,
-    Json(payload): Json<PostDataSetDisplayPower>,
-) -> Result<JsonResponse, WebServerError> {
-    if !ControlledDevice::is_any_device_controlled().await {
-        return Err(WebServerError::bad_request("No device under controlled"));
-    }
-
-    state
-        .cs_tx
-        .send(ScrcpyControlMsg::SetDisplayPower { mode: payload.mode })
-        .unwrap();
-    Ok(JsonResponse::success(
-        "Set display power of all controlled devices successfully",
-        None,
-    ))
-}
-
-#[derive(Deserialize)]
 struct PostDataAddress {
     address: String,
 }
@@ -311,4 +294,59 @@ async fn adb_screenshot(
     headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
 
     Ok((StatusCode::OK, headers, image_bytes))
+}
+
+#[derive(Deserialize)]
+struct PostDataSetDisplayPower {
+    mode: bool,
+}
+async fn set_display_power(
+    State(state): State<AppStateDevice>,
+    Json(payload): Json<PostDataSetDisplayPower>,
+) -> Result<JsonResponse, WebServerError> {
+    if !ControlledDevice::is_any_device_controlled().await {
+        return Err(WebServerError::bad_request("No device under controlled"));
+    }
+
+    state
+        .cs_tx
+        .send(ScrcpyControlMsg::SetDisplayPower { mode: payload.mode })
+        .unwrap();
+    Ok(JsonResponse::success(
+        "Set display power of all controlled devices successfully",
+        None,
+    ))
+}
+
+#[derive(Deserialize)]
+struct PostDataEvalScript {
+    script: String,
+}
+
+async fn eval_script(
+    State(state): State<AppStateDevice>,
+    Json(payload): Json<PostDataEvalScript>,
+) -> Result<JsonResponse, WebServerError> {
+    if !ControlledDevice::is_any_device_controlled().await {
+        return Err(WebServerError::bad_request("No device under controlled"));
+    }
+
+    let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+    state
+        .m_tx
+        .send_async((
+            MaskCommand::EvalScript {
+                script: payload.script,
+            },
+            oneshot_tx,
+        ))
+        .await
+        .unwrap();
+    match oneshot_rx.await.unwrap() {
+        Ok(_) => Ok(JsonResponse::success("Eval script successfully", None)),
+        Err(e) => Err(WebServerError::bad_request(format!(
+            "Eval script failed:\n{}",
+            e
+        ))),
+    }
 }

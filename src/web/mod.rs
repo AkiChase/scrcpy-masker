@@ -77,7 +77,10 @@ impl Server {
     ) -> Router {
         let router = Router::new()
             .fallback_service(ServeDir::new(relate_to_root_path(["assets", "web"])))
-            .nest("/api/device", device::routers(cs_tx.clone(), d_tx))
+            .nest(
+                "/api/device",
+                device::routers(cs_tx.clone(), d_tx, m_tx.clone()),
+            )
             .nest("/api/mapping", mapping::routers(m_tx.clone()))
             .nest("/api/config", config::routers(m_tx.clone()))
             .nest("/api/ws", ws::routers(cs_tx, ws_tx));

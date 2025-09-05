@@ -229,6 +229,21 @@
       "size": "尺寸",
       "differentName": "新配置名不能与当前文件名相同！",
       "duplicateTitle": "复制配置"
+    },
+    "script": {
+      "setting": {
+        "title": "映射配置 - 脚本",
+        "interval": "按住触发重复间隔",
+        "pressed_script": "按下触发脚本",
+        "pressed_script_placeholder": "按下快捷键时执行一次的脚本",
+        "run_script": "测试脚本运行",
+        "held_script": "按住触发脚本",
+        "held_script_placeholder": "按住快捷键时重复执行的脚本",
+        "released_script": "抬起触发脚本",
+        "released_script_placeholder": "抬起快捷键时执行一次的脚本",
+        "result": "运行结果"
+      },
+      "name": "脚本"
     }
   }
 }

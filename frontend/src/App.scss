@@ -6,6 +6,10 @@ body,
   width: 100%;
 }
 
+.ant-spin-fullscreen {
+  z-index: 9999;
+}
+
 .ant-form-item-label {
   font-weight: bold;
 }

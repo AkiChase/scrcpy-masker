@@ -229,6 +229,21 @@
       "size": "Size",
       "differentName": "The new config name cannot be the same as the current config!",
       "duplicateTitle": "Duplicate the config"
+    },
+    "script": {
+      "setting": {
+        "title": "Mapping Configuration - Script",
+        "pressed_script": "Pressed script",
+        "pressed_script_placeholder": "Executed once when the hotkey is pressed",
+        "interval": "Held repeat interval",
+        "run_script": "Test script execution",
+        "held_script": "Held script",
+        "held_script_placeholder": "Repeatedly executed while the hotkey is held down",
+        "released_script": "Released Script",
+        "released_script_placeholder": "Executed once when the hotkey is released",
+        "result": "Running result"
+      },
+      "name": "Script"
     }
   }
 }

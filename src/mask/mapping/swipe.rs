@@ -74,7 +74,7 @@ pub fn handle_swipe(
                 if ineffable.just_pulsed(action.ineff_pulse()) {
                     let cs_tx = cs_tx_res.0.clone();
                     let pointer_id = mapping.pointer_id;
-                    let potions = mapping.positions.clone();
+                    let points = mapping.positions.clone();
                     let interval = mapping.interval;
                     runtime.spawn_background_task(move |_ctx| async move {
                         ControlMsgHelper::send_touch(
@@ -82,11 +82,11 @@ pub fn handle_swipe(
                             MotionEventAction::Down,
                             pointer_id,
                             original_size,
-                            potions[0].into(),
+                            points[0].into(),
                         );
-                        let mut cur_pos: Vec2 = potions[0].into();
-                        for i in 1..potions.len() {
-                            let next_pos: Vec2 = potions[i].into();
+                        let mut cur_pos: Vec2 = points[0].into();
+                        for i in 1..points.len() {
+                            let next_pos: Vec2 = points[i].into();
 
                             let delta = next_pos - cur_pos;
                             let steps = std::cmp::max(1, interval / MIN_MOVE_STEP_INTERVAL);

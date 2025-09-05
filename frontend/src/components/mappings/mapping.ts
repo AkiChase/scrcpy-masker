@@ -19,7 +19,8 @@ export type MappingType =
   | ObservationConfig
   | FpsConfig
   | FireConfig
-  | RawInputConfig;
+  | RawInputConfig
+  | ScriptConfig;
 
 export type Position = {
   x: number;
@@ -336,6 +337,30 @@ export function newRawInput(position: Position): RawInputConfig {
     note: "",
     position,
     type: "RawInput",
+  };
+}
+
+export interface ScriptConfig {
+  bind: ButtonBinding;
+  note: string;
+  position: Position;
+  pressed_script: string;
+  released_script: string;
+  held_script: string;
+  interval: number;
+  type: "Script";
+}
+
+export function newScript(position: Position): ScriptConfig {
+  return {
+    bind: [],
+    note: "",
+    position,
+    pressed_script: "",
+    released_script: "",
+    held_script: "",
+    interval: 300,
+    type: "Script",
   };
 }
 

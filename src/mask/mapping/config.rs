@@ -506,6 +506,15 @@ pub fn default_mapping_config() -> MappingConfig {
                 position: (2000, 300).into(),
                 bind: ButtonBinding::new(vec![KeyCode::Enter.into()]),
             }),
+            MappingType::Script(MappingScript {
+                note: "Script".to_string(),
+                position: (2000, 400).into(),
+                pressed_script: r#"print("start"); send_key("AppSwitch");"#.to_string(),
+                released_script: r#"print("over"); send_key("AppSwitch");"#.to_string(),
+                held_script: r#"print("tap"); tap(1, CURSOR_X, CURSOR_Y);"#.to_string(),
+                interval: 1000,
+                bind: ButtonBinding::new(vec![KeyCode::Tab.into()]),
+            }),
         ],
     }
 }

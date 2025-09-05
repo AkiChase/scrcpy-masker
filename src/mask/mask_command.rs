@@ -7,9 +7,10 @@ use crate::{
         config::{
             ActiveMappingConfig, MappingConfig, load_mapping_config, validate_mapping_config,
         },
-        cursor::CursorState,
+        cursor::{CursorPosition, CursorState},
+        script_helper::ScriptAST,
     },
-    utils::ChannelReceiverM,
+    utils::{ChannelReceiverM, ChannelSenderCS},
 };
 
 #[derive(Debug)]
@@ -30,6 +31,9 @@ pub enum MaskCommand {
     LoadAndActivateMappingConfig {
         file_name: String,
     },
+    EvalScript {
+        script: String,
+    },
 }
 
 #[derive(Resource)]
@@ -37,6 +41,8 @@ pub struct MaskSize(pub Vec2);
 
 pub fn handle_mask_command(
     m_rx: Res<ChannelReceiverM>,
+    cs_tx_res: Res<ChannelSenderCS>,
+    cursor_pos: Res<CursorPosition>,
     mut window: Single<&mut Window>,
     mut next_mapping_state: ResMut<NextState<MappingState>>,
     mut next_cursor_state: ResMut<NextState<CursorState>>,
@@ -109,6 +115,25 @@ pub fn handle_mask_command(
                     }
                     Err(e) => {
                         oneshot_tx.send(Err(e)).unwrap();
+                    }
+                }
+            }
+            MaskCommand::EvalScript { script } => {
+                let ast = match ScriptAST::new(&script) {
+                    Err(e) => {
+                        oneshot_tx.send(Err(e)).unwrap();
+                        return;
+                    }
+                    Ok(ast) => ast,
+                };
+
+                match ast.eval_script(&cs_tx_res.0, mask_size.0, cursor_pos.0) {
+                    Err(e) => {
+                        oneshot_tx.send(Err(e.to_string())).unwrap();
+                        return;
+                    }
+                    Ok(_) => {
+                        oneshot_tx.send(Ok(String::new())).unwrap();
                     }
                 }
             }
