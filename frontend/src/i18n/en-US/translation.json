@@ -1,4 +1,8 @@
 {
+  "404": {
+    "title": "Looks like the page has vanished into thin air.",
+    "back": "Back Home"
+  },
   "sider": {
     "devices": "Devices",
     "mappings": "Mappings",

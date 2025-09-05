@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { lazy } from "react";
 import LoadingWrapper from "./components/common/LoadingWrapper";
 import App from "./App";
+import NotFound from "./components/NotFound";
 
 const Welcome = lazy(() => import("./components/Welcome"));
 const Devices = lazy(() => import("./components/Devices"));
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
         ),
       },
     ],
+  },
+  {
+    path: "*",
+    element: <NotFound />,
   },
 ]);
 

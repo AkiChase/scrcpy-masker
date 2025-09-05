@@ -13,7 +13,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::{net::SocketAddrV4, thread};
 use tokio::sync::{broadcast, mpsc::UnboundedSender, oneshot};
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 use crate::{
     mask::mask_command::MaskCommand,
@@ -76,7 +76,12 @@ impl Server {
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) -> Router {
         let router = Router::new()
-            .fallback_service(ServeDir::new(relate_to_root_path(["assets", "web"])))
+            .fallback_service(
+                ServeDir::new(relate_to_root_path(["assets", "web"])).not_found_service(
+                    ServeFile::new(relate_to_root_path(["assets", "web", "index.html"])),
+                ),
+            )
+            // .fallback_service()
             .nest(
                 "/api/device",
                 device::routers(cs_tx.clone(), d_tx, m_tx.clone()),
