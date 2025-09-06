@@ -190,6 +190,7 @@
       "unknownKeyCode": "未知的 KeyCode 类型",
       "failedToParseTo": "无法解析为",
       "unknownMouseButton": "未知的鼠标按键类型"
-    }
+    },
+    "evalScriptnoMappingError": "无法执行脚本：不存在激活的映射，无法获取映射配置尺寸"
   }
 }

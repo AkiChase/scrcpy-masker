@@ -136,14 +136,24 @@ pub fn handle_mask_command(
                     Ok(ast) => ast,
                 };
 
-                match ast.eval_script(&cs_tx_res.0, mask_size.0, cursor_pos.0) {
-                    Err(e) => {
-                        oneshot_tx.send(Err(e.to_string())).unwrap();
-                        return;
+                if let Some(mapping_config) = &active_mapping.0 {
+                    match ast.eval_script(
+                        &cs_tx_res.0,
+                        mapping_config.original_size.into(),
+                        cursor_pos.0,
+                    ) {
+                        Err(e) => {
+                            oneshot_tx.send(Err(e.to_string())).unwrap();
+                            return;
+                        }
+                        Ok(_) => {
+                            oneshot_tx.send(Ok(String::new())).unwrap();
+                        }
                     }
-                    Ok(_) => {
-                        oneshot_tx.send(Ok(String::new())).unwrap();
-                    }
+                } else {
+                    oneshot_tx
+                        .send(Err(t!("mask.evalScriptnoMappingError").to_string()))
+                        .unwrap();
                 }
             }
         }

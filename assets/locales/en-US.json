@@ -190,6 +190,7 @@
       "unknownKeyCode": "Unknown KeyCode variant",
       "failedToParseTo": "Failed to parse to",
       "unknownMouseButton": "Unknown mouse button variant"
-    }
+    },
+    "evalScriptnoMappingError": "Unable to execute script: No active mapping, cannot retrieve mapping configuration size"
   }
 }
