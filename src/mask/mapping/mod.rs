@@ -14,6 +14,7 @@ pub mod utils;
 
 use bevy::prelude::*;
 use bevy_ineffable::prelude::*;
+use rust_i18n::t;
 
 use crate::{
     config::LocalConfig,
@@ -110,12 +111,19 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
     let (bind_mapping_config, input_config, file) =
         match load_mapping_config(&config.active_mapping_file) {
             Ok((mapping_config, input_config)) => {
-                log::info!("[Mask] Using mapping config {}", config.active_mapping_file,);
+                log::info!(
+                    "[Mask] {}: {}",
+                    t!("mask.mapping.usingMappingConfig"),
+                    config.active_mapping_file,
+                );
                 (mapping_config, input_config, config.active_mapping_file)
             }
             Err(e) => {
                 log::error!("{}", e);
-                log::info!("[Mask] Using default mapping config");
+                log::info!(
+                    "[Mask] {}: default.json",
+                    t!("mask.mapping.useDefaultMapping")
+                );
                 let default_mapping = default_mapping_config();
                 let config_path = relate_to_root_path(["local", "mapping", "default.json"]);
                 save_mapping_config(&default_mapping, &config_path).unwrap();
@@ -133,5 +141,3 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
     active_mapping.1 = file;
     ineffable.set_config(&input_config);
 }
-
-// TODO fluent-rs 实现i8n，配置中添加语言选项，支持api来修改。用宏实现fluent-rs消息的获取（不存在panic， fluent有自带的Language优先级回退）

@@ -1,3 +1,4 @@
+use rust_i18n::t;
 use tokio::{io::AsyncReadExt, net::tcp::OwnedReadHalf};
 
 use crate::scrcpy::constant;
@@ -248,7 +249,7 @@ pub enum ScrcpyDeviceMsg {
 
 impl ScrcpyDeviceMsg {
     fn map_read_error(e: std::io::Error) -> String {
-        format!("Failed to read from scrcpy control connection: {}", e)
+        format!("{}: {}", t!("scrcpy.failedReadControlConnection"), e)
     }
 
     pub async fn read_msg(read_half: &mut OwnedReadHalf, scid: String) -> Result<Self, String> {

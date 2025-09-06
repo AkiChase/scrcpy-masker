@@ -9,6 +9,7 @@ use bevy_ineffable::{
     bindings::{AnalogInput, BinaryInput, ChordLike, Threshold},
     prelude::{DualAxisBinding, InputBinding, SingleAxisBinding},
 };
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
@@ -141,8 +142,9 @@ macro_rules! match_gamepad_from_str {
             ss if ss.starts_with("Other-") => ss[6..]
                 .parse()
                 .map(|i| MergedButton::GamePad(GamepadButton::Other(i)))
-                .map_err(|e| format!("Invalid gamepad button code: {}", e)),
-            _ => Err(format!("Unknown gamepad button variant: {}", $s)),
+                .map_err(|e| format!("{}: {}", t!("mask.mapping.invalidGamepadButtonCode"),e)),
+            _ => Err(format!("{}: {}", t!("mask.mapping.unknownGamepadButton")
+,$s)),
         }
     };
 }
@@ -156,17 +158,18 @@ macro_rules! match_keycode_from_str {
             "ScrollUp" => Ok(MergedButton::ScrollUp),
             s if s.starts_with("Android-") => s[8..].parse()
                 .map(|code| MergedButton::Keyboard(KeyCode::Unidentified(NativeKeyCode::Android(code))))
-                .map_err(|e| format!("Invalid Android code: {}", e)),
+                .map_err(|e| format!("{}: {}", t!("mask.mapping.invalidCode", name=>"Android"), e)),
             s if s.starts_with("MacOS-") => s[6..].parse()
                 .map(|code| MergedButton::Keyboard(KeyCode::Unidentified(NativeKeyCode::MacOS(code))))
-                .map_err(|e| format!("Invalid MacOS code: {}", e)),
+                .map_err(|e| format!("{}: {}", t!("mask.mapping.invalidCode", name=>"MacOS"), e)),
+
             s if s.starts_with("Windows-") => s[8..].parse()
                 .map(|code| MergedButton::Keyboard(KeyCode::Unidentified(NativeKeyCode::Windows(code))))
-                .map_err(|e| format!("Invalid Windows code: {}", e)),
+                .map_err(|e| format!("{}: {}", t!("mask.mapping.invalidCode", name=>"Windows"), e)),
             s if s.starts_with("Xkb-") => s[4..].parse()
                 .map(|code| MergedButton::Keyboard(KeyCode::Unidentified(NativeKeyCode::Xkb(code))))
-                .map_err(|e| format!("Invalid Xkb code: {}", e)),
-            _ => Err(format!("Unknown KeyCode variant: {}", $s)),
+                .map_err(|e| format!("{}: {}", t!("mask.mapping.invalidCode", name=>"Xkb"), e)),
+            _ => Err(format!("{}: {}", t!("mask.mapping.unknownKeyCode"),$s)),
         }
     };
 }
@@ -185,8 +188,14 @@ impl FromStr for MergedButton {
                 ss if ss.starts_with("Other-") => ss[6..]
                     .parse()
                     .map(|i| MergedButton::Mouse(MouseButton::Other(i)))
-                    .map_err(|e| format!("Failed to parse to MouseButton::Other, {}", e)),
-                _ => Err(format!("Unknown mouse button variant: {}", s)),
+                    .map_err(|e| {
+                        format!(
+                            "{} MouseButton::Other, {}",
+                            t!("mask.mapping.failedToParseTo"),
+                            e
+                        )
+                    }),
+                _ => Err(format!("{}: {}", t!("mask.mapping.unknownMouseButton"), s)),
             }
         } else if let Some(stripped) = s.strip_prefix("G-") {
             match_gamepad_from_str!(s, stripped;

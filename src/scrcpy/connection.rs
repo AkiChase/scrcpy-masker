@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use flume::Sender;
+use rust_i18n::t;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{
@@ -39,7 +40,7 @@ impl ScrcpyConnection {
     ) {
         tokio::select! {
             _ = token.cancelled()=>{
-                log::info!("[Controller] Scrcpy control connection reader half cancelled manually");
+                log::info!("[Controller] {}", t!("scrcpy.controlConnectionCancelled"));
             }
             _ = async {
                 loop {
@@ -87,20 +88,20 @@ impl ScrcpyConnection {
                                 };
                                 let data:Vec<u8> = msg.into();
                                 if let Err(e) = write_half.write_all(&data).await {
-                                    log::error!("[Controller] Failed to write to socket: {}", e);
+                                    log::error!("[Controller] {}: {}", t!("scrcpy.controlConnWriteFailed"),e);
                                 }
                         }
                         Err(RecvError::Lagged(skipped)) => {
-                            log::warn!("[Controller] Receiver lagged, skipped {} messages", skipped);
+                            log::warn!("[Controller] {}",t!("controller.csReceiverLagged", skipped => skipped));
                         }
                         Err(e) => {
-                            log::info!("[Controller] Control channel closed or error occurred: {}", e);
+                            log::info!("[Controller] {}: {}", t!("scrcpy.controlChannelClosed"),e);
                             break;
                         }
                     }
                 }
             }=>{
-                log::error!("[Controller] Scrcpy control write connection shutdown unexpectedly");
+                log::error!("[Controller] {}", t!("scrcpy.controlCnnShutdownUnexpectedly"));
             }
         }
         timeout(Duration::from_millis(500), write_half.shutdown())
@@ -119,11 +120,11 @@ impl ScrcpyConnection {
         let mut buf: [u8; 64] = [0; 64];
         match read_half.read(&mut buf).await {
             Err(_e) => {
-                log::error!("[Controller] Failed to read metadata");
+                log::error!("[Controller] {}", t!("scrcpy.failedToReadMetadata"));
                 return;
             }
             Ok(0) => {
-                log::error!("[Controller] Failed to read metadata");
+                log::error!("[Controller] {}", t!("scrcpy.failedToReadMetadata"));
                 return;
             }
             Ok(n) => {
@@ -137,7 +138,7 @@ impl ScrcpyConnection {
                     ControlledDevice::update_device_name(scid.to_string(), device_name.to_string())
                         .await;
                 } else {
-                    log::warn!("[Controller] Received invalid UTF-8 device name");
+                    log::warn!("[Controller] {}", t!("scrcpy.invalidDeviceName"));
                     ControlledDevice::update_device_name(
                         scid.to_string(),
                         "INVALID_NAME".to_string(),
@@ -183,10 +184,10 @@ impl ScrcpyConnection {
     ) {
         tokio::select! {
             _ = token.cancelled()=>{
-                log::info!("[Controller] Scrcpy control connection reader half cancelled manually");
+                log::info!("[Controller] {}", t!("scrcpy.controlConnectionReaderCancelled"));
             }
             _ = Self::control_reader_handler(read_half, cr_tx, watch_tx, scid, main)=>{
-                log::error!("[Controller] Scrcpy control read connection shutdown unexpectedly");
+                log::error!("[Controller] {}", t!("scrcpy.controlReadShutdownUnexpectedly"));
             }
         }
         // no need to shutdown the read_half
@@ -201,7 +202,7 @@ impl ScrcpyConnection {
         main: bool,
         token: CancellationToken,
     ) {
-        log::debug!("[Controller] Handle scrcpy control connection...");
+        log::debug!("[Controller] {}", t!("scrcpy.handleControlConnection"));
         let (read_half, write_half) = self.socket.into_split();
         let finnal_token = token.clone();
         let token_copy = token.clone();
@@ -222,7 +223,7 @@ impl ScrcpyConnection {
             _ = Self::control_reader(read_half, token_copy, cr_tx, watch_tx, &scid, main) => {finnal_token.cancel();}
         }
 
-        log::info!("[Controller] Scrcpy control connection closed");
+        log::info!("[Controller] {}", t!("scrcpy.controlConnectionClosed"));
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
             m_tx.send_async((
@@ -237,7 +238,7 @@ impl ScrcpyConnection {
 
     pub async fn handle_video(&mut self, token: CancellationToken, _v_tx: Sender<Vec<u8>>) {
         // TODO handle scrcpy video connection
-        log::debug!("[Controller] handle scrcpy video connection...");
+        log::debug!("[Controller] Handling scrcpy video connection...");
         tokio::select! {
             // _ = self.control_loop(csb_rx)=>{
             //     log::error!("Scrcpy video connection shutdown unexpectedly");
@@ -251,7 +252,7 @@ impl ScrcpyConnection {
 
     pub async fn handle_audio(&mut self, token: CancellationToken, _a_tx: Sender<Vec<u8>>) {
         // TODO handle scrcpy audio connection
-        log::debug!("[Controller] handle scrcpy audio connection...");
+        log::debug!("[Controller] Handling scrcpy audio connection...");
         tokio::select! {
             // _ = self.control_loop(csb_rx)=>{
             //     log::error!("[Controller] Scrcpy audio connection shutdown unexpectedly");

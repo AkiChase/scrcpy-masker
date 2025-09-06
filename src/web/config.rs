@@ -4,6 +4,7 @@ use axum::{
     routing::{get, post},
 };
 use flume::Sender;
+use rust_i18n::t;
 use serde::Deserialize;
 use tokio::sync::oneshot;
 
@@ -30,7 +31,7 @@ pub fn routers(m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>
 async fn get_config() -> Result<JsonResponse, WebServerError> {
     let config = LocalConfig::get();
     Ok(JsonResponse::success(
-        "Successfully get config",
+        t!("web.config.getLocalConfigSuccess"),
         Some(serde_json::to_value(&config).unwrap()),
     ))
 }
@@ -47,15 +48,38 @@ async fn update_config(
 ) -> Result<JsonResponse, WebServerError> {
     // sync with src/config.rs
     match payload.key.as_str() {
+        "language" => {
+            if let Some(value) = payload.value.as_str() {
+                if !matches!(value, "zh-CN" | "en-US") {
+                    return Err(WebServerError::bad_request(format!(
+                        "{}: {}",
+                        t!("web.config.invalidLanguage"),
+                        value
+                    )));
+                }
+                rust_i18n::set_locale(value);
+                LocalConfig::set_language(value.to_string());
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setLanguageSuccess"), value),
+                    None,
+                ));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.languageMustBeString"
+                )));
+            }
+        }
         "web_port" => {
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_web_port(value as u16);
                 return Ok(JsonResponse::success(
-                    format!("Please restart app to apply new web_port"),
+                    t!("web.config.restartToApplyWebPort"),
                     None,
                 ));
             } else {
-                return Err(WebServerError::bad_request("The web_port must be u16"));
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.webPortMustBeU16"
+                )));
             }
         }
         "adb_path" => {
@@ -64,32 +88,35 @@ async fn update_config(
                     Ok(_) => {
                         LocalConfig::set_adb_path(value.to_string());
                         return Ok(JsonResponse::success(
-                            format!("Successfully updated adb_path"),
+                            t!("web.config.adbPathSetSuccess"),
                             None,
                         ));
                     }
                     Err(e) => {
                         return Err(WebServerError::bad_request(format!(
-                            "Failed to set adb_path: {}",
+                            "{}: {}",
+                            t!("web.config.adbPathSetFailed"),
                             e
                         )));
                     }
                 }
             } else {
-                return Err(WebServerError::bad_request("The adb_path must be string"));
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.adbPathMustBeString"
+                )));
             }
         }
         "controller_port" => {
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_controller_port(value as u16);
                 return Ok(JsonResponse::success(
-                    format!("Please restart app to apply new controller_port"),
+                    t!("web.config.restartToApplyControllerPort"),
                     None,
                 ));
             } else {
-                return Err(WebServerError::bad_request(
-                    "The controller_port must be u16",
-                ));
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.controllerPortMustBeU16"
+                )));
             }
         }
         "vertical_mask_height" => {
@@ -99,14 +126,14 @@ async fn update_config(
                     let (device_w, device_h) = main_device.device_size;
                     let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
                     return Ok(JsonResponse::success(
-                        format!("Successfully updated vertical_mask_height. {}", msg),
+                        format!("{}. {}", t!("web.config.setVerticalMaskHeightSuccess"), msg),
                         None,
                     ));
                 }
             } else {
-                return Err(WebServerError::bad_request(
-                    "The vertical_mask_height must be u32",
-                ));
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.verticalMaskHeightMustBeu32"
+                )));
             }
         }
         "horizontal_mask_width" => {
@@ -116,14 +143,18 @@ async fn update_config(
                     let (device_w, device_h) = main_device.device_size;
                     let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
                     return Ok(JsonResponse::success(
-                        format!("Successfully updated horizontal_mask_width. {}", msg),
+                        format!(
+                            "{}. {}",
+                            t!("web.config.setHorizontalMaskWidthSuccess"),
+                            msg
+                        ),
                         None,
                     ));
                 }
             } else {
-                return Err(WebServerError::bad_request(
-                    "The horizontal_mask_width must be u32",
-                ));
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.horizontalMaskWidthMustBeu32"
+                )));
             }
         }
         "vertical_position" => {
@@ -135,19 +166,19 @@ async fn update_config(
                             let (device_w, device_h) = main_device.device_size;
                             let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
                             return Ok(JsonResponse::success(
-                                format!("Successfully updated vertical_position. {}", msg),
+                                format!("{}. {}", t!("web.config.setVerticalPositionSuccess"), msg),
                                 None,
                             ));
                         }
                     } else {
-                        return Err(WebServerError::bad_request(
-                            "vertical_position must be array [i32, i32]",
-                        ));
+                        return Err(WebServerError::bad_request(t!(
+                            "web.config.verticalPositionTypeError"
+                        )));
                     }
                 } else {
-                    return Err(WebServerError::bad_request(
-                        "vertical_position must be array [i32, i32]",
-                    ));
+                    return Err(WebServerError::bad_request(t!(
+                        "web.config.verticalPositionTypeError"
+                    )));
                 }
             }
         }
@@ -160,51 +191,61 @@ async fn update_config(
                             let (device_w, device_h) = main_device.device_size;
                             let msg = mask_win_move_helper(device_w, device_h, &state.m_tx).await;
                             return Ok(JsonResponse::success(
-                                format!("Successfully updated horizontal_position. {}", msg),
+                                format!(
+                                    "{}. {}",
+                                    t!("web.config.setHorizontalPositionSuccess"),
+                                    msg
+                                ),
                                 None,
                             ));
                         }
                     } else {
-                        return Err(WebServerError::bad_request(
-                            "The horizontal_position must be array [i32, i32]",
-                        ));
+                        return Err(WebServerError::bad_request(t!(
+                            "web.config.horizontalPositionTypeError"
+                        )));
                     }
                 } else {
-                    return Err(WebServerError::bad_request(
-                        "The horizontal_position must be array [i32, i32]",
-                    ));
+                    return Err(WebServerError::bad_request(t!(
+                        "web.config.horizontalPositionTypeError"
+                    )));
                 }
             }
         }
         "active_mapping_file" => {
-            return Err(WebServerError::bad_request(
-                "Please request /api/mapping/change_active_mapping for this operation",
-            ));
+            return Err(WebServerError::bad_request(format!(
+                "{}",
+                t!("web.config.pleaseRequestForOperation", api => "/api/mapping/change_active_mapping")
+            )));
         }
         "mapping_label_opacity" => {
             if let Some(value) = payload.value.as_f64() {
                 if value <= 1.0 && value >= 0.0 {
                     LocalConfig::set_mapping_label_opacity(value as f32);
                     return Ok(JsonResponse::success(
-                        format!("Successfully updated mapping_label_opacity"),
+                        t!("web.config.setMappingLabelOpacitySuccess"),
                         None,
                     ));
                 }
             }
-            return Err(WebServerError::bad_request(
-                "The mapping_label_opacity must between 0.0 and 1.0",
-            ));
+            return Err(WebServerError::bad_request(t!(
+                "web.config.mappingLabelOpacityRange"
+            )));
         }
         _ => {
             return Err(WebServerError::bad_request(format!(
-                "Unknown config key: {}",
+                "{}: {}",
+                t!("web.config.invalidMappingKey"),
                 payload.key
             )));
         }
     };
 
     Ok(JsonResponse::success(
-        format!("Successfully updated config.{}", payload.key),
+        format!(
+            "{} config.{}",
+            t!("web.config.successfullySet"),
+            payload.key
+        ),
         None,
     ))
 }

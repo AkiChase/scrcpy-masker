@@ -10,6 +10,7 @@ use bevy::{
 };
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding};
 use bevy_tokio_tasks::TokioTasksRuntime;
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -75,13 +76,17 @@ impl ValidateMappingConfig for MappingScript {
     fn validate(&self) -> Result<(), String> {
         let mut errors = Vec::new();
         if let Err(e) = ScriptAST::new(&self.pressed_script) {
-            errors.push(format!("Pressed script error:\n{e}"));
+            errors.push(format!("{}:\n{}", t!("mask.mapping.pressedScriptError"), e));
         }
         if let Err(e) = ScriptAST::new(&self.released_script) {
-            errors.push(format!("Released script error:\n{e}"));
+            errors.push(format!(
+                "{}:\n{}",
+                t!("mask.mapping.releasedScriptError"),
+                e
+            ));
         }
         if let Err(e) = ScriptAST::new(&self.held_script) {
-            errors.push(format!("Held script error:\n{e}"));
+            errors.push(format!("{}:\n{}", t!("mask.mapping.heldScriptError"), e));
         }
 
         if errors.is_empty() {
@@ -114,7 +119,11 @@ pub fn handle_script(
                         let ast = mapping.pressed_script_ast.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
                             if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos) {
-                                log::error!("Pressed script runtime error{}", e);
+                                log::error!(
+                                    "{}: {}",
+                                    t!("mask.mapping.pressedScriptRuntimeError"),
+                                    e
+                                );
                             }
                         });
                     }
@@ -140,7 +149,11 @@ pub fn handle_script(
                         let ast = mapping.released_script_ast.clone();
                         runtime.spawn_background_task(move |_ctx| async move {
                             if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos) {
-                                log::error!("Released script runtime error{}", e);
+                                log::error!(
+                                    "{}: {}",
+                                    t!("mask.mapping.releasedScriptRuntimeError"),
+                                    e
+                                );
                             }
                         });
                     }
@@ -175,7 +188,7 @@ pub fn handle_script_trigger(
             let ast = timer.held_script_ast.clone();
             runtime.spawn_background_task(move |_ctx| async move {
                 if let Err(e) = ast.eval_script(&cs_tx, original_size, cursor_pos) {
-                    log::error!("Held script runtime error{}", e);
+                    log::error!("{}: {}", t!("mask.mapping.heldScriptRuntimeError"), e);
                 }
             });
         }

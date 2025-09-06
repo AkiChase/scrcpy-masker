@@ -7,6 +7,7 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::{self, error::RecvError};
 
@@ -167,7 +168,7 @@ async fn handle_socket(
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     ws_rx: broadcast::Receiver<WebSocketNotification>,
 ) {
-    log::info!("[WebSocket] WS connected");
+    log::info!("[WebSocket] {}", t!("web.ws.connected"));
     let (sender, receiver) = socket.split();
 
     let mut send_handler = tokio::spawn(async move {
@@ -186,7 +187,7 @@ async fn handle_socket(
             send_handler.abort();
         }
     }
-    log::info!("[WebSocket] WS disconnected");
+    log::info!("[WebSocket] {}", t!("web.ws.disconnected"));
 }
 
 async fn handle_send(
@@ -215,12 +216,12 @@ async fn handle_send(
             }
             Err(RecvError::Lagged(skipped)) => {
                 log::warn!(
-                    "[WebSocket] WS channel receiver lagged, skipped {} messages",
-                    skipped
+                    "[WebSocket] {}",
+                    t!("web.ws.receiverLagged", skipped => skipped)
                 );
             }
             Err(e) => {
-                log::info!("[WebSocket] WS channel closed or error occurred: {}", e);
+                log::info!("[WebSocket] {}: {}", t!("web.ws.wsChannelClosed"), e);
                 break;
             }
         }
@@ -237,7 +238,7 @@ async fn handle_recv(
                 let msg: WebSocketMsg = match serde_json::from_str(&t) {
                     Ok(m) => m,
                     Err(e) => {
-                        log::error!("[WebSocket] Failed to parse message: {}", e);
+                        log::error!("[WebSocket] {}: {}", t!("web.ws.failedToParseMessage"), e);
                         continue;
                     }
                 };

@@ -3,6 +3,7 @@ use std::{collections::HashMap, net::SocketAddrV4, thread};
 use bevy::log;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use flume::Sender;
+use rust_i18n::t;
 use tokio::{
     net::TcpListener,
     sync::{
@@ -68,7 +69,7 @@ impl Controller {
                     ScrcpyDeviceMsg::Clipboard { length: _, text } => {
                         let mut ctx = ClipboardContext::new().unwrap();
                         ctx.set_contents(text).unwrap();
-                        log::info!("[Controller] Sync clipboard from main device");
+                        log::info!("[Controller] {}", t!("scrcpy.syncClipboardFromMain"));
                     }
                     ScrcpyDeviceMsg::AckClipboard { .. } => {}
                     ScrcpyDeviceMsg::UhidOutput { .. } => {}
@@ -93,13 +94,22 @@ impl Controller {
                             rotation * 90,
                             msg
                         );
+                        log::info!(
+                            "[Controller] {}. {}",
+                            t!(
+                                "scrcpy.deviceRotation",
+                                scid => scid,
+                                degree => rotation * 90,
+                            ),
+                            msg
+                        );
                     }
                     ScrcpyDeviceMsg::Unknown => {
-                        log::warn!("[Controller] Unknown message from main device")
+                        log::warn!("[Controller] {}", t!("scrcpy.unknownMsg"))
                     }
                 },
                 None => {
-                    log::info!("[Controller] CR channel closed, exiting handler.");
+                    log::info!("[Controller] {}", t!("scrcpy.crChannelClosed"));
                     break;
                 }
             }
@@ -115,7 +125,7 @@ impl Controller {
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
-        log::info!("[Controller] Starting scrcpy controller on: {}", addr);
+        log::info!("[Controller] {}: {}", t!("scrcpy.startingController"), addr);
         let listener = TcpListener::bind(addr).await.unwrap();
 
         // scrcpy device msg handler
@@ -125,7 +135,7 @@ impl Controller {
         tokio::spawn(async move { Self::cr_msg_handler(cr_rx, m_tx_copy, ws_tx_copy).await });
 
         // receive command from web server to accept and shutdown scrcpy connection
-        log::info!("[Controller] Starting to receive command from web server");
+        log::info!("[Controller] {}", t!("scrcpy.startReceiveCommand"));
         let mut signal_map: HashMap<String, CancellationToken> = HashMap::new();
         loop {
             match d_rx.recv().await {
@@ -134,14 +144,15 @@ impl Controller {
                         let socket_id = "main_control".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("Controlled device not recorded: {}", scid)
+                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
                         }
 
                         let token = CancellationToken::new();
                         signal_map.insert(socket_id.clone(), token.clone());
 
                         log::info!(
-                            "[Controller] Connecting scrcpy main control connection: {}",
+                            "[Controller] {}: {}",
+                            t!("scrcpy.creatingMainControl"),
                             scid
                         );
                         let cs_rx = cs_tx.subscribe();
@@ -174,7 +185,11 @@ impl Controller {
                                 });
                             }
                             Err(e) => {
-                                log::error!("[Controller] Error accepting connection: {}", e);
+                                log::error!(
+                                    "[Controller] {}: {}",
+                                    t!("scrcpy.errorAcceptingConnection"),
+                                    e
+                                );
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }
@@ -184,16 +199,13 @@ impl Controller {
                         let socket_id = "main_video".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("Controlled device not recorded: {}", scid)
+                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
                         }
 
                         let token = CancellationToken::new();
                         signal_map.insert(socket_id.clone(), token.clone());
 
-                        log::info!(
-                            "[Controller] Connecting scrcpy main video connection: {}",
-                            scid
-                        );
+                        log::info!("[Controller] {}: {}", t!("scrcpy.creatingMainVideo"), scid);
                         let v_tx_copy = v_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
@@ -204,7 +216,11 @@ impl Controller {
                                 });
                             }
                             Err(e) => {
-                                log::error!("[Controller] Error accepting connection: {}", e);
+                                log::error!(
+                                    "[Controller] {}: {}",
+                                    t!("scrcpy.errorAcceptingConnection"),
+                                    e
+                                );
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }
@@ -214,16 +230,13 @@ impl Controller {
                         let socket_id = "main_audio".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("Controlled device not recorded: {}", scid)
+                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
                         }
 
                         let token = CancellationToken::new();
                         signal_map.insert(socket_id.clone(), token.clone());
 
-                        log::info!(
-                            "[Controller] Connecting scrcpy main audio connection: {}",
-                            scid
-                        );
+                        log::info!("[Controller] {}: {}", t!("scrcpy.creatingMainAudio"), scid);
                         let a_tx_copy = a_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
@@ -234,7 +247,11 @@ impl Controller {
                                 });
                             }
                             Err(e) => {
-                                log::error!("[Controller] Error accepting connection: {}", e);
+                                log::error!(
+                                    "[Controller] {}: {}",
+                                    t!("scrcpy.errorAcceptingConnection"),
+                                    e
+                                );
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }
@@ -244,16 +261,13 @@ impl Controller {
                         let socket_id = format!("sub_control_{}", scid);
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("Controlled device not recorded: {}", scid)
+                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
                         }
 
                         let token = CancellationToken::new();
                         signal_map.insert(socket_id.clone(), token.clone());
 
-                        log::info!(
-                            "[Controller] Connecting scrcpy sub control connection: {}",
-                            scid
-                        );
+                        log::info!("[Controller] {}: {}", t!("scrcpy.creatingSubControl"), scid);
                         let sc_rx = cs_tx.subscribe();
                         let cr_tx_copy = cr_tx.clone();
                         let m_tx_copy = m_tx.clone();
@@ -284,7 +298,11 @@ impl Controller {
                                 });
                             }
                             Err(e) => {
-                                log::error!("[Controller] Error accepting connection: {}", e);
+                                log::error!(
+                                    "[Controller] {}: {}",
+                                    t!("scrcpy.errorAcceptingConnection"),
+                                    e
+                                );
                                 ControlledDevice::remove_device(&scid).await;
                                 signal_map.remove(&socket_id);
                             }
@@ -292,12 +310,9 @@ impl Controller {
                     }
                     ControllerCommand::ShutdownMain(scid) => {
                         if !signal_map.contains_key("main_control") {
-                            log::warn!("[Controller] Scrcpy main connection not found");
+                            log::warn!("[Controller] {}", t!("scrcpy.mainConnectionNotExist"));
                         } else {
-                            log::info!(
-                                "[Controller] Shutting down scrcpy main connection: {}",
-                                scid
-                            );
+                            log::info!("[Controller] {}: {}", t!("scrcpy.shutdownMain"), scid);
                             for socket_id in ["main_control", "main_video", "main_audio"] {
                                 if let Some(token) = signal_map.get(socket_id) {
                                     token.cancel();
@@ -314,12 +329,14 @@ impl Controller {
                         let socket_id = format!("sub_control_{}", scid);
                         if !signal_map.contains_key(&socket_id) {
                             log::warn!(
-                                "[Controller] Scrcpy sub connection not found: {}",
+                                "[Controller] {}: {}",
+                                t!("scrcpy.subConnectionNotExist"),
                                 socket_id
                             );
                         } else {
                             log::info!(
-                                "[Controller] Shutting down scrcpy sub connection: {}",
+                                "[Controller] {}: {}",
+                                t!("scrcpy.shutdownSub"),
                                 scid
                             );
                             if let Some(token) = signal_map.get(&socket_id) {
@@ -330,11 +347,11 @@ impl Controller {
                     }
                 },
                 None => {
-                    log::info!("[Controller] D channel closed, exiting handler.");
+                    log::info!("[Controller] {}", t!("scrcpy.dChannelClosed"));
                     break;
                 }
             }
         }
-        log::info!("[Controller] Scrcpy controller stopped");
+        log::info!("[Controller] {}", t!("scrcpy.controllerStopped"));
     }
 }

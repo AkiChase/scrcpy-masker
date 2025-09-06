@@ -16,6 +16,7 @@ use bevy::{
 };
 use bevy_ineffable::prelude::{Ineffable, InputBinding, PulseBinding};
 use copypasta::{ClipboardContext, ClipboardProvider};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -72,9 +73,7 @@ pub fn handle_raw_input(
             if action.as_ref().starts_with("RawInput") {
                 if ineffable.just_pulsed(action.ineff_pulse()) {
                     next_state.set(MappingState::RawInput);
-                    log::info!(
-                        "[Mapping] Enter raw input mode, long press mouse right button to exit"
-                    );
+                    log::info!("[Mapping] {}", t!("mask.mapping.rawInputModeHint"));
                     return;
                 }
             }
@@ -270,7 +269,7 @@ pub fn handle_exit_raw_input_mode(
         if now.duration_since(start).as_secs_f32() >= 1.0 {
             right_hold_instant.0 = None;
             next_state.set(MappingState::Normal);
-            log::info!("[Mapping] Exit raw input mode");
+            log::info!("[Mapping] {}", t!("mask.mapping.exitRawInputMode"));
         }
     }
 }

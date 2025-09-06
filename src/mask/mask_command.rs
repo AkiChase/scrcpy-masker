@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_ineffable::prelude::IneffableCommands;
+use rust_i18n::t;
 
 use crate::{
     mask::mapping::{
@@ -67,10 +68,14 @@ pub fn handle_mask_command(
 
                 mask_size.0 = window.resolution.size();
 
-                let msg = format!(
-                    "Window moved to ({},{}) and resize to {}x{}",
-                    left, top, mask_size.0.x, mask_size.0.y
-                );
+                let msg = t!(
+                    "mask.windowMovedAndResized",
+                    left => left,
+                    top => top,
+                    width => mask_size.0.x,
+                    height => mask_size.0.y
+                )
+                .to_string();
 
                 log::info!("[Mask] {}", msg);
                 oneshot_tx.send(Ok(msg)).unwrap();
@@ -78,15 +83,15 @@ pub fn handle_mask_command(
             MaskCommand::DeviceConnectionChange { connect } => {
                 let msg = if connect {
                     next_mapping_state.set(MappingState::Normal);
-                    log::info!("[Mapping] Enter normal mapping mode");
+                    log::info!("[Mapping] {}", t!("mask.enterNormalMappingMode"));
                     window.visible = true;
-                    format!("main device connection connected")
+                    t!("mask.mainDeviceConnected").to_string()
                 } else {
                     next_cursor_state.set(CursorState::Normal);
                     next_mapping_state.set(MappingState::Stop);
                     log::info!("[Mapping] Stop mapping");
                     window.visible = false;
-                    format!("main device connection disconnected")
+                    t!("mask.mainDeviceDisconnected").to_string()
                 };
                 log::info!("[Mask] {}", msg);
                 oneshot_tx.send(Ok(msg)).unwrap();
@@ -105,7 +110,11 @@ pub fn handle_mask_command(
                 }
             }
             MaskCommand::LoadAndActivateMappingConfig { file_name } => {
-                log::info!("[Mapping] Load and activate mapping config: {}", file_name);
+                log::info!(
+                    "[Mapping] {}: {}",
+                    t!("mask.loadActivateMappingConfig"),
+                    file_name
+                );
                 match load_mapping_config(&file_name) {
                     Ok((mapping_config, input_config)) => {
                         ineffable.set_config(&input_config);

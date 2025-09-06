@@ -44,6 +44,7 @@ once_cell = "1.21.3"
 copypasta = "0.10.2"
 pest = "2"
 pest_derive = "2"
+rust-i18n = "3"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

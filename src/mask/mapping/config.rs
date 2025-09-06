@@ -17,6 +17,7 @@ use bevy_ineffable::{
     prelude::{InputAction, InputBinding},
 };
 use paste::paste;
+use rust_i18n::t;
 use seq_macro::seq;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
@@ -530,7 +531,15 @@ pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), Str
             .and_modify(|c| *c += 1)
             .or_insert(1);
         if count > 32 {
-            validate_errors.push(format!("Mapping action '{name}' exceeds the maximum allowed count (current: {count}, max: 32)"));
+            validate_errors.push(
+                t!(
+                    "mask.mapping.mappingActionExceedsMaxCount",
+                    name => name,
+                    count => count,
+                    max => 32
+                )
+                .to_string(),
+            );
         }
 
         if let Err(e) = mapping.validate() {
@@ -544,7 +553,10 @@ pub fn validate_mapping_config(mapping_config: &MappingConfig) -> Result<(), Str
             .enumerate()
             .map(|(i, err)| format!("{}. {}", i + 1, err))
             .collect();
-        validate_errors.insert(0, "Mapping config validation failed:".to_string());
+        validate_errors.insert(
+            0,
+            t!("mask.mapping.mappingConfigValidationFailed").to_string(),
+        );
         return Err(validate_errors.join("\n"));
     }
     Ok(())
@@ -554,22 +566,27 @@ pub fn load_mapping_config(
     file_name: impl AsRef<str>,
 ) -> Result<(BindMappingConfig, InputConfig), String> {
     if !is_safe_file_name(file_name.as_ref()) {
-        return Err(format!("File name is not safe: {}", file_name.as_ref()));
+        return Err(format!(
+            "{}: {}",
+            t!("mask.mapping.fileNameNotSafe"),
+            file_name.as_ref()
+        ));
     }
 
     // load from file
     let path = relate_to_root_path(["local", "mapping", file_name.as_ref()]);
     if !path.exists() {
         return Err(format!(
-            "Mapping config file not found: {}",
+            "{}: {}",
+            t!("mask.mapping.mappingConfigNotFound"),
             file_name.as_ref()
         ));
     }
 
     let config_string = std::fs::read_to_string(path)
-        .map_err(|e| format!("Cannot read mapping config file: {}", e))?;
+        .map_err(|e| format!("{}: {}", t!("web.mapping.cannotReadMappingConfig"), e))?;
     let mapping_config: MappingConfig = serde_json::from_str(&config_string)
-        .map_err(|e| format!("Cannot deserialize mapping config: {}", e))?;
+        .map_err(|e| format!("{}: {}", t!("web.mapping.cannotDeserializeConfig"), e))?;
 
     validate_mapping_config(&mapping_config)?;
 
@@ -579,17 +596,17 @@ pub fn load_mapping_config(
 }
 
 pub fn save_mapping_config(config: &MappingConfig, path: &Path) -> Result<(), String> {
-    let json_string =
-        to_string_pretty(config).map_err(|e| format!("Cannot serialize mapping config: {}", e))?;
+    let json_string = to_string_pretty(config)
+        .map_err(|e| format!("{}: {}", t!("web.mapping.cannotDeserializeConfig"), e))?;
     if let Some(parent) = path.parent() {
         create_dir_all(parent)
-            .map_err(|e| format!("Cannot create directory for config file: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("mask.mapping.cannotCreateConfigDir"), e))?;
     }
 
-    let mut file =
-        File::create(path).map_err(|e| format!("Cannot create mapping config file: {}", e))?;
+    let mut file = File::create(path)
+        .map_err(|e| format!("{}: {}", t!("mask.mapping.cannotCreateMappingConfig"), e))?;
     file.write_all(json_string.as_bytes())
-        .map_err(|e| format!("Cannot write to mapping config file: {}", e))?;
+        .map_err(|e| format!("{}: {}", t!("mask.mapping.cannotWriteMappingConfig"), e))?;
 
     Ok(())
 }

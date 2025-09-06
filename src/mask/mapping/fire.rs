@@ -10,6 +10,7 @@ use bevy::{
     state::state::{NextState, State},
 };
 use bevy_ineffable::prelude::{ContinuousBinding, Ineffable, InputBinding, PulseBinding};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -68,10 +69,13 @@ pub struct MappingFps {
 impl ValidateMappingConfig for MappingFps {
     fn validate(&self) -> Result<(), String> {
         if self.position.x <= FPS_MARGIN as i32 || self.position.y <= FPS_MARGIN as i32 {
-            return Err(format!(
-                "Invalid position ({}, {}), x and y must be greater than {}",
-                self.position.x, self.position.y, FPS_MARGIN,
-            ));
+            return Err(t!(
+                "mask.mapping.invalidPosition",
+                x => self.position.x,
+                y => self.position.y,
+                margin => FPS_MARGIN
+            )
+            .to_string());
         }
         Ok(())
     }
@@ -111,7 +115,7 @@ pub fn handle_fps(
                                 original_pos,
                             );
                             next_state.set(CursorState::Fps);
-                            log::info!("[Cursor] Enter FPS mode");
+                            log::info!("[Cursor] {}", t!("mask.mapping.enterFpsMode"));
                         }
                         CursorState::Fps => {
                             // touch up
@@ -123,7 +127,7 @@ pub fn handle_fps(
                                 cursor_pos.0,
                             );
                             next_state.set(CursorState::Normal);
-                            log::info!("[Cursor] Exit FPS mode");
+                            log::info!("[Cursor] {}", t!("mask.mapping.exitFpsMode"));
                         }
                     };
                     return;

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rust_i18n::t;
 
 use crate::{
     config::LocalConfig,
@@ -233,7 +234,10 @@ fn create_pad_label(
             pad_node.justify_content = JustifyContent::SpaceBetween;
             bindings.iter().map(|binding| text_node(binding)).collect()
         }
-        _ => panic!("Pad label not support {} bindings", bindings.len()),
+        _ => panic!(
+            "{}",
+            t!("mask.padLabelNotSupported", count => bindings.len())
+        ),
     };
 
     commands

@@ -1,4 +1,5 @@
 use adb_client::{ADBDeviceExt, ADBServer, ADBServerDevice};
+use rust_i18n::t;
 use serde::Serialize;
 use tokio::{
     sync::mpsc::{self, UnboundedSender},
@@ -27,32 +28,55 @@ impl Device {
     pub fn push(id: &str, src: &str, des: &str) -> Result<(), String> {
         let mut device = Device::new_server_device(id);
         let mut input = File::open(Path::new(src))
-            .map_err(|e| format!("Failed to open file '{}': {}", src, e))?;
-        device
-            .push(&mut input, des)
-            .map_err(|e| format!("Failed to push file '{}' to '{}': {}", src, des, e))?;
+            .map_err(|e| format!("{} '{}': {}", t!("adb.failedToOpenFile"), src, e))?;
+        device.push(&mut input, des).map_err(|e| {
+            format!(
+                "{} '{}' to '{}': {}",
+                t!("adb.failedToPushFile"),
+                src,
+                des,
+                e
+            )
+        })?;
         Ok(())
     }
 
     pub fn pull(id: &str, src: String, output: &mut dyn Write) -> Result<(), String> {
         let mut device = Device::new_server_device(id);
-        device
-            .pull(&src, output)
-            .map_err(|e| format!("Failed to pull file '{}' from device '{}': {}", src, id, e))
+        device.pull(&src, output).map_err(|e| {
+            format!(
+                "{} '{}': {}",
+                t!("adb.failedToPullFile", file => src),
+                id,
+                e
+            )
+        })
     }
 
     pub fn reverse(id: &str, remote: &str, local: &str) -> Result<(), String> {
         let mut device = Device::new_server_device(id);
         device
             .reverse(remote.to_string(), local.to_string())
-            .map_err(|e| format!("Failed to reverse '{}' to '{}': {}", remote, local, e))
+            .map_err(|e| {
+                format!(
+                    "{}: {}",
+                    t!("adb.reverseFailed", remote => remote, local => local),
+                    e
+                )
+            })
     }
 
     pub fn forward(id: &str, local: &str, remote: &str) -> Result<(), String> {
         let mut device = Device::new_server_device(id);
         device
             .forward(remote.to_string(), local.to_string())
-            .map_err(|e| format!("Failed to forward '{}' to '{}': {}", local, remote, e))
+            .map_err(|e| {
+                format!(
+                    "{}: {}",
+                    t!("adb.forwardFailed", local => local, remote => remote),
+                    e
+                )
+            })
     }
 
     pub fn shell_process<S>(id: &str, shell_args: S) -> JoinHandle<Result<(), String>>
@@ -68,7 +92,7 @@ impl Device {
             let mut writer = ChannelWriter { sender: tx };
             let shell_args: Vec<&str> = shell_args.iter().map(|s| s.as_str()).collect();
             device.shell_command(&shell_args, &mut writer).map_err(|e| {
-                let msg = format!("Failed to run adb shell command: {}", e);
+                let msg = format!("{}: {}", t!("adb.adbShellCommandFailed"), e);
                 log::error!("[Adb] {}", msg);
                 msg
             })
@@ -103,7 +127,7 @@ impl Device {
         let mut cursor = Cursor::new(&mut output);
         device
             .shell_command(&["wm", "size"], &mut cursor)
-            .map_err(|e| format!("Failed to run adb shell command: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("adb.adbShellCommandFailed"), e))?;
 
         let stdout = String::from_utf8_lossy(&output);
         for line in stdout.lines() {
@@ -111,19 +135,19 @@ impl Device {
                 let mut parts = rest.trim().split('x');
                 let width = parts
                     .next()
-                    .ok_or("Missing width")?
+                    .ok_or(t!("adb.missingWidth"))?
                     .parse::<u32>()
-                    .map_err(|e| format!("Failed to parse width: {}", e))?;
+                    .map_err(|e| format!("{}: {}", t!("adb.parseWidthFailed"), e))?;
 
                 let height = parts
                     .next()
-                    .ok_or("Missing height")?
+                    .ok_or(t!("adb.missingHeight"))?
                     .parse::<u32>()
-                    .map_err(|e| format!("Failed to parse height: {}", e))?;
+                    .map_err(|e| format!("{}: {}", t!("adb.parseHeightFailed"), e))?;
                 return Ok((width, height));
             }
         }
-        Err("Failed to get screen size".to_string())
+        Err(t!("adb.getScreenSizeFailed").to_string())
     }
 }
 
@@ -136,7 +160,7 @@ impl Adb {
     pub fn check_adb_path(adb_path: &str) -> Result<(), String> {
         match which::which(&adb_path) {
             Ok(_) => Ok(()),
-            Err(_) => Err(format!("adb not found: {}", adb_path)),
+            Err(_) => Err(format!("{}: {}", t!("adb.adbNotFound"), adb_path)),
         }
     }
 
@@ -164,27 +188,27 @@ impl Adb {
     pub fn kill_server(&mut self) -> Result<(), String> {
         self.server
             .kill()
-            .map_err(|e| format!("Failed to kill adb server': {}", e))
+            .map_err(|e| format!("{}': {}", t!("adb.killServerFailed"), e))
     }
 
     pub fn connect_device(&mut self, address: &str) -> Result<(), String> {
         let socket_addr = address
             .parse::<SocketAddrV4>()
-            .map_err(|e| format!("Failed to parse device address: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("adb.parseDeviceAddressFailed"), e))?;
 
         self.server
             .connect_device(socket_addr)
-            .map_err(|e| format!("Failed to connect to device '{}': {}", address, e))
+            .map_err(|e| format!("{} '{}': {}", t!("adb.connectDeviceFailed"), address, e))
     }
 
     pub fn pair_device(&mut self, address: &str, code: &str) -> Result<(), String> {
         let socket_addr = address
             .parse::<SocketAddrV4>()
-            .map_err(|e| format!("Failed to parse device address: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("adb.parseDeviceAddressFailed"), e))?;
 
         self.server
             .pair(socket_addr, code.to_string())
-            .map_err(|e| format!("Failed to pair with device '{}': {}", address, e))
+            .map_err(|e| format!("{} '{}': {}", t!("adb.pairFailed"), address, e))
     }
 }
 

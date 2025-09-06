@@ -42,9 +42,9 @@ fn get_base_root() -> PathBuf {
     #[cfg(not(debug_assertions))]
     {
         env::current_exe()
-            .expect("Cannot get current executable path")
+            .expect(rust_i18n::t!("utils.cannotGetCurrentExePath"))
             .parent()
-            .expect("No parent directory for executable")
+            .expect(rust_i18n::t!("utils.noParentDirectory"))
             .to_path_buf()
     }
 }

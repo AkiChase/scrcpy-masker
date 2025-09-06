@@ -9,6 +9,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use flume::Sender;
+use rust_i18n::t;
 use serde::Serialize;
 use serde_json::Value;
 use std::{net::SocketAddrV4, thread};
@@ -50,7 +51,8 @@ impl Server {
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
-        log::info!("[WebServe] Starting web server on: {}", addr);
+        log::info!("[WebServe] {}: {}", t!("web.server.startingOn"), addr);
+
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
 
         let ip_str = if addr.ip().is_unspecified() || addr.ip().is_loopback() {
@@ -59,10 +61,16 @@ impl Server {
             &addr.ip().to_string()
         };
         let url = format!("http://{}:{}", ip_str, addr.port());
-        log::info!("[WebServe] Web server is accessible at: {}", url);
-        // TODO 启动网页
-        //opener::open(url)
-        //     .unwrap_or_else(|e| log::error!("[WebServe] Failed to open browser: {}", e));
+        log::info!(
+            "[WebServe] {}: {}",
+            t!("web.server.webServerAccessible"),
+            url
+        );
+
+        // TODO 在浏览器打开
+        // opener::open(url).unwrap_or_else(|e| {
+        //     log::error!("[WebServe] {}: {}", t!("web.server.failedToOpenBrowser"), e)
+        // });
 
         axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, ws_tx))
             .await
@@ -81,7 +89,6 @@ impl Server {
                     ServeFile::new(relate_to_root_path(["assets", "web", "index.html"])),
                 ),
             )
-            // .fallback_service()
             .nest(
                 "/api/device",
                 device::routers(cs_tx.clone(), d_tx, m_tx.clone()),
@@ -160,7 +167,13 @@ impl IntoResponse for WebServerError {
             message: self.1,
             data: None,
         };
-        log::error!("[WebServe] Response Error({}): {}", res.code, res.message);
+        log::error!(
+            "[WebServe] {} ({}): {}",
+            t!("web.server.responseError"),
+            res.code,
+            res.message
+        );
+
         (StatusCode::from_u16(res.code).unwrap(), Json(res)).into_response()
     }
 }

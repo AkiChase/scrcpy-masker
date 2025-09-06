@@ -5,6 +5,7 @@ use bevy::math::Vec2;
 use pest::iterators::Pair;
 use pest::{Parser, Span};
 use pest_derive::Parser;
+use rust_i18n::t;
 use tokio::sync::broadcast;
 
 use crate::mask::mapping::utils::{ControlMsgHelper, MIN_MOVE_STEP_INTERVAL, ease_sigmoid_like};
@@ -34,9 +35,15 @@ pub struct ScriptAST {
 impl ScriptAST {
     pub fn new(script: &str) -> Result<Self, String> {
         let program_pair = ScriptParser::parse(Rule::program, script)
-            .map_err(|e| format!("Failed to parse script by pest\n: {}", e.to_string()))?
+            .map_err(|e| {
+                format!(
+                    "{}\n: {}",
+                    t!("mask.mapping.parseScriptFailed"),
+                    e.to_string()
+                )
+            })?
             .next()
-            .ok_or_else(|| "No program found".to_string())?;
+            .ok_or_else(|| t!("mask.mapping.noProgramFound").to_string())?;
 
         let mut ast = ScriptAST::default();
         if script.is_empty() {
@@ -79,7 +86,7 @@ impl ScriptAST {
                     return Err(ScriptError::from_span(
                         span.clone(),
                         source,
-                        "Wait function takes one argument: time".to_string(),
+                        "The wait function takes one argument: time (int)".to_string(),
                     ));
                 }
                 std::thread::sleep(std::time::Duration::from_millis(

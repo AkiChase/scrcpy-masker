@@ -9,6 +9,7 @@ use axum::{
 };
 use flume::Sender;
 use rand::Rng;
+use rust_i18n::t;
 use serde::Deserialize;
 use serde_json::json;
 use tokio::{
@@ -60,7 +61,7 @@ async fn device_list() -> Result<JsonResponse, WebServerError> {
         .map_err(|e| WebServerError::internal_error(e))?;
 
     Ok(JsonResponse::success(
-        "Successfully obtained device list",
+        t!("web.device.deviceListObtained"),
         Some(json!({
             "controlled_devices": controlled_devices,
             "adb_devices": all_devices,
@@ -99,7 +100,7 @@ async fn control_device(
     {
         return Err(WebServerError(
             400,
-            format!("Device is already controlled: {}", device_id),
+            format!("{}: {}", t!("web.device.alreadyControlled"), device_id),
         ));
     }
 
@@ -113,12 +114,15 @@ async fn control_device(
         "/data/local/tmp/scrcpy-server.jar",
     )
     .map_err(|e| WebServerError(500, e))?;
-    log::info!("[WebServe] Push scrcpy server to device successfully");
+    log::info!("[WebServe] {}", t!("web.device.pushScrcpyServerSuccess"));
 
     let remote = format!("localabstract:scrcpy_{}", scid);
     let local = format!("tcp:{}", LocalConfig::get().controller_port);
     Device::reverse(&device_id, &remote, &local).map_err(|e| WebServerError(500, e))?;
-    log::info!("[WebServe] Reverse {} to {} successfully", remote, local);
+    log::info!(
+        "[WebServe] {}",
+        t!("web.device.reverseSuccess", remote => remote, local => local)
+    );
 
     // create device
     let main = device_list.len() == 0;
@@ -167,11 +171,12 @@ async fn control_device(
     tokio::spawn(async move {
         h.await.unwrap().unwrap();
         log::info!("[WebServe] Removing device after scrcpy app exit");
+        log::info!("[WebServe] {}", t!("web.device.removingDeviceAfterExit"));
         ControlledDevice::remove_device(&scid_copy).await;
     });
 
     Ok(JsonResponse::success(
-        "Trying to start scrcpy app",
+        t!("web.device.tryStartingScrcpy"),
         Some(json!({"scid": scid, "device_id": device_id})),
     ))
 }
@@ -203,13 +208,14 @@ async fn decontrol_device(
             }
             ControlledDevice::remove_device(&device.scid).await;
             return Ok(JsonResponse::success(
-                format!("Decontrol device: {}", device_id),
+                format!("{}: {}", t!("web.device.decontrolDevice"), device_id),
                 None,
             ));
         }
     }
     Err(WebServerError::bad_request(format!(
-        "Device not found: {}",
+        "{}: {}",
+        t!("web.device.deviceNotFound"),
         device_id
     )))
 }
@@ -223,12 +229,16 @@ async fn adb_connect(Json(payload): Json<PostDataAddress>) -> Result<JsonRespons
     let config = LocalConfig::get();
     match Adb::new(config.adb_path).connect_device(&payload.address) {
         Ok(_) => Ok(JsonResponse::success(
-            format!("Adb connect {} successfully", payload.address),
+            format!(
+                "{}",
+                t!("web.device.adbConnect", address => payload.address)
+            ),
             None,
         )),
         Err(e) => Err(WebServerError::bad_request(format!(
-            "Adb connect {} failed: {}",
-            payload.address, e
+            "{}: {}",
+            t!("web.device.adbConnectFailed", address => payload.address),
+            e
         ))),
     }
 }
@@ -244,14 +254,15 @@ async fn adb_pair(Json(payload): Json<PostDataAdbPair>) -> Result<JsonResponse, 
     match Adb::new(config.adb_path).pair_device(&payload.address, &payload.code) {
         Ok(_) => Ok(JsonResponse::success(
             format!(
-                "Adb pair {} with code {} successfully",
-                payload.address, payload.code
+                "{}",
+                t!("web.device.adbPairSuccess", address => payload.address, code => payload.code)
             ),
             None,
         )),
         Err(e) => Err(WebServerError::bad_request(format!(
-            "Adb pair {} with code {} failed: {}",
-            payload.address, payload.code, e
+            "{}: {}",
+            t!("web.device.adbPairFailed", address => payload.address, code => payload.code),
+            e
         ))),
     }
 }
@@ -273,19 +284,28 @@ async fn adb_screenshot(
     )
     .map_err(|e| {
         WebServerError::bad_request(format!(
-            "Failed to take screenshot for device {}: {}",
-            payload.id, e
+            "{} {}: {}",
+            t!("web.device.screenshotError"),
+            payload.id,
+            e
         ))
     })?;
 
     let mut image_bytes = Vec::<u8>::new();
-    Device::pull(&payload.id, src.to_string(), &mut image_bytes)
-        .map_err(|e| WebServerError::bad_request(format!("Failed get screenshot file. {}", e)))?;
+    Device::pull(&payload.id, src.to_string(), &mut image_bytes).map_err(|e| {
+        WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.device.failedGetScreenshotFile"),
+            e
+        ))
+    })?;
 
     Device::shell(&payload.id, ["rm", src], &mut std::io::stdout()).map_err(|e| {
         WebServerError::bad_request(format!(
-            "Failed to remove screenshot file for device {}: {}",
-            payload.id, e
+            "{} {}: {}",
+            t!("web.device.failedRemoveScreenshot"),
+            payload.id,
+            e
         ))
     })?;
 
@@ -305,7 +325,9 @@ async fn set_display_power(
     Json(payload): Json<PostDataSetDisplayPower>,
 ) -> Result<JsonResponse, WebServerError> {
     if !ControlledDevice::is_any_device_controlled().await {
-        return Err(WebServerError::bad_request("No device under controlled"));
+        return Err(WebServerError::bad_request(t!(
+            "web.device.noDeviceControlled"
+        )));
     }
 
     state
@@ -313,7 +335,7 @@ async fn set_display_power(
         .send(ScrcpyControlMsg::SetDisplayPower { mode: payload.mode })
         .unwrap();
     Ok(JsonResponse::success(
-        "Set display power of all controlled devices successfully",
+        t!("web.device.setDisplayPowerSuccess"),
         None,
     ))
 }
@@ -328,7 +350,9 @@ async fn eval_script(
     Json(payload): Json<PostDataEvalScript>,
 ) -> Result<JsonResponse, WebServerError> {
     if !ControlledDevice::is_any_device_controlled().await {
-        return Err(WebServerError::bad_request("No device under controlled"));
+        return Err(WebServerError::bad_request(t!(
+            "web.device.noDeviceControlled"
+        )));
     }
 
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
@@ -343,9 +367,13 @@ async fn eval_script(
         .await
         .unwrap();
     match oneshot_rx.await.unwrap() {
-        Ok(_) => Ok(JsonResponse::success("Eval script successfully", None)),
+        Ok(_) => Ok(JsonResponse::success(
+            t!("web.device.evalScriptSuccess"),
+            None,
+        )),
         Err(e) => Err(WebServerError::bad_request(format!(
-            "Eval script failed:\n{}",
+            "{}:\n{}",
+            t!("web.device.evalScriptError"),
             e
         ))),
     }

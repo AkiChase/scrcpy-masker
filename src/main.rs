@@ -40,6 +40,9 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
 }
 
 fn main() {
+    let default_language = "en-US";
+    rust_i18n::set_locale(default_language);
+
     let args: Vec<String> = env::args().collect();
     if args.contains(&"--self_update".to_string()) {
         update::self_update();
@@ -48,6 +51,15 @@ fn main() {
 
     if let Err(e) = LocalConfig::load() {
         println!("LocalConfig load failed. {}", e);
+    }
+    // update language
+    let language = LocalConfig::get().language;
+    match language.as_str() {
+        "zh-CN" | "en-US" => rust_i18n::set_locale(&language),
+        _ => {
+            rust_i18n::set_locale(default_language);
+            LocalConfig::set_language(default_language.to_string());
+        }
     }
     // update config file
     LocalConfig::save().unwrap();

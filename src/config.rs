@@ -7,6 +7,7 @@ use std::{
 use crate::utils::relate_to_root_path;
 use once_cell::sync::Lazy;
 use paste::paste;
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
 
@@ -30,6 +31,8 @@ pub struct LocalConfig {
     // mapping
     pub active_mapping_file: String,
     pub mapping_label_opacity: f32,
+    // language
+    pub language: String,
 }
 
 impl Default for LocalConfig {
@@ -40,10 +43,11 @@ impl Default for LocalConfig {
             controller_port: 27798,
             vertical_mask_height: 720,
             horizontal_mask_width: 1280,
-            vertical_position: (300, 300),
-            horizontal_position: (300, 300),
+            vertical_position: (100, 100),
+            horizontal_position: (100, 100),
             active_mapping_file: "default.json".to_string(),
             mapping_label_opacity: 0.3,
+            language: "en-US".to_string(),
         }
     }
 }
@@ -64,26 +68,32 @@ macro_rules! define_setter {
 impl LocalConfig {
     pub fn save() -> Result<(), String> {
         let config_json = to_string_pretty(&Self::get())
-            .map_err(|e| format!("Cannot serialize config: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
 
         let path = relate_to_root_path(["local", "config.json"]);
         if let Some(parent) = path.parent() {
             create_dir_all(parent)
-                .map_err(|e| format!("Cannot create directory for config file: {}", e))?;
+                .map_err(|e| format!("{}: {}", t!("localConfig.createConfigDirError"), e))?;
         }
-        let mut file =
-            File::create(path).map_err(|e| format!("Cannot create mapping config file: {}", e))?;
+        let mut file = File::create(path)
+            .map_err(|e| format!("{}: {}", t!("localConfig.createConfigError"), e))?;
         file.write_all(config_json.as_bytes())
-            .map_err(|e| format!("Cannot write to mapping config file: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("localConfig.writeConfigError"), e))?;
         Ok(())
     }
 
     pub fn load() -> Result<(), String> {
         let path = relate_to_root_path(["local", "config.json"]);
-        let config_string = std::fs::read_to_string(&path)
-            .map_err(|e| format!("Cannot read config file {}: {}", path.to_str().unwrap(), e))?;
+        let config_string = std::fs::read_to_string(&path).map_err(|e| {
+            format!(
+                "{} {}: {}",
+                t!("localConfig.readConfigError"),
+                path.to_str().unwrap(),
+                e
+            )
+        })?;
         let config: LocalConfig = serde_json::from_str(&config_string)
-            .map_err(|e| format!("Cannot deserialize mapping config: {}", e))?;
+            .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
         *CONFIG.write().unwrap() = config;
         Ok(())
     }
@@ -101,6 +111,7 @@ impl LocalConfig {
         (vertical_position, (i32, i32)),
         (horizontal_position, (i32, i32)),
         (active_mapping_file, String),
-        (mapping_label_opacity, f32)
+        (mapping_label_opacity, f32),
+        (language, String)
     );
 }
