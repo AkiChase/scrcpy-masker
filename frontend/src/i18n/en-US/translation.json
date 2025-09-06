@@ -249,5 +249,18 @@
       },
       "name": "Script"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "webPort": "Web port",
+    "controllerPort": "Controller port",
+    "adbPath": "Adb path",
+    "horizontalMaskWidth": "Horizontal mask width",
+    "horizontalMaskPosition": "Horizontal mask position",
+    "verticalMaskHeight": "Vertical mask height",
+    "verticalMaskPosition": "Vertical mask position",
+    "mappingLabelOpacity": "Mapping label opacity",
+    "clipboardSync": "Clipboard sync"
   }
 }

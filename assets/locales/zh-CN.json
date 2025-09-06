@@ -90,10 +90,12 @@
       "setHorizontalPositionSuccess": "横屏蒙版位置设置成功",
       "horizontalPositionTypeError": "横屏蒙版位置必须是数组 [i32, i32]",
       "pleaseRequestForOperation": "请为此操作请求 %{api}",
-      "setMappingLabelOpacitySuccess": "成功设置映射标签的不透明度",
+      "setMappingLabelOpacitySuccess": "成功设置标签不透明度",
       "mappingLabelOpacityRange": "标签不透明度必须在 0.0 到 1.0 之间",
       "invalidMappingKey": "无效的配置项",
-      "successfullySet": "成功设置"
+      "successfullySet": "成功设置",
+      "setClipboardSyncSuccess": "成功设置剪切板同步开关",
+      "clipboardSyncTypeError": "剪切板同步开关必须为 bool"
     }
   },
   "utils": {

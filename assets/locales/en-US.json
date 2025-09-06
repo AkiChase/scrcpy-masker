@@ -93,7 +93,9 @@
       "setMappingLabelOpacitySuccess": "Successfully set mapping_label_opacity",
       "mappingLabelOpacityRange": "The mapping_label_opacity must be between 0.0 and 1.0",
       "invalidMappingKey": "Invalid config key",
-      "successfullySet": "Successfully set"
+      "successfullySet": "Successfully set",
+      "setClipboardSyncSuccess": "Successfully set clipboard_sync",
+      "clipboardSyncTypeError": "The clipboard_sync must be bool"
     }
   },
   "utils": {

@@ -73,7 +73,7 @@ async fn update_config(
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_web_port(value as u16);
                 return Ok(JsonResponse::success(
-                    t!("web.config.restartToApplyWebPort"),
+                    format!("{}: {}", t!("web.config.restartToApplyWebPort"), value),
                     None,
                 ));
             } else {
@@ -88,7 +88,7 @@ async fn update_config(
                     Ok(_) => {
                         LocalConfig::set_adb_path(value.to_string());
                         return Ok(JsonResponse::success(
-                            t!("web.config.adbPathSetSuccess"),
+                            format!("{}: {}", t!("web.config.adbPathSetSuccess"), value),
                             None,
                         ));
                     }
@@ -110,7 +110,11 @@ async fn update_config(
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_controller_port(value as u16);
                 return Ok(JsonResponse::success(
-                    t!("web.config.restartToApplyControllerPort"),
+                    format!(
+                        "{}: {}",
+                        t!("web.config.restartToApplyControllerPort"),
+                        value
+                    ),
                     None,
                 ));
             } else {
@@ -130,11 +134,14 @@ async fn update_config(
                         None,
                     ));
                 }
-            } else {
-                return Err(WebServerError::bad_request(t!(
-                    "web.config.verticalMaskHeightMustBeu32"
-                )));
+                return Ok(JsonResponse::success(
+                    format!("{}", t!("web.config.setVerticalMaskHeightSuccess")),
+                    None,
+                ));
             }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.verticalMaskHeightMustBeu32"
+            )));
         }
         "horizontal_mask_width" => {
             if let Some(value) = payload.value.as_u64() {
@@ -151,11 +158,14 @@ async fn update_config(
                         None,
                     ));
                 }
-            } else {
-                return Err(WebServerError::bad_request(t!(
-                    "web.config.horizontalMaskWidthMustBeu32"
-                )));
+                return Ok(JsonResponse::success(
+                    t!("web.config.setHorizontalMaskWidthSuccess"),
+                    None,
+                ));
             }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.horizontalMaskWidthMustBeu32"
+            )));
         }
         "vertical_position" => {
             if let Some(value) = payload.value.as_array() {
@@ -170,17 +180,16 @@ async fn update_config(
                                 None,
                             ));
                         }
-                    } else {
-                        return Err(WebServerError::bad_request(t!(
-                            "web.config.verticalPositionTypeError"
-                        )));
+                        return Ok(JsonResponse::success(
+                            format!("{}", t!("web.config.setVerticalPositionSuccess")),
+                            None,
+                        ));
                     }
-                } else {
-                    return Err(WebServerError::bad_request(t!(
-                        "web.config.verticalPositionTypeError"
-                    )));
                 }
             }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.verticalPositionTypeError"
+            )));
         }
         "horizontal_position" => {
             if let Some(value) = payload.value.as_array() {
@@ -199,17 +208,12 @@ async fn update_config(
                                 None,
                             ));
                         }
-                    } else {
-                        return Err(WebServerError::bad_request(t!(
-                            "web.config.horizontalPositionTypeError"
-                        )));
                     }
-                } else {
-                    return Err(WebServerError::bad_request(t!(
-                        "web.config.horizontalPositionTypeError"
-                    )));
                 }
             }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.horizontalPositionTypeError"
+            )));
         }
         "active_mapping_file" => {
             return Err(WebServerError::bad_request(format!(
@@ -222,7 +226,11 @@ async fn update_config(
                 if value <= 1.0 && value >= 0.0 {
                     LocalConfig::set_mapping_label_opacity(value as f32);
                     return Ok(JsonResponse::success(
-                        t!("web.config.setMappingLabelOpacitySuccess"),
+                        format!(
+                            "{}: {}",
+                            t!("web.config.setMappingLabelOpacitySuccess"),
+                            value
+                        ),
                         None,
                     ));
                 }
@@ -231,21 +239,22 @@ async fn update_config(
                 "web.config.mappingLabelOpacityRange"
             )));
         }
-        _ => {
-            return Err(WebServerError::bad_request(format!(
-                "{}: {}",
-                t!("web.config.invalidMappingKey"),
-                payload.key
+        "clipboard_sync" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_clipboard_sync(value);
+                return Ok(JsonResponse::success(
+                    format!("{}: {}", t!("web.config.setClipboardSyncSuccess"), value),
+                    None,
+                ));
+            }
+            return Err(WebServerError::bad_request(t!(
+                "web.config.clipboardSyncTypeError"
             )));
         }
-    };
-
-    Ok(JsonResponse::success(
-        format!(
-            "{} config.{}",
-            t!("web.config.successfullySet"),
+        _ => Err(WebServerError::bad_request(format!(
+            "{}: {}",
+            t!("web.config.invalidMappingKey"),
             payload.key
-        ),
-        None,
-    ))
+        ))),
+    }
 }

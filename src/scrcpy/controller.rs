@@ -15,6 +15,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 use crate::{
+    config::LocalConfig,
     mask::mask_command::MaskCommand,
     scrcpy::{
         connection::ScrcpyConnection,
@@ -67,9 +68,11 @@ impl Controller {
             match cr_rx.recv().await {
                 Some(msg) => match msg {
                     ScrcpyDeviceMsg::Clipboard { length: _, text } => {
-                        let mut ctx = ClipboardContext::new().unwrap();
-                        ctx.set_contents(text).unwrap();
-                        log::info!("[Controller] {}", t!("scrcpy.syncClipboardFromMain"));
+                        if LocalConfig::get_clipboard_sync() {
+                            let mut ctx = ClipboardContext::new().unwrap();
+                            ctx.set_contents(text).unwrap();
+                            log::info!("[Controller] {}", t!("scrcpy.syncClipboardFromMain"));
+                        }
                     }
                     ScrcpyDeviceMsg::AckClipboard { .. } => {}
                     ScrcpyDeviceMsg::UhidOutput { .. } => {}
@@ -334,11 +337,7 @@ impl Controller {
                                 socket_id
                             );
                         } else {
-                            log::info!(
-                                "[Controller] {}: {}",
-                                t!("scrcpy.shutdownSub"),
-                                scid
-                            );
+                            log::info!("[Controller] {}: {}", t!("scrcpy.shutdownSub"), scid);
                             if let Some(token) = signal_map.get(&socket_id) {
                                 token.cancel();
                                 signal_map.remove(&socket_id);

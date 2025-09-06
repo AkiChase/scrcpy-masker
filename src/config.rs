@@ -33,6 +33,8 @@ pub struct LocalConfig {
     pub mapping_label_opacity: f32,
     // language
     pub language: String,
+    // clipboard sync
+    pub clipboard_sync: bool,
 }
 
 impl Default for LocalConfig {
@@ -48,6 +50,7 @@ impl Default for LocalConfig {
             active_mapping_file: "default.json".to_string(),
             mapping_label_opacity: 0.3,
             language: "en-US".to_string(),
+            clipboard_sync: true,
         }
     }
 }
@@ -102,6 +105,10 @@ impl LocalConfig {
         CONFIG.read().unwrap().clone()
     }
 
+    pub fn get_clipboard_sync() -> bool {
+        CONFIG.read().unwrap().clipboard_sync
+    }
+
     define_setter!(
         (web_port, u16),
         (controller_port, u16),
@@ -112,6 +119,7 @@ impl LocalConfig {
         (horizontal_position, (i32, i32)),
         (active_mapping_file, String),
         (mapping_label_opacity, f32),
-        (language, String)
+        (language, String),
+        (clipboard_sync, bool)
     );
 }

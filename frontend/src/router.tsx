@@ -7,7 +7,7 @@ import NotFound from "./components/NotFound";
 const Welcome = lazy(() => import("./components/Welcome"));
 const Devices = lazy(() => import("./components/Devices"));
 const Mappings = lazy(() => import("./components/mappings/Mappings"));
-const Settings = lazy(() => import("./components/settings/Settings"));
+const Settings = lazy(() => import("./components/Settings"));
 
 const router = createBrowserRouter([
   {

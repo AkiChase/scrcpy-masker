@@ -249,5 +249,18 @@
       },
       "name": "脚本"
     }
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "webPort": "Web 端口",
+    "controllerPort": "控制服务端口",
+    "adbPath": "Adb 路径",
+    "horizontalMaskWidth": "横屏蒙版宽度",
+    "horizontalMaskPosition": "横屏蒙版位置",
+    "verticalMaskHeight": "竖屏蒙版高度",
+    "verticalMaskPosition": "竖屏蒙版位置",
+    "mappingLabelOpacity": "映射标签不透明度",
+    "clipboardSync": "剪切板同步"
   }
 }

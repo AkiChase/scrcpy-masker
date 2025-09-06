@@ -1,7 +1,7 @@
 import "./App.scss";
 import { Layout, message, Spin } from "antd";
 import { MessageContext } from "./hooks";
-import { useAppDispatch, useAppSelector } from "./store/store";
+import { staticStore, useAppDispatch, useAppSelector } from "./store/store";
 import { forceSetLocalConfig } from "./store/localConfig";
 import { useEffect } from "react";
 import { Content } from "antd/es/layout/layout";
@@ -11,6 +11,7 @@ import KeepAlive, { useKeepAliveRef } from "keepalive-for-react";
 import LoadingWrapper from "./components/common/LoadingWrapper";
 import { requestGet } from "./utils";
 import { setIsLoading } from "./store/other";
+import i18n from "./i18n";
 
 function App() {
   const dispatch = useAppDispatch();
@@ -26,6 +27,7 @@ function App() {
     try {
       const res = await requestGet("/api/config/get_config");
       dispatch(forceSetLocalConfig(res.data));
+      i18n.changeLanguage(res.data.language);
     } catch (err: any) {
       messageApi.error(err);
     }
@@ -33,6 +35,7 @@ function App() {
   }
 
   useEffect(() => {
+    staticStore.messageApi = messageApi;
     loadLocalConfig();
 
     // prevent backward
