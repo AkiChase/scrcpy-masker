@@ -5,9 +5,8 @@ import { createFromIconfontCN, SettingFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-// TODO 下载使用
 const IconFont = createFromIconfontCN({
-  scriptUrl: "//at.alicdn.com/t/c/font_4972804_p27uer455ek.js",
+  scriptUrl: new URL("../assets/iconfont.js", import.meta.url).href,
 });
 
 export default function Sider() {

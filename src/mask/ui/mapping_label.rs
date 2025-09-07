@@ -16,34 +16,21 @@ pub struct MappingLabelPlugin;
 
 impl Plugin for MappingLabelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_label_opacity)
+        app.insert_resource(RedrawMappingLabel(0))
+            .add_systems(Startup, init_label_opacity)
             .add_systems(
-                FixedUpdate,
+                Update,
                 (
                     redraw_normal_mapping_label.run_if(resource_changed::<ActiveMappingConfig>),
-                    update_labels
-                        .run_if(
-                            resource_changed::<MaskSize>
-                                .or(resource_changed::<LabelOpacity>)
-                                .or(resource_changed::<ActiveMappingConfig>),
-                        )
-                        .after(redraw_normal_mapping_label),
+                    update_labels.run_if(
+                        resource_changed::<MaskSize>
+                            .or(resource_changed::<LabelOpacity>)
+                            .or(resource_changed::<RedrawMappingLabel>),
+                    ),
                 ),
             )
-            .add_systems(
-                OnEnter(MappingState::RawInput),
-                (
-                    redraw_raw_input_label,
-                    update_labels.after(redraw_raw_input_label),
-                ),
-            )
-            .add_systems(
-                OnExit(MappingState::RawInput),
-                (
-                    redraw_normal_mapping_label,
-                    update_labels.after(redraw_normal_mapping_label),
-                ),
-            );
+            .add_systems(OnEnter(MappingState::RawInput), redraw_raw_input_label)
+            .add_systems(OnExit(MappingState::RawInput), redraw_normal_mapping_label);
     }
 }
 
@@ -55,18 +42,24 @@ fn redraw_raw_input_label(
     mut commands: Commands,
     query: Query<(Entity, &Label)>,
     mask_size: Res<MaskSize>,
+    mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
     for (entity, _) in query.iter() {
         commands.entity(entity).despawn();
     }
 
     create_simple_label(&mut commands, "M-Right", (25., 25.).into(), mask_size.0);
+    redraw_mapping_label.0 += 1;
 }
+
+#[derive(Resource)]
+pub struct RedrawMappingLabel(u32);
 
 fn redraw_normal_mapping_label(
     mut commands: Commands,
     query: Query<(Entity, &Label)>,
     active_mapping: Res<ActiveMappingConfig>,
+    mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
     for (entity, _) in query.iter() {
         commands.entity(entity).despawn();
@@ -107,7 +100,8 @@ fn redraw_normal_mapping_label(
                 } else {
                     create_simple_label(&mut commands, &binding, pos, size);
                 }
-            })
+            });
+        redraw_mapping_label.0 += 1;
     }
 }
 
@@ -124,11 +118,19 @@ fn update_labels(
     )>,
     mut text_query: Query<&mut TextColor>,
     mut child_query: Query<&Children>,
+    mut redraw_mapping_label: ResMut<RedrawMappingLabel>,
 ) {
+    let mut updated_flag = false;
+
     for (label, mut bg, mut node, cp_node, node_children) in query.iter_mut() {
+        let node_size = cp_node.size();
+        if node_size != Vec2::ZERO {
+            updated_flag = true;
+        }
+
         let scale = window.scale_factor();
         let new_pos =
-            label.original_pos / label.original_size * mask_size.0 - cp_node.size() / scale / 2.;
+            label.original_pos / label.original_size * mask_size.0 - node_size / scale / 2.;
         node.left = Val::Px(new_pos.x);
         node.top = Val::Px(new_pos.y);
 
@@ -146,6 +148,10 @@ fn update_labels(
                 }
             }
         }
+    }
+
+    if !updated_flag {
+        redraw_mapping_label.0 += 1;
     }
 }
 

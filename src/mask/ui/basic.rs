@@ -1,5 +1,10 @@
+use std::time::Duration;
+
 /// Bevy basic plugin that creates a window with a transparent background and a border.
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    winit::{UpdateMode, WinitSettings},
+};
 
 pub struct BasicPlugin;
 
@@ -8,6 +13,10 @@ impl Plugin for BasicPlugin {
         app
             // ClearColor resource: The color used to clear the screen at the beginning of each frame
             .insert_resource(ClearColor(Color::NONE))
+            .insert_resource(WinitSettings {
+                focused_mode: UpdateMode::Continuous,
+                unfocused_mode: UpdateMode::reactive_low_power(Duration::from_millis(100)),
+            })
             .add_systems(Startup, (setup, border.after(setup)));
     }
 }
