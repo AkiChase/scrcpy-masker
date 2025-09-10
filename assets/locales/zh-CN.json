@@ -67,7 +67,8 @@
       "noDeviceControlled": "无受控设备",
       "setDisplayPowerSuccess": "成功设置所有受控设备的显示开关",
       "evalScriptSuccess": "脚本执行成功",
-      "evalScriptError": "脚本执行失败"
+      "evalScriptError": "脚本执行失败",
+      "startingScrcpyApp": "启动 scrcpy 应用..."
     },
     "config": {
       "getLocalConfigSuccess": "成功获取本地配置",
@@ -105,7 +106,6 @@
   "scrcpy": {
     "syncClipboardFromMain": "从主设备同步剪贴板",
     "deviceRotation": "设备 %{scid} 旋转 %{degree}°",
-    "unknownMsg": "收到来自主设备的未知消息",
     "crChannelClosed": "CR 通道已关闭，退出消息处理程序",
     "startingController": "正在启动 scrcpy 控制器",
     "startReceiveCommand": "开始从 Web 服务器接收指令",
@@ -126,12 +126,22 @@
     "controlConnWriteFailed": "写入控制连接写入端失败",
     "controlChannelClosed": "控制通道已关闭或发生错误",
     "controlCnnShutdownUnexpectedly": "Scrcpy 控制写入连接意外关闭",
-    "failedToReadMetadata": "读取元数据失败",
     "invalidDeviceName": "收到无效的 UTF-8 设备名称",
     "controlConnectionReaderCancelled": "Scrcpy 控制连接读取端被手动关闭",
     "controlReadShutdownUnexpectedly": "Scrcpy 控制读取连接意外关闭",
     "handleControlConnection": "正在处理 scrcpy 控制连接...",
-    "controlConnectionClosed": "Scrcpy 控制连接已关闭"
+    "controlConnectionClosed": "Scrcpy 控制连接已关闭",
+    "handleVideoConnection": "正在处理 scrcpy 视频连接...",
+    "failedToReadControlMetadata": "读取控制元数据失败",
+    "failedToReadVideoMetadata": "读取视频元数据失败",
+    "invalidVideoCodec": "不支持的视频编码标识",
+    "failedToReadFrameHeader": "读取媒体数据包头部失败",
+    "videoConnectionReaderCancelled": "Scrcpy 视频连接读取端被手动关闭",
+    "videoReadShutdownUnexpectedly": "Scrcpy 视频连接意外关闭",
+    "videoConnectionClosed": "Scrcpy 视频连接已关闭",
+    "unknownControlMsg": "收到来自主设备的未知控制消息",
+    "videoCodec": "视频编码",
+    "handleAudioConnection": "正在处理 scrcpy 音频连接..."
   },
   "controller": {
     "csReceiverLagged": "CS 接收器延迟，跳过 %{skipped} 条消息"
@@ -191,6 +201,10 @@
       "failedToParseTo": "无法解析为",
       "unknownMouseButton": "未知的鼠标按键类型"
     },
-    "evalScriptnoMappingError": "无法执行脚本：不存在激活的映射，无法获取映射配置尺寸"
+    "evalScriptnoMappingError": "无法执行脚本：不存在激活的映射，无法获取映射配置尺寸",
+    "video": {
+      "noDecoder": "视频解码器未创建"
+    },
+    "exitStopMappingMode": "退出映射模式"
   }
 }

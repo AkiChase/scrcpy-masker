@@ -20,6 +20,7 @@ use crate::{
     scrcpy::{
         connection::ScrcpyConnection,
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
+        video_msg::VideoMsg,
     },
     utils::{mask_win_move_helper, share::ControlledDevice},
     web::ws::WebSocketNotification,
@@ -28,9 +29,9 @@ use crate::{
 #[derive(Debug)]
 pub enum ControllerCommand {
     // scid: String
-    ConnectMainControl(String),
-    ConnectMainVideo(String),
-    ConnectMainAudio(String),
+    ConnectMainControl(String, bool),
+    ConnectMainVideo(String, bool),
+    ConnectMainAudio(String, bool),
     ConnectSubControl(String),
     ShutdownMain(String),
     ShutdownSub(String),
@@ -42,7 +43,7 @@ impl Controller {
     pub fn start(
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
-        v_tx: Sender<Vec<u8>>,
+        v_tx: Sender<VideoMsg>,
         a_tx: Sender<Vec<u8>>,
         d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
@@ -92,12 +93,6 @@ impl Controller {
                             .ok();
                         let msg = mask_win_move_helper(width, height, &m_tx).await;
                         log::info!(
-                            "[Controller] Device {} rotation {}°. {}",
-                            scid,
-                            rotation * 90,
-                            msg
-                        );
-                        log::info!(
                             "[Controller] {}. {}",
                             t!(
                                 "scrcpy.deviceRotation",
@@ -108,7 +103,7 @@ impl Controller {
                         );
                     }
                     ScrcpyDeviceMsg::Unknown => {
-                        log::warn!("[Controller] {}", t!("scrcpy.unknownMsg"))
+                        log::warn!("[Controller] {}", t!("scrcpy.unknownControlMsg"))
                     }
                 },
                 None => {
@@ -122,7 +117,7 @@ impl Controller {
     async fn run_server(
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
-        v_tx: Sender<Vec<u8>>,
+        v_tx: Sender<VideoMsg>,
         a_tx: Sender<Vec<u8>>,
         mut d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
@@ -143,7 +138,7 @@ impl Controller {
         loop {
             match d_rx.recv().await {
                 Some(cmd) => match cmd {
-                    ControllerCommand::ConnectMainControl(scid) => {
+                    ControllerCommand::ConnectMainControl(scid, meta_flag) => {
                         let socket_id = "main_control".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
@@ -176,6 +171,7 @@ impl Controller {
                                     ScrcpyConnection::new(socket)
                                         .handle_control(
                                             cs_rx, cr_tx_copy, m_tx_copy, scid, true, token,
+                                            meta_flag,
                                         )
                                         .await;
                                     ws_tx_copy
@@ -198,7 +194,7 @@ impl Controller {
                             }
                         }
                     }
-                    ControllerCommand::ConnectMainVideo(scid) => {
+                    ControllerCommand::ConnectMainVideo(scid, meta_flag) => {
                         let socket_id = "main_video".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
@@ -214,7 +210,7 @@ impl Controller {
                             Ok((socket, _)) => {
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
-                                        .handle_video(token, v_tx_copy)
+                                        .handle_video(token, v_tx_copy, meta_flag, &scid)
                                         .await;
                                 });
                             }
@@ -229,7 +225,7 @@ impl Controller {
                             }
                         }
                     }
-                    ControllerCommand::ConnectMainAudio(scid) => {
+                    ControllerCommand::ConnectMainAudio(scid, meta_flag) => {
                         let socket_id = "main_audio".to_string();
 
                         if !ControlledDevice::is_scid_controlled(&scid).await {
@@ -245,7 +241,7 @@ impl Controller {
                             Ok((socket, _)) => {
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
-                                        .handle_audio(token, a_tx_copy)
+                                        .handle_audio(token, a_tx_copy, meta_flag, &scid)
                                         .await;
                                 });
                             }
@@ -288,7 +284,7 @@ impl Controller {
                                 tokio::spawn(async move {
                                     ScrcpyConnection::new(socket)
                                         .handle_control(
-                                            sc_rx, cr_tx_copy, m_tx_copy, scid, false, token,
+                                            sc_rx, cr_tx_copy, m_tx_copy, scid, false, token, true,
                                         )
                                         .await;
                                     ws_tx_copy

@@ -6,6 +6,8 @@ use bevy::{
     winit::{UpdateMode, WinitSettings},
 };
 
+pub const BORDER_THICKNESS: f32 = 1.0; // logical size
+
 pub struct BasicPlugin;
 
 impl Plugin for BasicPlugin {
@@ -27,13 +29,12 @@ fn setup(mut commands: Commands, mut window: Single<&mut Window>) {
 }
 
 fn border(mut commands: Commands) {
-    let border_thickness = 1.0; // logical size
     let border_color = Color::srgba_u8(183, 42, 32, 255);
     commands.spawn((
         Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
-            border: UiRect::all(Val::Px(border_thickness)),
+            border: UiRect::all(Val::Px(BORDER_THICKNESS)),
             box_sizing: BoxSizing::BorderBox,
             ..default()
         },

@@ -45,6 +45,10 @@ copypasta = "0.10.2"
 pest = "2"
 pest_derive = "2"
 rust-i18n = "3"
+ffmpeg-next = { version = "8.0.0", default-features = false, features = [
+    "format",
+    "software-scaling",
+] }
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

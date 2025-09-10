@@ -89,7 +89,7 @@ pub fn handle_mask_command(
                 } else {
                     next_cursor_state.set(CursorState::Normal);
                     next_mapping_state.set(MappingState::Stop);
-                    log::info!("[Mapping] Stop mapping");
+                    log::info!("[Mapping] {}", t!("mask.exitStopMappingMode"));
                     window.visible = false;
                     t!("mask.mainDeviceDisconnected").to_string()
                 };

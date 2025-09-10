@@ -15,6 +15,14 @@ static CONFIG: Lazy<RwLock<LocalConfig>> = Lazy::new(|| RwLock::default());
 
 // TODO 单独写外部脚本来捕获特定窗口，发送Post消息来设置蒙版相关配置（宽度>=高度则设置横屏相关配置，否则设置竖屏）
 
+// TODO java/com/genymobile/scrcpy/Options.java 附加一些Options选项，比如视频比特率等等
+// video_codec (H265 可能提供更好的质量，但 H264 应该能提供更低的延迟)
+// video_bit_rate（视频码率，在设备支持的情况下码率越高，视频表现越好）
+// max_size (可选限制视频最大尺寸，默认不限制。进行限制有助于提高性能)
+// max_fps (可选限制视频最大帧数，默认不限制。此外，只有当屏幕内容发生变化时才会生成新的帧)
+// audio_codec (The possible values are opus (default), aac, flac and raw (uncompressed PCM 16-bit LE))
+// audio_bit_rate（音频码率，在设备支持的情况下码率越高，音频表现越好）
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LocalConfig {

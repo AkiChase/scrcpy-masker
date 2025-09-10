@@ -129,16 +129,26 @@ async fn control_device(
     let mut socket_id: Vec<String> = Vec::new();
     let mut commands: Vec<ControllerCommand> = Vec::new();
     if main {
+        let mut meta_flag = true;
         if video {
             socket_id.push("main_video".to_string());
-            commands.push(ControllerCommand::ConnectMainVideo(scid.clone()));
+            commands.push(ControllerCommand::ConnectMainVideo(scid.clone(), meta_flag));
+            if meta_flag {
+                meta_flag = false;
+            }
         }
         if audio {
             socket_id.push("main_audio".to_string());
-            commands.push(ControllerCommand::ConnectMainAudio(scid.clone()));
+            commands.push(ControllerCommand::ConnectMainAudio(scid.clone(), meta_flag));
+            if meta_flag {
+                meta_flag = false;
+            }
         }
         socket_id.push("main_control".to_string());
-        commands.push(ControllerCommand::ConnectMainControl(scid.clone()));
+        commands.push(ControllerCommand::ConnectMainControl(
+            scid.clone(),
+            meta_flag,
+        ));
     } else {
         socket_id.push(format!("sub_control_{}", scid));
         commands.push(ControllerCommand::ConnectSubControl(scid.clone()));
@@ -152,7 +162,7 @@ async fn control_device(
 
     // run scrcpy app
     sleep(Duration::from_millis(500)).await;
-    log::info!("[WebServe] Start scrcpy app...");
+    log::info!("[WebServe] {}", t!("web.device.startingScrcpyApp"));
     let h = Device::shell_process(
         &device_id,
         [
@@ -170,7 +180,6 @@ async fn control_device(
     let scid_copy = scid.clone();
     tokio::spawn(async move {
         h.await.unwrap().unwrap();
-        log::info!("[WebServe] Removing device after scrcpy app exit");
         log::info!("[WebServe] {}", t!("web.device.removingDeviceAfterExit"));
         ControlledDevice::remove_device(&scid_copy).await;
     });

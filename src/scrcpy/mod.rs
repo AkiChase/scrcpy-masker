@@ -5,6 +5,8 @@ pub mod connection;
 pub mod constant;
 pub mod control_msg;
 pub mod controller;
+pub mod media;
+pub mod video_msg;
 
 #[derive(Clone, Serialize, Debug)]
 pub struct ScrcpyDevice {
