@@ -23,8 +23,9 @@ use crate::{
     scrcpy::{
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
-            SC_CODEC_ID_AV1, SC_CODEC_ID_H264, SC_CODEC_ID_H265, VideoCodec, VideoDecoder,
-            VideoMsg, read_media_packet,
+            AudioCodec, AudioDecoder, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1, SC_CODEC_ID_FLAC,
+            SC_CODEC_ID_H264, SC_CODEC_ID_H265, SC_CODEC_ID_OPUS, SC_CODEC_ID_RAW, VideoCodec,
+            VideoDecoder, VideoMsg, read_media_packet,
         },
     },
     utils::share::ControlledDevice,
@@ -359,9 +360,76 @@ impl ScrcpyConnection {
                 finnal_token.cancel();
             }
         }
-        // v_tx.send_async(VideoMsg::End).await.unwrap();
+        v_tx.send(VideoMsg::Close).unwrap();
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
         self.socket.shutdown().await.unwrap();
+    }
+
+    async fn audio_handler(&mut self) {
+        // read metadata
+        let mut buf: [u8; 4] = [0; 4];
+        let mut audio_decoder = match self.socket.read_exact(&mut buf).await {
+            Err(_) => {
+                log::error!("[Controller] {}", t!("scrcpy.failedToReadVideoMetadata"));
+                return;
+            }
+            Ok(_) => {
+                let raw_codec_id = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+
+                let codec_id = match raw_codec_id {
+                    SC_CODEC_ID_OPUS => {
+                        log::info!("[Controller] {}: OPUS", t!("scrcpy.audioCodec"));
+                        AudioCodec::OPUS
+                    }
+                    SC_CODEC_ID_AAC => {
+                        log::info!("[Controller] {}: AAC", t!("scrcpy.audioCodec"));
+                        AudioCodec::AAC
+                    }
+                    SC_CODEC_ID_FLAC => {
+                        log::info!("[Controller] {}: FLAC", t!("scrcpy.audioCodec"));
+                        AudioCodec::FLAC
+                    }
+                    SC_CODEC_ID_RAW => {
+                        log::info!("[Controller] {}: RAW", t!("scrcpy.audioCodec"));
+                        AudioCodec::RAW
+                    }
+                    _ => {
+                        log::error!(
+                            "[Controller] {}: 0x{:x}",
+                            t!("scrcpy.invalidAudioCodec"),
+                            raw_codec_id
+                        );
+                        return;
+                    }
+                };
+                let audio_decoder = AudioDecoder::new(codec_id);
+                audio_decoder
+            }
+        };
+
+        // read video packets
+        loop {
+            match read_media_packet(&mut self.socket).await {
+                Ok(mut packet) => {
+                    let _decoded = {
+                        let mut decoded = frame::Audio::empty();
+                        audio_decoder.decoder.send_packet(&mut packet).unwrap();
+                        audio_decoder.decoder.receive_frame(&mut decoded).unwrap();
+                        decoded
+                    };
+
+                    // let channels = decoded.channels();
+                    // let nb_samples = decoded.samples();
+                    // let sample_format = decoded.format();
+
+                    unreachable!("Audio player not implemented");
+                }
+                Err(e) => {
+                    log::error!("[Controller] {}", e);
+                    break;
+                }
+            }
+        }
     }
 
     pub async fn handle_audio(
@@ -381,7 +449,16 @@ impl ScrcpyConnection {
             }
         }
 
-        // TODO handle scrcpy audio connection
+        let finnal_token = token.clone();
+        tokio::select! {
+            _ = token.cancelled()=>{
+                log::info!("[Controller] {}", t!("scrcpy.audioConnectionReaderCancelled"));
+            }
+            _ = self.audio_handler()=>{
+                log::error!("[Controller] {}", t!("scrcpy.audioReadShutdownUnexpectedly"));
+                finnal_token.cancel();
+            }
+        }
         self.socket.shutdown().await.unwrap();
     }
 }

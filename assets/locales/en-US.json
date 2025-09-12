@@ -156,7 +156,11 @@
     "videoConnectionClosed": "Scrcpy video connection closed",
     "unknownControlMsg": "Unknown control message from main device",
     "videoCodec": "Video Codec",
-    "handleAudioConnection": "Handling scrcpy audio connection..."
+    "handleAudioConnection": "Handling scrcpy audio connection...",
+    "audioReadShutdownUnexpectedly": "Scrcpy audio connection shutdown unexpectedly",
+    "audioConnectionReaderCancelled": "Scrcpy audio connection cancelled manually",
+    "audioCodec": "Audio Codec",
+    "invalidAudioCodec": "Unsupported audio codec"
   },
   "controller": {
     "csReceiverLagged": "CS receiver lagged, skipped %{skipped} messages"

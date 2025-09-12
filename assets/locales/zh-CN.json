@@ -156,7 +156,11 @@
     "videoConnectionClosed": "Scrcpy 视频连接已关闭",
     "unknownControlMsg": "收到来自主设备的未知控制消息",
     "videoCodec": "视频编码",
-    "handleAudioConnection": "正在处理 scrcpy 音频连接..."
+    "handleAudioConnection": "正在处理 scrcpy 音频连接...",
+    "audioReadShutdownUnexpectedly": "Scrcpy 音频连接意外关闭",
+    "audioConnectionReaderCancelled": "Scrcpy 音频连接读取端被手动关闭",
+    "audioCodec": "音频编码",
+    "invalidAudioCodec": "不支持的音频编码"
   },
   "controller": {
     "csReceiverLagged": "CS 接收器延迟，跳过 %{skipped} 条消息"

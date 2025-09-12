@@ -196,6 +196,7 @@ function OtherDevices({
             {t("devices.otherDevices.video")}
           </Checkbox>
           <Checkbox
+            disabled
             checked={isAudio}
             onChange={(e) => setIsAudio(e.target.checked)}
           >

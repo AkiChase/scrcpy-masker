@@ -1,7 +1,9 @@
 use std::{fmt, io::Write};
 
 use bevy::ecs::error::Result;
-use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet, software::scaling};
+use ffmpeg_next::{
+    ChannelLayout, Packet, codec, decoder, format::Pixel, frame, packet, software::scaling,
+};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
@@ -151,6 +153,30 @@ impl fmt::Display for AudioCodec {
             AudioCodec::RAW => "raw",
         };
         write!(f, "{}", s)
+    }
+}
+
+pub struct AudioDecoder {
+    pub decoder: decoder::Audio,
+}
+
+impl AudioDecoder {
+    pub fn new(codec_id: AudioCodec) -> Self {
+        let codec = decoder::find(codec_id.into()).unwrap();
+        let mut codec_context = codec::Context::new_with_codec(codec);
+        let flags = unsafe {
+            let raw_flags = (*codec_context.as_mut_ptr()).flags;
+            let flags = codec::Flags::from_bits(raw_flags as std::ffi::c_uint)
+                .unwrap_or(codec::Flags::empty());
+            flags | codec::Flags::LOW_DELAY
+        };
+        codec_context.set_flags(flags);
+        let mut audio_decoder = codec_context.decoder().audio().unwrap();
+        audio_decoder.set_channel_layout(ChannelLayout::STEREO);
+
+        Self {
+            decoder: audio_decoder,
+        }
     }
 }
 
