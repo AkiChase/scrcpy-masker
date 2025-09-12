@@ -37,6 +37,7 @@ export interface LocalConfigState {
   // adb
   adbPath: string;
   // mask area
+  alwaysOnTop: boolean;
   verticalMaskHeight: number;
   horizontalMaskWidth: number;
   verticalPosition: [number, number];
@@ -62,6 +63,7 @@ const initialState: LocalConfigState = {
   webPort: 0,
   controllerPort: 0,
   adbPath: "",
+  alwaysOnTop: true,
   verticalMaskHeight: 0,
   horizontalMaskWidth: 0,
   verticalPosition: [0, 0],
@@ -101,6 +103,10 @@ const localConfigSlice = createSlice({
     setAdbPath: (state, action: PayloadAction<string>) => {
       state.adbPath = action.payload;
       updateLocalConfig("adb_path", action.payload, 1000);
+    },
+    setAlwaysOnTop: (state, action: PayloadAction<boolean>) => {
+      state.alwaysOnTop = action.payload;
+      updateLocalConfig("always_on_top", action.payload);
     },
     setverticalMaskHeight: (state, action: PayloadAction<number>) => {
       state.verticalMaskHeight = action.payload;
@@ -167,6 +173,7 @@ export const {
   setWebPort,
   setControllerPort,
   setAdbPath,
+  setAlwaysOnTop,
   setverticalMaskHeight,
   sethorizontalMaskWidth,
   setVerticalPosition,

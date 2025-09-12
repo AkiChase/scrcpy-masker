@@ -126,6 +126,23 @@ async fn update_config(
                 )));
             }
         }
+        "always_on_top" => {
+            if let Some(value) = payload.value.as_bool() {
+                LocalConfig::set_always_on_top(value);
+                let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
+                state
+                    .m_tx
+                    .send_async((MaskCommand::WinSwitchLevel { top: value }, oneshot_tx))
+                    .await
+                    .unwrap();
+                let msg = oneshot_rx.await.unwrap().unwrap();
+                return Ok(JsonResponse::success(msg, None));
+            } else {
+                return Err(WebServerError::bad_request(t!(
+                    "web.config.alwaysOnTopMustBeBool"
+                )));
+            }
+        }
         "vertical_mask_height" => {
             if let Some(value) = payload.value.as_u64() {
                 LocalConfig::set_vertical_mask_height(value as u32);

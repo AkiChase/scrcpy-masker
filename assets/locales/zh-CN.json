@@ -110,7 +110,8 @@
       "setAudioCodecSuccess": "成功设置音频编码（下次连接时生效）",
       "audioCodecTypeError": "音频编码必须为 string",
       "setAudioBitRateSuccess": "成功设置音频码率（下次连接时生效）",
-      "audioBitRateTypeError": "音频编码必须为 string"
+      "audioBitRateTypeError": "音频编码必须为 string",
+      "alwaysOnTopMustBeBool": "窗口置顶必须为 bool"
     }
   },
   "utils": {
@@ -219,6 +220,7 @@
     "video": {
       "noDecoder": "视频解码器未创建"
     },
-    "exitStopMappingMode": "退出映射模式"
+    "exitStopMappingMode": "退出映射模式",
+    "windowLevelChanged": "蒙版置顶"
   }
 }

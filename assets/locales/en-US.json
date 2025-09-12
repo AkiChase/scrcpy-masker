@@ -110,7 +110,8 @@
       "setAudioCodecSuccess": "Successfully set audio_codec (takes effect on next connection)",
       "audioCodecTypeError": "The audio_codec must be string",
       "setAudioBitRateSuccess": "Successfully set audio_bit_rate (takes effect on next connection)",
-      "audioBitRateTypeError": "The audio_bit_rate must be string"
+      "audioBitRateTypeError": "The audio_bit_rate must be string",
+      "alwaysOnTopMustBeBool": "The always_on_top must be bool"
     }
   },
   "utils": {
@@ -219,6 +220,7 @@
     "video": {
       "noDecoder": "Video decoder not created"
     },
-    "exitStopMappingMode": "Exit mapping mode"
+    "exitStopMappingMode": "Exit mapping mode",
+    "windowLevelChanged": "Mask always on top"
   }
 }

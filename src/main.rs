@@ -3,7 +3,7 @@ use std::{env, fs::File, net::SocketAddrV4, process::exit, sync::OnceLock};
 use bevy::{
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
     prelude::*,
-    window::{CompositeAlphaMode, PresentMode},
+    window::{CompositeAlphaMode, PresentMode, WindowLevel},
 };
 use scrcpy_masker::{
     config::LocalConfig,
@@ -53,13 +53,16 @@ fn main() {
     if let Err(e) = LocalConfig::load() {
         println!("LocalConfig load failed. {}", e);
     }
+
+    let mut local_config = LocalConfig::get();
     // update language
-    let language = LocalConfig::get().language;
+    let language = local_config.language;
     match language.as_str() {
         "zh-CN" | "en-US" => rust_i18n::set_locale(&language),
         _ => {
             rust_i18n::set_locale(default_language);
             LocalConfig::set_language(default_language.to_string());
+            local_config = LocalConfig::get();
         }
     }
     // update config file
@@ -82,6 +85,11 @@ fn main() {
                         present_mode: PresentMode::AutoVsync,
                         resizable: false,
                         visible: false,
+                        window_level: if local_config.always_on_top {
+                            WindowLevel::AlwaysOnTop
+                        } else {
+                            WindowLevel::Normal
+                        },
                         #[cfg(target_os = "macos")]
                         composite_alpha_mode: CompositeAlphaMode::PostMultiplied,
                         #[cfg(target_os = "linux")]

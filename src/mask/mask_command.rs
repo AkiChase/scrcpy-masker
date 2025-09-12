@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowLevel};
 use bevy_ineffable::prelude::IneffableCommands;
 use rust_i18n::t;
 
@@ -21,6 +21,9 @@ pub enum MaskCommand {
         top: i32,
         right: i32,
         bottom: i32,
+    },
+    WinSwitchLevel {
+        top: bool,
     },
     DeviceConnectionChange {
         connect: bool,
@@ -78,6 +81,16 @@ pub fn handle_mask_command(
                 .to_string();
 
                 log::info!("[Mask] {}", msg);
+                oneshot_tx.send(Ok(msg)).unwrap();
+            }
+            MaskCommand::WinSwitchLevel { top } => {
+                if top {
+                    window.window_level = WindowLevel::AlwaysOnTop;
+                } else {
+                    window.window_level = WindowLevel::Normal;
+                }
+                let msg = format!("[Mask] {}: {}", t!("mask.windowLevelChanged"), top);
+                log::info!("{}", msg);
                 oneshot_tx.send(Ok(msg)).unwrap();
             }
             MaskCommand::DeviceConnectionChange { connect } => {

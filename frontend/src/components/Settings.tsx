@@ -29,6 +29,7 @@ import {
   setVideoBitRate,
   setVideoMaxSize,
   setVideoMaxFps,
+  setAlwaysOnTop,
 } from "../store/localConfig";
 import { setIsLoading } from "../store/other";
 import { requestGet } from "../utils";
@@ -115,6 +116,12 @@ export default function Settings() {
         </ItemBoxContainer>
         <h3 className="title-with-line-sub">{t("settings.title.mask")}</h3>
         <ItemBoxContainer className="mb-6">
+          <ItemBox label={t("settings.alwaysOnTop")}>
+            <Switch
+              checked={localConfig.alwaysOnTop}
+              onChange={(v) => dispatch(setAlwaysOnTop(v))}
+            />
+          </ItemBox>
           <ItemBox label={t("settings.mappingLabelOpacity")}>
             <Slider
               className="w-sm"

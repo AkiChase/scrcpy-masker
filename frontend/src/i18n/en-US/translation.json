@@ -275,6 +275,7 @@
     "audioBitRate": "Audio bit rate",
     "videoMaxSize": "Video max size",
     "zeroUnlimitedTip": "Set to 0 for unlimited",
-    "videoMaxFps": "Video max FPS"
+    "videoMaxFps": "Video max FPS",
+    "alwaysOnTop": "Mask always on top"
   }
 }
