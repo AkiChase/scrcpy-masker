@@ -4861,6 +4861,7 @@ dependencies = [
  "bevy_ineffable",
  "bitflags 2.9.1",
  "copypasta",
+ "crossbeam-channel",
  "ffmpeg-next",
  "flume",
  "futures-util",

@@ -22,6 +22,13 @@ import {
   setHorizontalPosition,
   setMappingLabelOpacity,
   setClipboardSync,
+  setLanguage,
+  setVideoCodec,
+  setAudioCodec,
+  setAudioBitRate,
+  setVideoBitRate,
+  setVideoMaxSize,
+  setVideoMaxFps,
 } from "../store/localConfig";
 import { setIsLoading } from "../store/other";
 import { requestGet } from "../utils";
@@ -39,6 +46,16 @@ const languageOptions = [
     value: "en-US",
   },
 ];
+
+const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
+  value: v,
+  label: v,
+}));
+
+const audioCodecOptions = ["AAC", "OPUS", "FLAC", "RAW"].map((v) => ({
+  value: v,
+  label: v,
+}));
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -62,7 +79,9 @@ export default function Settings() {
     <div className="page-container">
       <section>
         <Flex align="start" justify="space-between">
-          <h2 className="title-with-line">{t("settings.title")}</h2>
+          <h2 className="title-with-line" style={{ marginBottom: 0 }}>
+            {t("settings.title.header")}
+          </h2>
           <Button
             type="primary"
             icon={<SyncOutlined />}
@@ -70,12 +89,14 @@ export default function Settings() {
             onClick={loadLocalConfig}
           ></Button>
         </Flex>
+        <h3 className="title-with-line-sub">{t("settings.title.basic")}</h3>
         <ItemBoxContainer className="mb-6">
           <ItemBox label={t("settings.language")}>
             <Select
               className="w-sm"
               value={localConfig.language}
               options={languageOptions}
+              onChange={(v) => dispatch(setLanguage(v))}
             />
           </ItemBox>
           <ItemBox label={t("settings.adbPath")}>
@@ -91,7 +112,9 @@ export default function Settings() {
               onChange={(v) => dispatch(setClipboardSync(v))}
             />
           </ItemBox>
-
+        </ItemBoxContainer>
+        <h3 className="title-with-line-sub">{t("settings.title.mask")}</h3>
+        <ItemBoxContainer className="mb-6">
           <ItemBox label={t("settings.mappingLabelOpacity")}>
             <Slider
               className="w-sm"
@@ -184,6 +207,75 @@ export default function Settings() {
               />
             </Space.Compact>
           </ItemBox>
+        </ItemBoxContainer>
+        <h3 className="title-with-line-sub">{t("settings.title.video")}</h3>
+        <ItemBoxContainer className="mb-6">
+          <ItemBox label={t("settings.videoCodec")}>
+            <Select
+              className="w-sm"
+              value={localConfig.videoCodec}
+              options={videoCodecOptions}
+              onChange={(v) => dispatch(setVideoCodec(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.videoBitRate")}>
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              min={1000000}
+              suffix="bps"
+              value={localConfig.videoBitRate}
+              onChange={(v) => v !== null && dispatch(setVideoBitRate(v))}
+            />
+          </ItemBox>
+          <ItemBox
+            label={t("settings.videoMaxSize")}
+            tooltip={t("settings.zeroUnlimitedTip")}
+          >
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              min={0}
+              value={localConfig.videoMaxSize}
+              onChange={(v) => v !== null && dispatch(setVideoMaxSize(v))}
+            />
+          </ItemBox>
+          <ItemBox
+            label={t("settings.videoMaxFps")}
+            tooltip={t("settings.zeroUnlimitedTip")}
+          >
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              min={0}
+              value={localConfig.videoMaxFps}
+              onChange={(v) => v !== null && dispatch(setVideoMaxFps(v))}
+            />
+          </ItemBox>
+        </ItemBoxContainer>
+        <h3 className="title-with-line-sub">{t("settings.title.audio")}</h3>
+        <ItemBoxContainer className="mb-6">
+          <ItemBox label={t("settings.audioCodec")}>
+            <Select
+              className="w-sm"
+              value={localConfig.audioCodec}
+              options={audioCodecOptions}
+              onChange={(v) => dispatch(setAudioCodec(v))}
+            />
+          </ItemBox>
+          <ItemBox label={t("settings.audioBitRate")}>
+            <InputNumber
+              className="w-sm"
+              controls={false}
+              min={1000}
+              suffix="bps"
+              value={localConfig.audioBitRate}
+              onChange={(v) => v !== null && dispatch(setAudioBitRate(v))}
+            />
+          </ItemBox>
+        </ItemBoxContainer>
+        <h3 className="title-with-line-sub">{t("settings.title.advance")}</h3>
+        <ItemBoxContainer className="mb-6">
           <ItemBox label={t("settings.webPort")}>
             <InputNumber
               className="w-sm"

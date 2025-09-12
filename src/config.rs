@@ -4,7 +4,10 @@ use std::{
     sync::RwLock,
 };
 
-use crate::utils::relate_to_root_path;
+use crate::{
+    scrcpy::media::{AudioCodec, VideoCodec},
+    utils::relate_to_root_path,
+};
 use once_cell::sync::Lazy;
 use paste::paste;
 use rust_i18n::t;
@@ -43,6 +46,14 @@ pub struct LocalConfig {
     pub language: String,
     // clipboard sync
     pub clipboard_sync: bool,
+    // video config
+    pub video_codec: VideoCodec,
+    pub video_bit_rate: u32,
+    pub video_max_size: u32,
+    pub video_max_fps: u32,
+    // audio config
+    pub audio_codec: AudioCodec,
+    pub audio_bit_rate: u32,
 }
 
 impl Default for LocalConfig {
@@ -59,6 +70,12 @@ impl Default for LocalConfig {
             mapping_label_opacity: 0.3,
             language: "en-US".to_string(),
             clipboard_sync: true,
+            video_codec: VideoCodec::H264,
+            video_bit_rate: 8_000000, // 8M
+            video_max_size: 0,        // default no limit
+            video_max_fps: 0,         // default no limit
+            audio_codec: AudioCodec::OPUS,
+            audio_bit_rate: 128_000, // 128K
         }
     }
 }
@@ -128,6 +145,12 @@ impl LocalConfig {
         (active_mapping_file, String),
         (mapping_label_opacity, f32),
         (language, String),
-        (clipboard_sync, bool)
+        (clipboard_sync, bool),
+        (video_codec, VideoCodec),
+        (video_bit_rate, u32),
+        (video_max_size, u32),
+        (video_max_fps, u32),
+        (audio_codec, AudioCodec),
+        (audio_bit_rate, u32)
     );
 }

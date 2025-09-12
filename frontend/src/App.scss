@@ -50,13 +50,30 @@ body,
   font-weight: bold;
   margin: 0;
   margin-bottom: 24px;
+  line-height: 1.4em;
 
   &::before {
     content: "";
     margin-right: 0.4em;
     display: inline-block;
     width: 0.2em;
-    height: 1.1em;
+    height: 1.4em;
+    background-color: var(--ant-color-primary);
+    vertical-align: text-top;
+  }
+}
+
+.title-with-line-sub {
+  font-size: var(--ant-font-size-heading-5);
+  font-weight: bold;
+  margin: 24px 0;
+
+  &::before {
+    content: "";
+    margin-right: 0.4em;
+    display: inline-block;
+    width: 0.2em;
+    height: 1.4em;
     background-color: var(--ant-color-primary);
     vertical-align: text-top;
   }

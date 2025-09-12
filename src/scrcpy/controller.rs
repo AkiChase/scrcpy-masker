@@ -20,7 +20,7 @@ use crate::{
     scrcpy::{
         connection::ScrcpyConnection,
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
-        video_msg::VideoMsg,
+        media::VideoMsg,
     },
     utils::{mask_win_move_helper, share::ControlledDevice},
     web::ws::WebSocketNotification,
@@ -28,7 +28,6 @@ use crate::{
 
 #[derive(Debug)]
 pub enum ControllerCommand {
-    // scid: String
     ConnectMainControl(String, bool),
     ConnectMainVideo(String, bool),
     ConnectMainAudio(String, bool),
@@ -43,7 +42,7 @@ impl Controller {
     pub fn start(
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
-        v_tx: Sender<VideoMsg>,
+        v_tx: crossbeam_channel::Sender<VideoMsg>,
         a_tx: Sender<Vec<u8>>,
         d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
@@ -117,7 +116,7 @@ impl Controller {
     async fn run_server(
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
-        v_tx: Sender<VideoMsg>,
+        v_tx: crossbeam_channel::Sender<VideoMsg>,
         a_tx: Sender<Vec<u8>>,
         mut d_rx: UnboundedReceiver<ControllerCommand>,
         m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
@@ -208,10 +207,16 @@ impl Controller {
                         let v_tx_copy = v_tx.clone();
                         match listener.accept().await {
                             Ok((socket, _)) => {
-                                tokio::spawn(async move {
-                                    ScrcpyConnection::new(socket)
-                                        .handle_video(token, v_tx_copy, meta_flag, &scid)
-                                        .await;
+                                thread::spawn(move || {
+                                    tokio::runtime::Builder::new_current_thread()
+                                        .enable_all()
+                                        .build()
+                                        .unwrap()
+                                        .block_on(async move {
+                                            ScrcpyConnection::new(socket)
+                                                .handle_video(token, v_tx_copy, meta_flag, &scid)
+                                                .await;
+                                        });
                                 });
                             }
                             Err(e) => {

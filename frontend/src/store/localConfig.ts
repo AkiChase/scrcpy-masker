@@ -48,6 +48,14 @@ export interface LocalConfigState {
   language: string;
   // clipboard sync
   clipboardSync: boolean;
+  // video
+  videoCodec: string;
+  videoBitRate: number;
+  videoMaxSize: number;
+  videoMaxFps: number;
+  // audio
+  audioCodec: string;
+  audioBitRate: number;
 }
 
 const initialState: LocalConfigState = {
@@ -62,13 +70,19 @@ const initialState: LocalConfigState = {
   mappingLabelOpacity: 0,
   language: "en-US",
   clipboardSync: true,
+  videoCodec: "H264",
+  videoBitRate: 8000000,
+  videoMaxSize: 0,
+  videoMaxFps: 0,
+  audioCodec: "OPUS",
+  audioBitRate: 128000,
 };
 
 const localConfigSlice = createSlice({
   name: "localConfig",
   initialState,
   reducers: {
-    forceSetLocalConfig: (state, action: PayloadAction<LocalConfigState>) => {
+    forceSetLocalConfig: (state, action: PayloadAction<any>) => {
       for (const [key, value] of Object.entries(action.payload)) {
         const curKey = toCamelCase(key);
         if (curKey in state) {
@@ -121,6 +135,30 @@ const localConfigSlice = createSlice({
       state.clipboardSync = action.payload;
       updateLocalConfig("clipboard_sync", action.payload);
     },
+    setVideoCodec: (state, action: PayloadAction<string>) => {
+      state.videoCodec = action.payload;
+      updateLocalConfig("video_codec", action.payload);
+    },
+    setVideoBitRate: (state, action: PayloadAction<number>) => {
+      state.videoBitRate = action.payload;
+      updateLocalConfig("video_bit_rate", action.payload);
+    },
+    setVideoMaxSize: (state, action: PayloadAction<number>) => {
+      state.videoMaxSize = action.payload;
+      updateLocalConfig("video_max_size", action.payload);
+    },
+    setVideoMaxFps: (state, action: PayloadAction<number>) => {
+      state.videoMaxFps = action.payload;
+      updateLocalConfig("video_max_fps", action.payload);
+    },
+    setAudioCodec: (state, action: PayloadAction<string>) => {
+      state.audioCodec = action.payload;
+      updateLocalConfig("audio_codec", action.payload);
+    },
+    setAudioBitRate: (state, action: PayloadAction<number>) => {
+      state.audioBitRate = action.payload;
+      updateLocalConfig("audio_bit_rate", action.payload);
+    },
   },
 });
 
@@ -137,6 +175,12 @@ export const {
   setMappingLabelOpacity,
   setLanguage,
   setClipboardSync,
+  setVideoCodec,
+  setVideoBitRate,
+  setVideoMaxSize,
+  setVideoMaxFps,
+  setAudioCodec,
+  setAudioBitRate,
 } = localConfigSlice.actions;
 
 export default localConfigSlice.reducer;

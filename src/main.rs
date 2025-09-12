@@ -11,7 +11,7 @@ use scrcpy_masker::{
     scrcpy::{
         control_msg::ScrcpyControlMsg,
         controller::{self, ControllerCommand},
-        video_msg::VideoMsg,
+        media::VideoMsg,
     },
     update,
     utils::{
@@ -106,7 +106,7 @@ fn start_servers(mut commands: Commands) {
 
     let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(1000);
     let (ws_tx, _) = broadcast::channel::<WebSocketNotification>(1000);
-    let (v_tx, v_rx) = flume::unbounded::<VideoMsg>();
+    let (v_tx, v_rx) = crossbeam_channel::unbounded::<VideoMsg>();
     let (a_tx, a_rx) = flume::unbounded::<Vec<u8>>();
     let (m_tx, m_rx) = flume::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();
     let (d_tx, d_rx) = mpsc::unbounded_channel::<ControllerCommand>();

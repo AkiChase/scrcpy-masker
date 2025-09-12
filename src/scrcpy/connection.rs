@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ffmpeg_next::codec::Id;
+use ffmpeg_next::frame;
 use flume::Sender;
 use rust_i18n::t;
 use tokio::{
@@ -23,9 +23,9 @@ use crate::{
     scrcpy::{
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
-            PacketMerger, SC_CODEC_ID_AV1, SC_CODEC_ID_H264, SC_CODEC_ID_H265, read_media_packet,
+            SC_CODEC_ID_AV1, SC_CODEC_ID_H264, SC_CODEC_ID_H265, VideoCodec, VideoDecoder,
+            VideoMsg, read_media_packet,
         },
-        video_msg::VideoMsg,
     },
     utils::share::ControlledDevice,
 };
@@ -251,10 +251,10 @@ impl ScrcpyConnection {
         }
     }
 
-    async fn video_handler(&mut self, v_tx: Sender<VideoMsg>) {
+    async fn video_handler(&mut self, v_tx: crossbeam_channel::Sender<VideoMsg>) {
         // read metadata
         let mut buf: [u8; 12] = [0; 12];
-        let must_merge_config_packet = match self.socket.read_exact(&mut buf).await {
+        let mut video_decoder = match self.socket.read_exact(&mut buf).await {
             Err(_) => {
                 log::error!("[Controller] {}", t!("scrcpy.failedToReadVideoMetadata"));
                 return;
@@ -267,15 +267,15 @@ impl ScrcpyConnection {
                 let codec_id = match raw_codec_id {
                     SC_CODEC_ID_H264 => {
                         log::info!("[Controller] {}: H264", t!("scrcpy.videoCodec"));
-                        Id::H264
+                        VideoCodec::H264
                     }
                     SC_CODEC_ID_H265 => {
                         log::info!("[Controller] {}: H265", t!("scrcpy.videoCodec"));
-                        Id::H265
+                        VideoCodec::H265
                     }
                     SC_CODEC_ID_AV1 => {
                         log::info!("[Controller] {}: AV1", t!("scrcpy.videoCodec"));
-                        Id::AV1
+                        VideoCodec::AV1
                     }
                     _ => {
                         log::error!(
@@ -286,39 +286,43 @@ impl ScrcpyConnection {
                         return;
                     }
                 };
-
-                v_tx.send_async(VideoMsg::Start {
-                    codec_id,
-                    width,
-                    height,
-                })
-                .await
-                .unwrap();
-
-                if matches!(codec_id, Id::H264 | Id::H265) {
-                    true
-                } else {
-                    false
-                }
+                let video_decoder = VideoDecoder::new(codec_id, width, height);
+                video_decoder
             }
         };
-
-        let mut packet_merger = PacketMerger::new();
 
         // read video packets
         loop {
             match read_media_packet(&mut self.socket).await {
                 Ok(mut packet) => {
-                    if must_merge_config_packet {
+                    if video_decoder.must_merge_config {
                         // merge config packet if needed
-                        packet_merger.merge(&mut packet);
+                        video_decoder.packet_merger.merge(&mut packet);
                     }
 
                     // no send config packet
                     if packet.pts().is_some() {
-                        v_tx.send_async(VideoMsg::Packet(packet)).await.unwrap();
+                        let decoded = {
+                            let mut decoded = frame::Video::empty();
+                            video_decoder.decoder.send_packet(&mut packet).unwrap();
+                            video_decoder.decoder.receive_frame(&mut decoded).unwrap();
+                            decoded
+                        };
+                        // update size after decoding video packet
+                        video_decoder.update();
+
+                        let rgb_frame = video_decoder.conver_to_rgba(&decoded);
+                        let mut buf = Vec::with_capacity(video_decoder.frame_size);
+                        buf.resize(video_decoder.frame_size, 0);
+                        buf.copy_from_slice(rgb_frame.data(0));
+
+                        v_tx.send(VideoMsg::Data {
+                            data: buf,
+                            width: video_decoder.width,
+                            height: video_decoder.height,
+                        })
+                        .unwrap();
                     }
-                    // TODO test AV1 packet
                 }
                 Err(e) => {
                     log::error!("[Controller] {}", e);
@@ -331,7 +335,7 @@ impl ScrcpyConnection {
     pub async fn handle_video(
         mut self,
         token: CancellationToken,
-        v_tx: Sender<VideoMsg>,
+        v_tx: crossbeam_channel::Sender<VideoMsg>,
         meta_flag: bool,
         scid: &str,
     ) {
@@ -355,7 +359,7 @@ impl ScrcpyConnection {
                 finnal_token.cancel();
             }
         }
-        v_tx.send_async(VideoMsg::End).await.unwrap();
+        // v_tx.send_async(VideoMsg::End).await.unwrap();
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
         self.socket.shutdown().await.unwrap();
     }

@@ -96,7 +96,21 @@
       "invalidMappingKey": "Invalid config key",
       "successfullySet": "Successfully set",
       "setClipboardSyncSuccess": "Successfully set clipboard_sync",
-      "clipboardSyncTypeError": "The clipboard_sync must be bool"
+      "clipboardSyncTypeError": "The clipboard_sync must be bool",
+      "invalidVideoCodec": "Unsupported video codec",
+      "videoCodecTypeError": "The video_codec must be string",
+      "setVideoCodecSuccess": "Successfully set video_codec (takes effect on next connection)",
+      "videoBitRateTypeError": "The video_bit_rate must be u32",
+      "setVideoBitRateSuccess": "Successfully set video_bit_rate (takes effect on next connection)",
+      "setVideoMaxSizeSuccess": "Successfully set video_max_size (takes effect on next connection)",
+      "videoMaxSizeTypeError": "The video_max_size must be u32",
+      "setVideoMaxFpsSuccess": "Successfully set video_max_fps (takes effect on next connection)",
+      "videoMaxFpsTypeError": "The video_max_fps must be u32",
+      "invalidAudioCodec": "Unsupported audio codec",
+      "setAudioCodecSuccess": "Successfully set audio_codec (takes effect on next connection)",
+      "audioCodecTypeError": "The audio_codec must be string",
+      "setAudioBitRateSuccess": "Successfully set audio_bit_rate (takes effect on next connection)",
+      "audioBitRateTypeError": "The audio_bit_rate must be string"
     }
   },
   "utils": {

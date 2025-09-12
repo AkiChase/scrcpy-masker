@@ -1,8 +1,9 @@
-use std::io::Write;
+use std::{fmt, io::Write};
 
 use bevy::ecs::error::Result;
-use ffmpeg_next::{Packet, packet::Flags};
+use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet, software::scaling};
 use rust_i18n::t;
+use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
 
 const SC_PACKET_FLAG_CONFIG: u64 = 1u64 << 63;
@@ -15,6 +16,7 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> Result<Packet, String>
         .read_exact(&mut header)
         .await
         .map_err(|e| format!("{}: {}", t!("scrcpy.failedToReadFrameHeader"), e))?;
+
     let pts_flags = u64::from_be_bytes(header[0..8].try_into().unwrap());
     let len = u32::from_be_bytes(header[8..12].try_into().unwrap()) as usize;
 
@@ -33,7 +35,7 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> Result<Packet, String>
     }
 
     if (pts_flags & SC_PACKET_FLAG_KEY_FRAME) != 0 {
-        packet.set_flags(packet.flags() | Flags::KEY);
+        packet.set_flags(packet.flags() | packet::Flags::KEY);
     }
 
     packet.set_dts(packet.pts());
@@ -91,4 +93,143 @@ impl PacketMerger {
             self.config = None;
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum VideoCodec {
+    H264,
+    H265,
+    AV1,
+}
+
+impl From<VideoCodec> for codec::Id {
+    fn from(codec: VideoCodec) -> Self {
+        match codec {
+            VideoCodec::H264 => Self::H264,
+            VideoCodec::H265 => Self::HEVC,
+            VideoCodec::AV1 => Self::AV1,
+        }
+    }
+}
+
+impl fmt::Display for VideoCodec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            VideoCodec::H264 => "h264",
+            VideoCodec::H265 => "h265",
+            VideoCodec::AV1 => "av1",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum AudioCodec {
+    OPUS,
+    AAC,
+    FLAC,
+    RAW,
+}
+
+impl From<AudioCodec> for codec::Id {
+    fn from(codec: AudioCodec) -> Self {
+        match codec {
+            AudioCodec::OPUS => Self::OPUS,
+            AudioCodec::AAC => Self::AAC,
+            AudioCodec::FLAC => Self::FLAC,
+            AudioCodec::RAW => Self::PCM_F16LE,
+        }
+    }
+}
+
+impl fmt::Display for AudioCodec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            AudioCodec::OPUS => "opus",
+            AudioCodec::AAC => "aac",
+            AudioCodec::FLAC => "flac",
+            AudioCodec::RAW => "raw",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+pub struct VideoDecoder {
+    pub decoder: decoder::Video,
+    pub scaler: Option<scaling::Context>,
+    pub width: u32,
+    pub height: u32,
+    pub frame_size: usize,
+    pub must_merge_config: bool,
+    pub packet_merger: PacketMerger,
+}
+
+impl VideoDecoder {
+    pub fn new(codec_id: VideoCodec, width: u32, height: u32) -> Self {
+        let codec = decoder::find(codec_id.into()).unwrap();
+        let mut codec_context = codec::Context::new_with_codec(codec);
+        let flags = unsafe {
+            let raw_flags = (*codec_context.as_mut_ptr()).flags;
+            let flags = codec::Flags::from_bits(raw_flags as std::ffi::c_uint)
+                .unwrap_or(codec::Flags::empty());
+            flags | codec::Flags::LOW_DELAY
+        };
+        codec_context.set_flags(flags);
+        let video_decoder = codec_context.decoder().video().unwrap();
+
+        Self {
+            decoder: video_decoder,
+            scaler: None,
+            width,
+            height,
+            must_merge_config: matches!(codec_id, VideoCodec::H264 | VideoCodec::H265),
+            packet_merger: PacketMerger::new(),
+            frame_size: (width * height * 4) as usize,
+        }
+    }
+
+    pub fn update(&mut self) -> bool {
+        let width = self.decoder.width();
+        let height = self.decoder.height();
+        if self.scaler.is_none() || width != self.width || height != self.height {
+            self.width = width;
+            self.height = height;
+            self.scaler = Some(
+                scaling::Context::get(
+                    self.decoder.format(),
+                    width,
+                    height,
+                    Pixel::RGBA,
+                    width,
+                    height,
+                    scaling::Flags::BILINEAR,
+                )
+                .unwrap(),
+            );
+            self.frame_size = (width * height * 4) as usize;
+
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn conver_to_rgba(&mut self, decoded: &frame::Video) -> frame::Video {
+        let mut rgba_frame = frame::Video::empty();
+        self.scaler
+            .as_mut()
+            .unwrap()
+            .run(decoded, &mut rgba_frame)
+            .unwrap();
+        rgba_frame
+    }
+}
+
+pub enum VideoMsg {
+    Data {
+        data: Vec<u8>,
+        width: u32,
+        height: u32,
+    },
+    Close,
 }

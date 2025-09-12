@@ -10,7 +10,9 @@ use flume::{Receiver, Sender};
 use tokio::sync::{broadcast, oneshot};
 
 use crate::{
-    config::LocalConfig, mask::mask_command::MaskCommand, scrcpy::{control_msg::ScrcpyControlMsg, video_msg::VideoMsg},
+    config::LocalConfig,
+    mask::mask_command::MaskCommand,
+    scrcpy::{control_msg::ScrcpyControlMsg, media::VideoMsg},
 };
 
 pub fn relate_to_root_path<P>(segments: P) -> PathBuf
@@ -53,7 +55,7 @@ fn get_base_root() -> PathBuf {
 pub struct ChannelSenderCS(pub broadcast::Sender<ScrcpyControlMsg>);
 
 #[derive(Resource)]
-pub struct ChannelReceiverV(pub Receiver<VideoMsg>);
+pub struct ChannelReceiverV(pub crossbeam_channel::Receiver<VideoMsg>);
 
 #[derive(Resource)]
 pub struct ChannelReceiverA(pub Receiver<Vec<u8>>);

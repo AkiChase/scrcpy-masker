@@ -92,6 +92,8 @@ async fn control_device(
     let video = payload.video;
     let audio = payload.audio;
 
+    let local_config = LocalConfig::get();
+
     let device_list = ControlledDevice::get_device_list().await;
     // check if device is controlled
     if device_list
@@ -117,12 +119,27 @@ async fn control_device(
     log::info!("[WebServe] {}", t!("web.device.pushScrcpyServerSuccess"));
 
     let remote = format!("localabstract:scrcpy_{}", scid);
-    let local = format!("tcp:{}", LocalConfig::get().controller_port);
+    let local = format!("tcp:{}", local_config.controller_port);
     Device::reverse(&device_id, &remote, &local).map_err(|e| WebServerError(500, e))?;
     log::info!(
         "[WebServe] {}",
         t!("web.device.reverseSuccess", remote => remote, local => local)
     );
+
+    let mut args = [
+        "CLASSPATH=/data/local/tmp/scrcpy-server.jar",
+        "app_process",
+        "/",
+        "com.genymobile.scrcpy.Server",
+    ]
+    .iter_mut()
+    .map(|arg| arg.to_string())
+    .collect::<Vec<String>>();
+
+    args.push(version.to_string());
+    args.push(format!("scid={}", scid));
+    args.push(format!("video={}", video));
+    args.push(format!("audio={}", audio));
 
     // create device
     let main = device_list.len() == 0;
@@ -136,6 +153,16 @@ async fn control_device(
             if meta_flag {
                 meta_flag = false;
             }
+
+            // video shell args
+            args.push(format!("video_codec={}", local_config.video_codec));
+            args.push(format!("video_bit_rate={}", local_config.video_bit_rate));
+            if local_config.video_max_size > 0 {
+                args.push(format!("video_max_size={}", local_config.video_max_size));
+            }
+            if local_config.video_max_fps > 0 {
+                args.push(format!("video_max_fps={}", local_config.video_max_fps));
+            }
         }
         if audio {
             socket_id.push("main_audio".to_string());
@@ -143,6 +170,9 @@ async fn control_device(
             if meta_flag {
                 meta_flag = false;
             }
+            // audio shell args
+            args.push(format!("audio_codec={}", local_config.audio_codec));
+            args.push(format!("audio_bit_rate={}", local_config.audio_bit_rate));
         }
         socket_id.push("main_control".to_string());
         commands.push(ControllerCommand::ConnectMainControl(
@@ -163,19 +193,8 @@ async fn control_device(
     // run scrcpy app
     sleep(Duration::from_millis(500)).await;
     log::info!("[WebServe] {}", t!("web.device.startingScrcpyApp"));
-    let h = Device::shell_process(
-        &device_id,
-        [
-            "CLASSPATH=/data/local/tmp/scrcpy-server.jar",
-            "app_process",
-            "/",
-            "com.genymobile.scrcpy.Server",
-            version,
-            &format!("scid={}", scid),
-            &format!("video={}", video),
-            &format!("audio={}", audio),
-        ],
-    );
+
+    let h = Device::shell_process(&device_id, args);
 
     let scid_copy = scid.clone();
     tokio::spawn(async move {

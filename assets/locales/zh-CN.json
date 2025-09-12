@@ -96,7 +96,21 @@
       "invalidMappingKey": "无效的配置项",
       "successfullySet": "成功设置",
       "setClipboardSyncSuccess": "成功设置剪切板同步开关",
-      "clipboardSyncTypeError": "剪切板同步开关必须为 bool"
+      "clipboardSyncTypeError": "剪切板同步开关必须为 bool",
+      "invalidVideoCodec": "不支持的视频编码",
+      "videoCodecTypeError": "视频编码必须为 string",
+      "setVideoCodecSuccess": "成功设置视频编码（下次连接时生效）",
+      "videoBitRateTypeError": "视频码率必须为 u32",
+      "setVideoBitRateSuccess": "成功设置视频码率（下次连接时生效）",
+      "setVideoMaxSizeSuccess": "成功设置视频最大尺寸（下次连接时生效）",
+      "videoMaxSizeTypeError": "视频最大尺寸必须为 u32",
+      "setVideoMaxFpsSuccess": "成功设置视频最大尺寸（下次连接时生效）",
+      "videoMaxFpsTypeError": "视频最大FPS必须为 u32",
+      "invalidAudioCodec": "不支持的音频编码",
+      "setAudioCodecSuccess": "成功设置音频编码（下次连接时生效）",
+      "audioCodecTypeError": "音频编码必须为 string",
+      "setAudioBitRateSuccess": "成功设置音频码率（下次连接时生效）",
+      "audioBitRateTypeError": "音频编码必须为 string"
     }
   },
   "utils": {
