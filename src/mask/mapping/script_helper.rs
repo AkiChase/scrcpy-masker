@@ -947,7 +947,7 @@ fn tap_func(
                     "The pointer_id must be non-negative".to_string(),
                 ));
             } else {
-                p.cast_unsigned()
+                *p as u64
             };
 
             ControlMsgHelper::send_touch(
@@ -997,7 +997,7 @@ fn swipe_func(
     }
 
     let (pointer_id, interval) = match (&args[0], &args[1]) {
-        (Value::Int(p), Value::Int(i)) if *p >= 0 && *i >= 0 => (p.cast_unsigned(), *i as u64),
+        (Value::Int(p), Value::Int(i)) if *p >= 0 && *i >= 0 => (*p as u64, *i as u64),
         _ => {
             return Err(ScriptError::from_span(
                 span.clone(),

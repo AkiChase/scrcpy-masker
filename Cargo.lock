@@ -1541,7 +1541,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "rustc-hash 1.1.0",
+ "rustc-hash",
  "shlex",
  "syn",
  "which 4.4.2",
@@ -1562,25 +1562,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "rustc-hash 1.1.0",
- "shlex",
- "syn",
-]
-
-[[package]]
-name = "bindgen"
-version = "0.72.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
-dependencies = [
- "bitflags 2.9.1",
- "cexpr",
- "clang-sys",
- "itertools 0.13.0",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash 2.1.1",
+ "rustc-hash",
  "shlex",
  "syn",
 ]
@@ -2010,7 +1992,7 @@ dependencies = [
  "fontdb",
  "log",
  "rangemap",
- "rustc-hash 1.1.0",
+ "rustc-hash",
  "rustybuzz",
  "self_cell",
  "smol_str",
@@ -2397,9 +2379,9 @@ dependencies = [
 
 [[package]]
 name = "ffmpeg-next"
-version = "8.0.0"
+version = "7.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d658424d233cbd993a972dd73a66ca733acd12a494c68995c9ac32ae1fe65b40"
+checksum = "da02698288e0275e442a47fc12ca26d50daf0d48b15398ba5906f20ac2e2a9f9"
 dependencies = [
  "bitflags 2.9.1",
  "ffmpeg-sys-next",
@@ -2408,11 +2390,11 @@ dependencies = [
 
 [[package]]
 name = "ffmpeg-sys-next"
-version = "8.0.1"
+version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bca20aa4ee774fe384c2490096c122b0b23cf524a9910add0686691003d797b"
+checksum = "f9e9c75ebd4463de9d8998fb134ba26347fe5faee62fabf0a4b4d41bd500b4ad"
 dependencies = [
- "bindgen 0.72.1",
+ "bindgen 0.70.1",
  "cc",
  "libc",
  "num_cpus",
@@ -3486,7 +3468,7 @@ dependencies = [
  "indexmap",
  "log",
  "pp-rs",
- "rustc-hash 1.1.0",
+ "rustc-hash",
  "spirv",
  "strum 0.26.3",
  "termcolor",
@@ -3508,7 +3490,7 @@ dependencies = [
  "once_cell",
  "regex",
  "regex-syntax 0.8.5",
- "rustc-hash 1.1.0",
+ "rustc-hash",
  "thiserror 1.0.69",
  "tracing",
  "unicode-ident",
@@ -4710,12 +4692,6 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
-
-[[package]]
-name = "rustc-hash"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 
 [[package]]
 name = "rustix"
@@ -6095,7 +6071,7 @@ dependencies = [
  "parking_lot",
  "profiling",
  "raw-window-handle",
- "rustc-hash 1.1.0",
+ "rustc-hash",
  "smallvec",
  "thiserror 2.0.12",
  "wgpu-hal",
@@ -6138,7 +6114,7 @@ dependencies = [
  "range-alloc",
  "raw-window-handle",
  "renderdoc-sys",
- "rustc-hash 1.1.0",
+ "rustc-hash",
  "smallvec",
  "thiserror 2.0.12",
  "wasm-bindgen",

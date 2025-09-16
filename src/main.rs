@@ -3,7 +3,7 @@ use std::{env, fs::File, net::SocketAddrV4, process::exit, sync::OnceLock};
 use bevy::{
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
     prelude::*,
-    window::{CompositeAlphaMode, PresentMode, WindowLevel},
+    window::{PresentMode, WindowLevel},
 };
 use scrcpy_masker::{
     config::LocalConfig,
@@ -89,9 +89,9 @@ fn main() {
                             WindowLevel::Normal
                         },
                         #[cfg(target_os = "macos")]
-                        composite_alpha_mode: CompositeAlphaMode::PostMultiplied,
+                        composite_alpha_mode: bevy::window::CompositeAlphaMode::PostMultiplied,
                         #[cfg(target_os = "linux")]
-                        composite_alpha_mode: CompositeAlphaMode::PreMultiplied,
+                        composite_alpha_mode: bevy::window::CompositeAlphaMode::PreMultiplied,
                         ..default()
                     }),
                     ..default()
@@ -113,7 +113,8 @@ fn start_servers(mut commands: Commands) {
     let (cs_tx, _) = broadcast::channel::<ScrcpyControlMsg>(1000);
     let (ws_tx, _) = broadcast::channel::<WebSocketNotification>(1000);
     let (v_tx, v_rx) = crossbeam_channel::unbounded::<VideoMsg>();
-    let (m_tx, m_rx) = crossbeam_channel::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();
+    let (m_tx, m_rx) =
+        crossbeam_channel::unbounded::<(MaskCommand, oneshot::Sender<Result<String, String>>)>();
     let (d_tx, d_rx) = mpsc::unbounded_channel::<ControllerCommand>();
 
     commands.insert_resource(ChannelSenderCS(cs_tx.clone()));
