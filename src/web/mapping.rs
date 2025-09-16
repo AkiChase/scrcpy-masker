@@ -6,7 +6,6 @@ use axum::{
     routing::{get, post},
 };
 use bevy::math::Vec2;
-use flume::Sender;
 use rust_i18n::t;
 use serde::Deserialize;
 use serde_json::json;
@@ -24,10 +23,12 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct AppStatMapping {
-    m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 }
 
-pub fn routers(m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>) -> Router {
+pub fn routers(
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+) -> Router {
     Router::new()
         .route("/change_active_mapping", post(change_active_mapping))
         .route("/create_mapping", post(create_mapping))
@@ -57,13 +58,12 @@ async fn change_active_mapping(
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
     state
         .m_tx
-        .send_async((
+        .send((
             MaskCommand::LoadAndActivateMappingConfig {
                 file_name: payload.file.clone(),
             },
             oneshot_tx,
         ))
-        .await
         .unwrap();
     match oneshot_rx.await.unwrap() {
         Ok(_) => {
@@ -99,17 +99,16 @@ struct PostDataNewMapping {
 }
 
 async fn validate_config(
-    m_tx: &Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    m_tx: &crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
     config: &MappingConfig,
 ) -> Result<(), String> {
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-    m_tx.send_async((
+    m_tx.send((
         MaskCommand::ValidateMappingConfig {
             config: config.clone(),
         },
         oneshot_tx,
     ))
-    .await
     .unwrap();
     match oneshot_rx.await.unwrap() {
         Ok(_) => Ok(()),
@@ -195,8 +194,7 @@ async fn delete_mapping(
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
     state
         .m_tx
-        .send_async((MaskCommand::GetActiveMapping, oneshot_tx))
-        .await
+        .send((MaskCommand::GetActiveMapping, oneshot_tx))
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
     if file == payload.file {
@@ -293,8 +291,7 @@ async fn rename_mapping(
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
     state
         .m_tx
-        .send_async((MaskCommand::GetActiveMapping, oneshot_tx))
-        .await
+        .send((MaskCommand::GetActiveMapping, oneshot_tx))
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
     if file == payload.file {
@@ -302,13 +299,12 @@ async fn rename_mapping(
         let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
         state
             .m_tx
-            .send_async((
+            .send((
                 MaskCommand::LoadAndActivateMappingConfig {
                     file_name: payload.new_file.clone(),
                 },
                 oneshot_tx,
             ))
-            .await
             .unwrap();
         match oneshot_rx.await.unwrap() {
             Ok(_) => {
@@ -443,8 +439,7 @@ async fn update_mapping(
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
     state
         .m_tx
-        .send_async((MaskCommand::GetActiveMapping, oneshot_tx))
-        .await
+        .send((MaskCommand::GetActiveMapping, oneshot_tx))
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
     if file == payload.file {
@@ -452,13 +447,12 @@ async fn update_mapping(
         let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
         state
             .m_tx
-            .send_async((
+            .send((
                 MaskCommand::LoadAndActivateMappingConfig {
                     file_name: payload.file.clone(),
                 },
                 oneshot_tx,
             ))
-            .await
             .unwrap();
         match oneshot_rx.await.unwrap() {
             Ok(_) => {
@@ -517,8 +511,7 @@ async fn get_mapping_list(
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
     state
         .m_tx
-        .send_async((MaskCommand::GetActiveMapping, oneshot_tx))
-        .await
+        .send((MaskCommand::GetActiveMapping, oneshot_tx))
         .unwrap();
     let file = oneshot_rx.await.unwrap().unwrap();
 

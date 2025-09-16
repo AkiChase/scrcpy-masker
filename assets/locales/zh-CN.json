@@ -105,13 +105,7 @@
       "setVideoMaxSizeSuccess": "成功设置视频最大尺寸（下次连接时生效）",
       "videoMaxSizeTypeError": "视频最大尺寸必须为 u32",
       "setVideoMaxFpsSuccess": "成功设置视频最大尺寸（下次连接时生效）",
-      "videoMaxFpsTypeError": "视频最大FPS必须为 u32",
-      "invalidAudioCodec": "不支持的音频编码",
-      "setAudioCodecSuccess": "成功设置音频编码（下次连接时生效）",
-      "audioCodecTypeError": "音频编码必须为 string",
-      "setAudioBitRateSuccess": "成功设置音频码率（下次连接时生效）",
-      "audioBitRateTypeError": "音频编码必须为 string",
-      "alwaysOnTopMustBeBool": "窗口置顶必须为 bool"
+      "videoMaxFpsTypeError": "视频最大FPS必须为 u32"
     }
   },
   "utils": {
@@ -128,7 +122,6 @@
     "errorAcceptingConnection": "接受连接时出错",
     "creatingMainControl": "正在创建 scrcpy 主控制连接",
     "creatingMainVideo": "正在创建 scrcpy 主视频连接",
-    "creatingMainAudio": "正在创建 scrcpy 主音频连接",
     "creatingSubControl": "正在创建 scrcpy 子控制连接",
     "mainConnectionNotExist": "Scrcpy 主连接不存在",
     "shutdownMain": "正在关闭 scrcpy 主连接",
@@ -156,11 +149,7 @@
     "videoConnectionClosed": "Scrcpy 视频连接已关闭",
     "unknownControlMsg": "收到来自主设备的未知控制消息",
     "videoCodec": "视频编码",
-    "handleAudioConnection": "正在处理 scrcpy 音频连接...",
-    "audioReadShutdownUnexpectedly": "Scrcpy 音频连接意外关闭",
-    "audioConnectionReaderCancelled": "Scrcpy 音频连接读取端被手动关闭",
-    "audioCodec": "音频编码",
-    "invalidAudioCodec": "不支持的音频编码"
+    "noDefaultOutputDevice": "没有可用的输出设备"
   },
   "controller": {
     "csReceiverLagged": "CS 接收器延迟，跳过 %{skipped} 条消息"

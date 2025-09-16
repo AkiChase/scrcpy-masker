@@ -4,10 +4,7 @@ use std::{
     sync::RwLock,
 };
 
-use crate::{
-    scrcpy::media::{AudioCodec, VideoCodec},
-    utils::relate_to_root_path,
-};
+use crate::{scrcpy::media::VideoCodec, utils::relate_to_root_path};
 use once_cell::sync::Lazy;
 use paste::paste;
 use rust_i18n::t;
@@ -44,9 +41,6 @@ pub struct LocalConfig {
     pub video_bit_rate: u32,
     pub video_max_size: u32,
     pub video_max_fps: u32,
-    // audio config
-    pub audio_codec: AudioCodec,
-    pub audio_bit_rate: u32,
 }
 
 impl Default for LocalConfig {
@@ -68,8 +62,6 @@ impl Default for LocalConfig {
             video_bit_rate: 8_000000, // 8M
             video_max_size: 0,        // default no limit
             video_max_fps: 0,         // default no limit
-            audio_codec: AudioCodec::OPUS,
-            audio_bit_rate: 128_000, // 128K
         }
     }
 }
@@ -145,7 +137,5 @@ impl LocalConfig {
         (video_bit_rate, u32),
         (video_max_size, u32),
         (video_max_fps, u32),
-        (audio_codec, AudioCodec),
-        (audio_bit_rate, u32)
     );
 }

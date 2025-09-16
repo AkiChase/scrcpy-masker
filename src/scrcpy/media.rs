@@ -1,9 +1,7 @@
 use std::{fmt, io::Write};
 
 use bevy::ecs::error::Result;
-use ffmpeg_next::{
-    ChannelLayout, Packet, codec, decoder, format::Pixel, frame, packet, software::scaling,
-};
+use ffmpeg_next::{Packet, codec, decoder, format::Pixel, frame, packet, software::scaling};
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncReadExt, net::TcpStream};
@@ -49,12 +47,6 @@ pub async fn read_media_packet(socket: &mut TcpStream) -> Result<Packet, String>
 pub const SC_CODEC_ID_H264: u32 = 0x68_32_36_34;
 pub const SC_CODEC_ID_H265: u32 = 0x68_32_36_35;
 pub const SC_CODEC_ID_AV1: u32 = 0x00_61_76_31;
-
-// Audio Codec Constants
-pub const SC_CODEC_ID_OPUS: u32 = 0x6f_70_75_73;
-pub const SC_CODEC_ID_AAC: u32 = 0x00_61_61_63;
-pub const SC_CODEC_ID_FLAC: u32 = 0x66_6c_61_63;
-pub const SC_CODEC_ID_RAW: u32 = 0x00_72_61_77;
 
 pub struct PacketMerger {
     config: Option<Vec<u8>>,
@@ -122,61 +114,6 @@ impl fmt::Display for VideoCodec {
             VideoCodec::AV1 => "av1",
         };
         write!(f, "{}", s)
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum AudioCodec {
-    OPUS,
-    AAC,
-    FLAC,
-    RAW,
-}
-
-impl From<AudioCodec> for codec::Id {
-    fn from(codec: AudioCodec) -> Self {
-        match codec {
-            AudioCodec::OPUS => Self::OPUS,
-            AudioCodec::AAC => Self::AAC,
-            AudioCodec::FLAC => Self::FLAC,
-            AudioCodec::RAW => Self::PCM_F16LE,
-        }
-    }
-}
-
-impl fmt::Display for AudioCodec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            AudioCodec::OPUS => "opus",
-            AudioCodec::AAC => "aac",
-            AudioCodec::FLAC => "flac",
-            AudioCodec::RAW => "raw",
-        };
-        write!(f, "{}", s)
-    }
-}
-
-pub struct AudioDecoder {
-    pub decoder: decoder::Audio,
-}
-
-impl AudioDecoder {
-    pub fn new(codec_id: AudioCodec) -> Self {
-        let codec = decoder::find(codec_id.into()).unwrap();
-        let mut codec_context = codec::Context::new_with_codec(codec);
-        let flags = unsafe {
-            let raw_flags = (*codec_context.as_mut_ptr()).flags;
-            let flags = codec::Flags::from_bits(raw_flags as std::ffi::c_uint)
-                .unwrap_or(codec::Flags::empty());
-            flags | codec::Flags::LOW_DELAY
-        };
-        codec_context.set_flags(flags);
-        let mut audio_decoder = codec_context.decoder().audio().unwrap();
-        audio_decoder.set_channel_layout(ChannelLayout::STEREO);
-
-        Self {
-            decoder: audio_decoder,
-        }
     }
 }
 

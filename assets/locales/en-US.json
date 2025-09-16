@@ -106,11 +106,6 @@
       "videoMaxSizeTypeError": "The video_max_size must be u32",
       "setVideoMaxFpsSuccess": "Successfully set video_max_fps (takes effect on next connection)",
       "videoMaxFpsTypeError": "The video_max_fps must be u32",
-      "invalidAudioCodec": "Unsupported audio codec",
-      "setAudioCodecSuccess": "Successfully set audio_codec (takes effect on next connection)",
-      "audioCodecTypeError": "The audio_codec must be string",
-      "setAudioBitRateSuccess": "Successfully set audio_bit_rate (takes effect on next connection)",
-      "audioBitRateTypeError": "The audio_bit_rate must be string",
       "alwaysOnTopMustBeBool": "The always_on_top must be bool"
     }
   },
@@ -128,7 +123,6 @@
     "errorAcceptingConnection": "Error accepting connection",
     "creatingMainControl": "Creating scrcpy main control connection",
     "creatingMainVideo": "Creating scrcpy main video connection",
-    "creatingMainAudio": "Creating scrcpy main audio connection",
     "creatingSubControl": "Creating scrcpy sub control connection",
     "mainConnectionNotExist": "Scrcpy main connection not exists",
     "shutdownMain": "Shutting down scrcpy main connection",
@@ -156,11 +150,7 @@
     "videoConnectionClosed": "Scrcpy video connection closed",
     "unknownControlMsg": "Unknown control message from main device",
     "videoCodec": "Video Codec",
-    "handleAudioConnection": "Handling scrcpy audio connection...",
-    "audioReadShutdownUnexpectedly": "Scrcpy audio connection shutdown unexpectedly",
-    "audioConnectionReaderCancelled": "Scrcpy audio connection cancelled manually",
-    "audioCodec": "Audio Codec",
-    "invalidAudioCodec": "Unsupported audio codec"
+    "noDefaultOutputDevice": "no output device available"
   },
   "controller": {
     "csReceiverLagged": "CS receiver lagged, skipped %{skipped} messages"

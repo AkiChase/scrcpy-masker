@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use ffmpeg_next::frame;
-use flume::Sender;
 use rust_i18n::t;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -23,9 +22,8 @@ use crate::{
     scrcpy::{
         control_msg::{ScrcpyControlMsg, ScrcpyDeviceMsg},
         media::{
-            AudioCodec, AudioDecoder, SC_CODEC_ID_AAC, SC_CODEC_ID_AV1, SC_CODEC_ID_FLAC,
-            SC_CODEC_ID_H264, SC_CODEC_ID_H265, SC_CODEC_ID_OPUS, SC_CODEC_ID_RAW, VideoCodec,
-            VideoDecoder, VideoMsg, read_media_packet,
+            SC_CODEC_ID_AV1, SC_CODEC_ID_H264, SC_CODEC_ID_H265, VideoCodec, VideoDecoder,
+            VideoMsg, read_media_packet,
         },
     },
     utils::share::ControlledDevice,
@@ -204,7 +202,7 @@ impl ScrcpyConnection {
         mut self,
         cs_rx: broadcast::Receiver<ScrcpyControlMsg>,
         cr_tx: UnboundedSender<ScrcpyDeviceMsg>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         scid: String,
         main: bool,
         token: CancellationToken,
@@ -225,11 +223,10 @@ impl ScrcpyConnection {
         let (watch_tx, watch_rx) = watch::channel::<(u32, u32)>((0, 0)); // share device size with writer
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-            m_tx.send_async((
+            m_tx.send((
                 MaskCommand::DeviceConnectionChange { connect: true },
                 oneshot_tx,
             ))
-            .await
             .unwrap();
             oneshot_rx.await.unwrap().unwrap();
         }
@@ -242,11 +239,10 @@ impl ScrcpyConnection {
         log::info!("[Controller] {}", t!("scrcpy.controlConnectionClosed"));
         if main {
             let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-            m_tx.send_async((
+            m_tx.send((
                 MaskCommand::DeviceConnectionChange { connect: false },
                 oneshot_tx,
             ))
-            .await
             .unwrap();
             oneshot_rx.await.unwrap().unwrap();
         }
@@ -362,103 +358,6 @@ impl ScrcpyConnection {
         }
         v_tx.send(VideoMsg::Close).unwrap();
         log::info!("[Controller] {}", t!("scrcpy.videoConnectionClosed"));
-        self.socket.shutdown().await.unwrap();
-    }
-
-    async fn audio_handler(&mut self) {
-        // read metadata
-        let mut buf: [u8; 4] = [0; 4];
-        let mut audio_decoder = match self.socket.read_exact(&mut buf).await {
-            Err(_) => {
-                log::error!("[Controller] {}", t!("scrcpy.failedToReadVideoMetadata"));
-                return;
-            }
-            Ok(_) => {
-                let raw_codec_id = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
-
-                let codec_id = match raw_codec_id {
-                    SC_CODEC_ID_OPUS => {
-                        log::info!("[Controller] {}: OPUS", t!("scrcpy.audioCodec"));
-                        AudioCodec::OPUS
-                    }
-                    SC_CODEC_ID_AAC => {
-                        log::info!("[Controller] {}: AAC", t!("scrcpy.audioCodec"));
-                        AudioCodec::AAC
-                    }
-                    SC_CODEC_ID_FLAC => {
-                        log::info!("[Controller] {}: FLAC", t!("scrcpy.audioCodec"));
-                        AudioCodec::FLAC
-                    }
-                    SC_CODEC_ID_RAW => {
-                        log::info!("[Controller] {}: RAW", t!("scrcpy.audioCodec"));
-                        AudioCodec::RAW
-                    }
-                    _ => {
-                        log::error!(
-                            "[Controller] {}: 0x{:x}",
-                            t!("scrcpy.invalidAudioCodec"),
-                            raw_codec_id
-                        );
-                        return;
-                    }
-                };
-                let audio_decoder = AudioDecoder::new(codec_id);
-                audio_decoder
-            }
-        };
-
-        // read video packets
-        loop {
-            match read_media_packet(&mut self.socket).await {
-                Ok(mut packet) => {
-                    let _decoded = {
-                        let mut decoded = frame::Audio::empty();
-                        audio_decoder.decoder.send_packet(&mut packet).unwrap();
-                        audio_decoder.decoder.receive_frame(&mut decoded).unwrap();
-                        decoded
-                    };
-
-                    // let channels = decoded.channels();
-                    // let nb_samples = decoded.samples();
-                    // let sample_format = decoded.format();
-
-                    unreachable!("Audio player not implemented");
-                }
-                Err(e) => {
-                    log::error!("[Controller] {}", e);
-                    break;
-                }
-            }
-        }
-    }
-
-    pub async fn handle_audio(
-        &mut self,
-        token: CancellationToken,
-        _a_tx: Sender<Vec<u8>>,
-        meta_flag: bool,
-        scid: &str,
-    ) {
-        log::info!("[Controller] {}", t!("scrcpy.handleAudioConnection"));
-
-        if meta_flag {
-            if let Err(e) = self.read_device_metadata(scid.to_string()).await {
-                log::error!("[Controller] {}", e);
-                token.cancel();
-                return;
-            }
-        }
-
-        let finnal_token = token.clone();
-        tokio::select! {
-            _ = token.cancelled()=>{
-                log::info!("[Controller] {}", t!("scrcpy.audioConnectionReaderCancelled"));
-            }
-            _ = self.audio_handler()=>{
-                log::error!("[Controller] {}", t!("scrcpy.audioReadShutdownUnexpectedly"));
-                finnal_token.cancel();
-            }
-        }
         self.socket.shutdown().await.unwrap();
     }
 }

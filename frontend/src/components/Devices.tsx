@@ -157,7 +157,6 @@ function OtherDevices({
   const messageApi = useMessageContext();
 
   const [isVideo, setIsVideo] = useState(false);
-  const [isAudio, setIsAudio] = useState(false);
 
   async function controlDevice(device: AdbDevice) {
     dispatch(setIsLoading(true));
@@ -165,7 +164,6 @@ function OtherDevices({
       const res = await requestPost("/api/device/control_device", {
         device_id: device.id,
         video: isVideo,
-        audio: isAudio,
       });
       messageApi?.success(res.message);
       setTimeout(refresh, 1000);
@@ -188,19 +186,12 @@ function OtherDevices({
     },
     {
       title: (
-        <Flex justify="center" align="center" gap={8}>
+        <Flex justify="center" align="center">
           <Checkbox
             checked={isVideo}
             onChange={(e) => setIsVideo(e.target.checked)}
           >
             {t("devices.otherDevices.video")}
-          </Checkbox>
-          <Checkbox
-            disabled
-            checked={isAudio}
-            onChange={(e) => setIsAudio(e.target.checked)}
-          >
-            {t("devices.otherDevices.audio")}
           </Checkbox>
         </Flex>
       ),

@@ -36,8 +36,7 @@
       "title": "其他设备",
       "status": "状态",
       "actionControl": "控制设备",
-      "video": "视频",
-      "audio": "音频"
+      "video": "视频"
     },
     "common": {
       "refresh": "刷新设备"
@@ -256,7 +255,6 @@
       "basic": "基本",
       "mask": "蒙版",
       "video": "视频",
-      "audio": "音频",
       "advance": "高级"
     },
     "language": "语言",
@@ -270,9 +268,7 @@
     "mappingLabelOpacity": "映射标签不透明度",
     "clipboardSync": "剪切板同步",
     "videoCodec": "视频编码",
-    "audioCodec": "音频编码",
     "videoBitRate": "视频码率",
-    "audioBitRate": "音频码率",
     "videoMaxSize": "视频最大尺寸",
     "zeroUnlimitedTip": "设为 0 表示无限制",
     "videoMaxFps": "视频最大FPS",

@@ -3,7 +3,6 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
-use flume::Sender;
 use rust_i18n::t;
 use serde::Deserialize;
 use tokio::sync::oneshot;
@@ -11,20 +10,19 @@ use tokio::sync::oneshot;
 use crate::{
     config::LocalConfig,
     mask::mask_command::MaskCommand,
-    scrcpy::{
-        adb::Adb,
-        media::{AudioCodec, VideoCodec},
-    },
+    scrcpy::{adb::Adb, media::VideoCodec},
     utils::{mask_win_move_helper, share::ControlledDevice},
     web::{JsonResponse, WebServerError},
 };
 
 #[derive(Debug, Clone)]
 pub struct AppStatConfig {
-    m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 }
 
-pub fn routers(m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>) -> Router {
+pub fn routers(
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+) -> Router {
     Router::new()
         .route("/get_config", get(get_config))
         .route("/update_config", post(update_config))
@@ -132,8 +130,7 @@ async fn update_config(
                 let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
                 state
                     .m_tx
-                    .send_async((MaskCommand::WinSwitchLevel { top: value }, oneshot_tx))
-                    .await
+                    .send((MaskCommand::WinSwitchLevel { top: value }, oneshot_tx))
                     .unwrap();
                 let msg = oneshot_rx.await.unwrap().unwrap();
                 return Ok(JsonResponse::success(msg, None));
@@ -329,43 +326,6 @@ async fn update_config(
             }
             return Err(WebServerError::bad_request(t!(
                 "web.config.videoMaxFpsTypeError"
-            )));
-        }
-        "audio_codec" => {
-            if let Some(value) = payload.value.as_str() {
-                let codec = match value {
-                    "OPUS" => AudioCodec::OPUS,
-                    "AAC" => AudioCodec::AAC,
-                    "FLAC" => AudioCodec::FLAC,
-                    "RAW" => AudioCodec::RAW,
-                    _ => {
-                        return Err(WebServerError::bad_request(format!(
-                            "{}: {}",
-                            t!("web.config.invalidAudioCodec"),
-                            value
-                        )));
-                    }
-                };
-                LocalConfig::set_audio_codec(codec);
-                return Ok(JsonResponse::success(
-                    format!("{}: {}", t!("web.config.setAudioCodecSuccess"), value),
-                    None,
-                ));
-            }
-            return Err(WebServerError::bad_request(t!(
-                "web.config.audioCodecTypeError"
-            )));
-        }
-        "audio_bit_rate" => {
-            if let Some(value) = payload.value.as_u64() {
-                LocalConfig::set_audio_bit_rate(value as u32);
-                return Ok(JsonResponse::success(
-                    format!("{}: {}", t!("web.config.setAudioBitRateSuccess"), value),
-                    None,
-                ));
-            }
-            return Err(WebServerError::bad_request(t!(
-                "web.config.audioBitRateTypeError"
             )));
         }
         _ => Err(WebServerError::bad_request(format!(

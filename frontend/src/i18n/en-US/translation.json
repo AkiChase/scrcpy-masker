@@ -36,7 +36,6 @@
       "title": "Other Devices",
       "status": "Status",
       "actionControl": "Control device",
-      "audio": "Audio",
       "video": "Video"
     },
     "common": {
@@ -256,7 +255,6 @@
       "basic": "Basic",
       "mask": "Mask",
       "video": "Video",
-      "audio": "Audio",
       "advance": "Advance"
     },
     "language": "Language",
@@ -270,9 +268,7 @@
     "mappingLabelOpacity": "Mapping label opacity",
     "clipboardSync": "Clipboard sync",
     "videoCodec": "Video codec",
-    "audioCodec": "Audio codec",
     "videoBitRate": "Video bit rate",
-    "audioBitRate": "Audio bit rate",
     "videoMaxSize": "Video max size",
     "zeroUnlimitedTip": "Set to 0 for unlimited",
     "videoMaxFps": "Video max FPS",

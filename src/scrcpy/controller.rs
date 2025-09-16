@@ -2,7 +2,6 @@ use std::{collections::HashMap, net::SocketAddrV4, thread};
 
 use bevy::log;
 use copypasta::{ClipboardContext, ClipboardProvider};
-use flume::Sender;
 use rust_i18n::t;
 use tokio::{
     net::TcpListener,
@@ -30,7 +29,6 @@ use crate::{
 pub enum ControllerCommand {
     ConnectMainControl(String, bool),
     ConnectMainVideo(String, bool),
-    ConnectMainAudio(String, bool),
     ConnectSubControl(String),
     ShutdownMain(String),
     ShutdownSub(String),
@@ -43,9 +41,8 @@ impl Controller {
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         v_tx: crossbeam_channel::Sender<VideoMsg>,
-        a_tx: Sender<Vec<u8>>,
         d_rx: UnboundedReceiver<ControllerCommand>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         thread::spawn(move || {
@@ -54,14 +51,14 @@ impl Controller {
                 .build()
                 .unwrap()
                 .block_on(async move {
-                    Controller::run_server(addr, cs_tx, v_tx, a_tx, d_rx, m_tx, ws_tx).await;
+                    Controller::run_server(addr, cs_tx, v_tx, d_rx, m_tx, ws_tx).await;
                 });
         });
     }
 
     async fn cr_msg_handler(
         mut cr_rx: UnboundedReceiver<ScrcpyDeviceMsg>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         loop {
@@ -117,9 +114,8 @@ impl Controller {
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         v_tx: crossbeam_channel::Sender<VideoMsg>,
-        a_tx: Sender<Vec<u8>>,
         mut d_rx: UnboundedReceiver<ControllerCommand>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[Controller] {}: {}", t!("scrcpy.startingController"), addr);
@@ -230,37 +226,6 @@ impl Controller {
                             }
                         }
                     }
-                    ControllerCommand::ConnectMainAudio(scid, meta_flag) => {
-                        let socket_id = "main_audio".to_string();
-
-                        if !ControlledDevice::is_scid_controlled(&scid).await {
-                            panic!("{}: {}", t!("scrcpy.deviceNotRecorded"), scid)
-                        }
-
-                        let token = CancellationToken::new();
-                        signal_map.insert(socket_id.clone(), token.clone());
-
-                        log::info!("[Controller] {}: {}", t!("scrcpy.creatingMainAudio"), scid);
-                        let a_tx_copy = a_tx.clone();
-                        match listener.accept().await {
-                            Ok((socket, _)) => {
-                                tokio::spawn(async move {
-                                    ScrcpyConnection::new(socket)
-                                        .handle_audio(token, a_tx_copy, meta_flag, &scid)
-                                        .await;
-                                });
-                            }
-                            Err(e) => {
-                                log::error!(
-                                    "[Controller] {}: {}",
-                                    t!("scrcpy.errorAcceptingConnection"),
-                                    e
-                                );
-                                ControlledDevice::remove_device(&scid).await;
-                                signal_map.remove(&socket_id);
-                            }
-                        }
-                    }
                     ControllerCommand::ConnectSubControl(scid) => {
                         let socket_id = format!("sub_control_{}", scid);
 
@@ -317,7 +282,7 @@ impl Controller {
                             log::warn!("[Controller] {}", t!("scrcpy.mainConnectionNotExist"));
                         } else {
                             log::info!("[Controller] {}: {}", t!("scrcpy.shutdownMain"), scid);
-                            for socket_id in ["main_control", "main_video", "main_audio"] {
+                            for socket_id in ["main_control", "main_video"] {
                                 if let Some(token) = signal_map.get(socket_id) {
                                     token.cancel();
                                     signal_map.remove(socket_id);

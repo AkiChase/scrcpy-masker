@@ -7,7 +7,6 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
-use flume::Sender;
 use rand::Rng;
 use rust_i18n::t;
 use serde::Deserialize;
@@ -33,13 +32,13 @@ use crate::{
 pub struct AppStateDevice {
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
-    m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 }
 
 pub fn routers(
     cs_tx: broadcast::Sender<ScrcpyControlMsg>,
     d_tx: UnboundedSender<ControllerCommand>,
-    m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 ) -> Router {
     Router::new()
         .route("/device_list", get(device_list))
@@ -81,7 +80,6 @@ fn gen_scid() -> String {
 struct PostDataControlDevice {
     device_id: String,
     video: bool,
-    audio: bool,
 }
 
 async fn control_device(
@@ -90,7 +88,6 @@ async fn control_device(
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = payload.device_id;
     let video = payload.video;
-    let audio = payload.audio;
 
     let local_config = LocalConfig::get();
 
@@ -139,7 +136,7 @@ async fn control_device(
     args.push(version.to_string());
     args.push(format!("scid={}", scid));
     args.push(format!("video={}", video));
-    args.push(format!("audio={}", audio));
+    args.push("audio=false".to_string());
 
     // create device
     let main = device_list.len() == 0;
@@ -163,16 +160,6 @@ async fn control_device(
             if local_config.video_max_fps > 0 {
                 args.push(format!("video_max_fps={}", local_config.video_max_fps));
             }
-        }
-        if audio {
-            socket_id.push("main_audio".to_string());
-            commands.push(ControllerCommand::ConnectMainAudio(scid.clone(), meta_flag));
-            if meta_flag {
-                meta_flag = false;
-            }
-            // audio shell args
-            args.push(format!("audio_codec={}", local_config.audio_codec));
-            args.push(format!("audio_bit_rate={}", local_config.audio_bit_rate));
         }
         socket_id.push("main_control".to_string());
         commands.push(ControllerCommand::ConnectMainControl(
@@ -386,13 +373,12 @@ async fn eval_script(
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
     state
         .m_tx
-        .send_async((
+        .send((
             MaskCommand::EvalScript {
                 script: payload.script,
             },
             oneshot_tx,
         ))
-        .await
         .unwrap();
     match oneshot_rx.await.unwrap() {
         Ok(_) => Ok(JsonResponse::success(

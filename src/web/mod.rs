@@ -8,7 +8,6 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use flume::Sender;
 use rust_i18n::t;
 use serde::Serialize;
 use serde_json::Value;
@@ -30,7 +29,7 @@ impl Server {
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         thread::spawn(move || {
@@ -48,7 +47,7 @@ impl Server {
         addr: SocketAddrV4,
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) {
         log::info!("[WebServe] {}: {}", t!("web.server.startingOn"), addr);
@@ -80,7 +79,7 @@ impl Server {
     fn app(
         cs_tx: broadcast::Sender<ScrcpyControlMsg>,
         d_tx: UnboundedSender<ControllerCommand>,
-        m_tx: Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+        m_tx: crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
         ws_tx: broadcast::Sender<WebSocketNotification>,
     ) -> Router {
         let router = Router::new()

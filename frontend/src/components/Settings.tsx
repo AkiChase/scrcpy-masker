@@ -24,8 +24,6 @@ import {
   setClipboardSync,
   setLanguage,
   setVideoCodec,
-  setAudioCodec,
-  setAudioBitRate,
   setVideoBitRate,
   setVideoMaxSize,
   setVideoMaxFps,
@@ -53,10 +51,6 @@ const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
   label: v,
 }));
 
-const audioCodecOptions = ["AAC", "OPUS", "FLAC", "RAW"].map((v) => ({
-  value: v,
-  label: v,
-}));
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -260,27 +254,7 @@ export default function Settings() {
             />
           </ItemBox>
         </ItemBoxContainer>
-        <h3 className="title-with-line-sub">{t("settings.title.audio")}</h3>
-        <ItemBoxContainer className="mb-6">
-          <ItemBox label={t("settings.audioCodec")}>
-            <Select
-              className="w-sm"
-              value={localConfig.audioCodec}
-              options={audioCodecOptions}
-              onChange={(v) => dispatch(setAudioCodec(v))}
-            />
-          </ItemBox>
-          <ItemBox label={t("settings.audioBitRate")}>
-            <InputNumber
-              className="w-sm"
-              controls={false}
-              min={1000}
-              suffix="bps"
-              value={localConfig.audioBitRate}
-              onChange={(v) => v !== null && dispatch(setAudioBitRate(v))}
-            />
-          </ItemBox>
-        </ItemBoxContainer>
+
         <h3 className="title-with-line-sub">{t("settings.title.advance")}</h3>
         <ItemBoxContainer className="mb-6">
           <ItemBox label={t("settings.webPort")}>

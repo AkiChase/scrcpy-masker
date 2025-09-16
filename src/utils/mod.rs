@@ -6,7 +6,6 @@ use std::{
 };
 
 use bevy::ecs::resource::Resource;
-use flume::{Receiver, Sender};
 use tokio::sync::{broadcast, oneshot};
 
 use crate::{
@@ -58,15 +57,14 @@ pub struct ChannelSenderCS(pub broadcast::Sender<ScrcpyControlMsg>);
 pub struct ChannelReceiverV(pub crossbeam_channel::Receiver<VideoMsg>);
 
 #[derive(Resource)]
-pub struct ChannelReceiverA(pub Receiver<Vec<u8>>);
-
-#[derive(Resource)]
-pub struct ChannelReceiverM(pub Receiver<(MaskCommand, oneshot::Sender<Result<String, String>>)>);
+pub struct ChannelReceiverM(
+    pub crossbeam_channel::Receiver<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+);
 
 pub async fn mask_win_move_helper(
     device_w: u32,
     device_h: u32,
-    m_tx: &Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
+    m_tx: &crossbeam_channel::Sender<(MaskCommand, oneshot::Sender<Result<String, String>>)>,
 ) -> String {
     let config = LocalConfig::get();
     let (left, top, right, bottom) = {
@@ -87,7 +85,7 @@ pub async fn mask_win_move_helper(
         }
     };
     let (oneshot_tx, oneshot_rx) = oneshot::channel::<Result<String, String>>();
-    m_tx.send_async((
+    m_tx.send((
         MaskCommand::WinMove {
             left,
             top,
@@ -96,7 +94,6 @@ pub async fn mask_win_move_helper(
         },
         oneshot_tx,
     ))
-    .await
     .unwrap();
     oneshot_rx.await.unwrap().unwrap()
 }

@@ -54,9 +54,6 @@ export interface LocalConfigState {
   videoBitRate: number;
   videoMaxSize: number;
   videoMaxFps: number;
-  // audio
-  audioCodec: string;
-  audioBitRate: number;
 }
 
 const initialState: LocalConfigState = {
@@ -75,9 +72,7 @@ const initialState: LocalConfigState = {
   videoCodec: "H264",
   videoBitRate: 8000000,
   videoMaxSize: 0,
-  videoMaxFps: 0,
-  audioCodec: "OPUS",
-  audioBitRate: 128000,
+  videoMaxFps: 0
 };
 
 const localConfigSlice = createSlice({
@@ -157,14 +152,6 @@ const localConfigSlice = createSlice({
       state.videoMaxFps = action.payload;
       updateLocalConfig("video_max_fps", action.payload);
     },
-    setAudioCodec: (state, action: PayloadAction<string>) => {
-      state.audioCodec = action.payload;
-      updateLocalConfig("audio_codec", action.payload);
-    },
-    setAudioBitRate: (state, action: PayloadAction<number>) => {
-      state.audioBitRate = action.payload;
-      updateLocalConfig("audio_bit_rate", action.payload);
-    },
   },
 });
 
@@ -186,8 +173,6 @@ export const {
   setVideoBitRate,
   setVideoMaxSize,
   setVideoMaxFps,
-  setAudioCodec,
-  setAudioBitRate,
 } = localConfigSlice.actions;
 
 export default localConfigSlice.reducer;
