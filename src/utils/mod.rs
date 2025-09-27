@@ -36,11 +36,11 @@ pub fn is_safe_file_name(name: &str) -> bool {
 }
 
 fn get_base_root() -> PathBuf {
-    // #[cfg(debug_assertions)]
-    // {
-    //     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-    // }
-    // #[cfg(not(debug_assertions))]
+    #[cfg(debug_assertions)]
+    {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    }
+    #[cfg(not(debug_assertions))]
     {
         env::current_exe()
             .expect(rust_i18n::t!("utils.cannotGetCurrentExePath").as_ref())

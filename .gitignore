@@ -5,3 +5,4 @@ scrcpy-masker.code-workspace
 /local
 app.log
 assets/web
+ffmpeg-7.1.2
