@@ -222,6 +222,7 @@ function OtherDevices({
   );
 }
 
+// TODO 刷新设备按钮只保留一个，另一个改成发送系统按键和息屏
 export default function Devices() {
   const { t } = useTranslation();
   const messageApi = useMessageContext();
