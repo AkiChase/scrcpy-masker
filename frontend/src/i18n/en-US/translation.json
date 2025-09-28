@@ -40,6 +40,15 @@
     },
     "common": {
       "refresh": "Refresh devices"
+    },
+    "actions": {
+      "setDisplayPowerOn": "Screen power on",
+      "setDisplayPowerOff": "Screen power off",
+      "volumeUp": "Volume up",
+      "volumeDown": "Volume down",
+      "back": "Back",
+      "home": "Home",
+      "appSwitch": "App switch"
     }
   },
   "mappings": {

@@ -68,7 +68,8 @@
       "setDisplayPowerSuccess": "Set display power of all controlled devices successfully",
       "evalScriptSuccess": "Eval script successfully",
       "evalScriptError": "Eval script failed",
-      "startingScrcpyApp": "Start scrcpy app..."
+      "startingScrcpyApp": "Start scrcpy app...",
+      "sendKeySuccess": "Send key to all controlled devices successfully"
     },
     "config": {
       "getLocalConfigSuccess": "Successfully get local config",

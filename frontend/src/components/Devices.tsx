@@ -3,11 +3,13 @@ import {
   Button,
   Checkbox,
   Descriptions,
+  Dropdown,
   Flex,
   Input,
   Popover,
   Space,
   Table,
+  type DropdownProps,
   type TableProps,
 } from "antd";
 import { useTranslation } from "react-i18next";
@@ -18,10 +20,18 @@ import {
   type ControlledDevice,
 } from "../utils";
 import {
+  BorderOutlined,
+  BulbFilled,
+  BulbOutlined,
   DisconnectOutlined,
+  DownOutlined,
+  EnterOutlined,
   InfoCircleOutlined,
   LinkOutlined,
+  SwitcherOutlined,
   SyncOutlined,
+  UnorderedListOutlined,
+  UpOutlined,
 } from "@ant-design/icons";
 import IconButton from "./common/IconButton";
 import { useEffect, useState } from "react";
@@ -38,6 +48,16 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
   const controlledDevices = useAppSelector(
     (state) => state.other.controlledDevices
   );
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+
+  const handleMenuOpenChange: DropdownProps["onOpenChange"] = (
+    nextOpen,
+    info
+  ) => {
+    if (info.source === "trigger" || nextOpen) {
+      setActionMenuOpen(nextOpen);
+    }
+  };
 
   async function decontrolDevice(device_id: string) {
     dispatch(setIsLoading(true));
@@ -84,7 +104,141 @@ function ControlledDevices({ refresh }: { refresh: () => void }) {
       },
     },
     {
-      title: t("devices.controlledDevices.action"),
+      title: (
+        <Flex align="center" gap="middle" justify="center">
+          <div>{t("devices.controlledDevices.action")}</div>
+          <Dropdown
+            trigger={["click"]}
+            menu={{
+              style: {
+                userSelect: "none",
+              },
+              onClick: async ({ key }) => {
+                switch (key) {
+                  case "SetDisplayPowerOff":
+                    try {
+                      await requestPost(
+                        "/api/device/control/set_display_power",
+                        {
+                          mode: false,
+                        }
+                      );
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  case "SetDisplayPowerOn":
+                    try {
+                      await requestPost(
+                        "/api/device/control/set_display_power",
+                        {
+                          mode: true,
+                        }
+                      );
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  case "VolumeUp":
+                    try {
+                      await requestPost("/api/device/control/send_key", {
+                        keycode: "VolumeUp",
+                      });
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  case "VolumeDown":
+                    try {
+                      await requestPost("/api/device/control/send_key", {
+                        keycode: "VolumeDown",
+                      });
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  case "Back":
+                    try {
+                      await requestPost("/api/device/control/send_key", {
+                        keycode: "Back",
+                      });
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  case "Home":
+                    try {
+                      await requestPost("/api/device/control/send_key", {
+                        keycode: "Home",
+                      });
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  case "AppSwitch":
+                    try {
+                      await requestPost("/api/device/control/send_key", {
+                        keycode: "AppSwitch",
+                      });
+                    } catch (error) {
+                      messageApi?.error(error as string);
+                    }
+                    break;
+                  default:
+                    break;
+                }
+              },
+              items: [
+                {
+                  key: "SetDisplayPowerOff",
+                  icon: <BulbOutlined />,
+                  label: t("devices.actions.setDisplayPowerOff"),
+                },
+                {
+                  key: "SetDisplayPowerOn",
+                  icon: <BulbFilled />,
+                  label: t("devices.actions.setDisplayPowerOn"),
+                },
+                {
+                  key: "VolumeUp",
+                  icon: <UpOutlined />,
+                  label: t("devices.actions.volumeUp"),
+                },
+                {
+                  key: "VolumeDown",
+                  icon: <DownOutlined />,
+                  label: t("devices.actions.volumeDown"),
+                },
+                {
+                  key: "Back",
+                  icon: <EnterOutlined />,
+                  label: t("devices.actions.back"),
+                },
+                {
+                  key: "Home",
+                  icon: <BorderOutlined />,
+                  label: t("devices.actions.home"),
+                },
+                {
+                  key: "AppSwitch",
+                  icon: <SwitcherOutlined />,
+                  label: t("devices.actions.appSwitch"),
+                },
+              ],
+            }}
+            onOpenChange={handleMenuOpenChange}
+            open={actionMenuOpen}
+          >
+            <div>
+              <IconButton
+                size={18}
+                color="primary"
+                icon={<UnorderedListOutlined />}
+              />
+            </div>
+          </Dropdown>
+        </Flex>
+      ),
       key: "action",
       align: "center",
       render: (_, record) => (
@@ -222,7 +376,6 @@ function OtherDevices({
   );
 }
 
-// TODO 刷新设备按钮只保留一个，另一个改成发送系统按键和息屏
 export default function Devices() {
   const { t } = useTranslation();
   const messageApi = useMessageContext();
@@ -343,16 +496,7 @@ export default function Devices() {
         <ControlledDevices refresh={refreshDevices} />
       </section>
       <section className="mt-4">
-        <Flex justify="space-between" align="start">
-          <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
-          <Button
-            type="primary"
-            icon={<SyncOutlined />}
-            onClick={() => refreshDevices()}
-          >
-            {t("devices.common.refresh")}
-          </Button>
-        </Flex>
+        <h2 className="title-with-line">{t("devices.otherDevices.title")}</h2>
         <OtherDevices otherDevices={otherDevices} refresh={refreshDevices} />
       </section>
     </div>

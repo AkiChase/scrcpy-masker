@@ -21,6 +21,7 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{
         adb::{Adb, Device},
+        constant::{KeyEventAction, Keycode, MetaState},
         control_msg::ScrcpyControlMsg,
         controller::ControllerCommand,
     },
@@ -48,6 +49,7 @@ pub fn routers(
         .route("/adb_pair", post(adb_pair))
         .route("/adb_screenshot", post(adb_screenshot))
         .route("/control/set_display_power", post(set_display_power))
+        .route("/control/send_key", post(send_key))
         .route("/control/eval_script", post(eval_script))
         .with_state(AppStateDevice { cs_tx, d_tx, m_tx })
 }
@@ -353,6 +355,43 @@ async fn set_display_power(
         t!("web.device.setDisplayPowerSuccess"),
         None,
     ))
+}
+
+#[derive(Deserialize)]
+struct PostDataSendKey {
+    keycode: Keycode,
+}
+
+async fn send_key(
+    State(state): State<AppStateDevice>,
+    Json(payload): Json<PostDataSendKey>,
+) -> Result<JsonResponse, WebServerError> {
+    if !ControlledDevice::is_any_device_controlled().await {
+        return Err(WebServerError::bad_request(t!(
+            "web.device.noDeviceControlled"
+        )));
+    }
+
+    state
+        .cs_tx
+        .send(ScrcpyControlMsg::InjectKeycode {
+            action: KeyEventAction::Down,
+            keycode: payload.keycode.clone(),
+            repeat: 0,
+            metastate: MetaState::NONE,
+        })
+        .unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    state
+        .cs_tx
+        .send(ScrcpyControlMsg::InjectKeycode {
+            action: KeyEventAction::Up,
+            keycode: payload.keycode,
+            repeat: 0,
+            metastate: MetaState::NONE,
+        })
+        .unwrap();
+    Ok(JsonResponse::success(t!("web.device.sendKeySuccess"), None))
 }
 
 #[derive(Deserialize)]

@@ -93,3 +93,15 @@ export DYLD_LIBRARY_PATH="$SCRIPT_DIR/assets/lib/$DYLIB:$DYLD_LIBRARY_PATH"
 cargo run
 ```
 
+### Note
+
+To ensure that the `rust-analyzer` extension in VS Code can correctly locate the FFmpeg dependencies, add the following configuration to your `settings.json`:
+
+```json
+"rust-analyzer.cargo.extraEnv": {
+    "PKG_CONFIG_PATH": "/path/to/scrcpy-mask/ffmpeg-7.1.2/ffmpeg-macos/lib/pkgconfig",
+    "FFMPEG_DIR": "/path/to/scrcpy-mask/ffmpeg-7.1.2/ffmpeg-macos"
+}
+```
+
+Make sure to replace `/path/to/scrcpy-mask/` with the actual path to your local FFmpeg build directory. This configuration sets the necessary environment variables so that Cargo and rust-analyzer can find the FFmpeg libraries and headers during build and analysis.

@@ -68,7 +68,8 @@
       "setDisplayPowerSuccess": "成功设置所有受控设备的显示开关",
       "evalScriptSuccess": "脚本执行成功",
       "evalScriptError": "脚本执行失败",
-      "startingScrcpyApp": "启动 scrcpy 应用..."
+      "startingScrcpyApp": "启动 scrcpy 应用...",
+      "sendKeySuccess": "成功发送按键到所有受控设备"
     },
     "config": {
       "getLocalConfigSuccess": "成功获取本地配置",

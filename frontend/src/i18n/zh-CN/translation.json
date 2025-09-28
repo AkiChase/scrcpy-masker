@@ -40,6 +40,15 @@
     },
     "common": {
       "refresh": "刷新设备"
+    },
+    "actions": {
+      "setDisplayPowerOn": "亮屏",
+      "setDisplayPowerOff": "息屏",
+      "volumeUp": "增大音量",
+      "volumeDown": "减小音量",
+      "back": "返回",
+      "home": "主页",
+      "appSwitch": "切换应用"
     }
   },
   "mappings": {
