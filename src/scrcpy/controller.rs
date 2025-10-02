@@ -67,8 +67,17 @@ impl Controller {
                     ScrcpyDeviceMsg::Clipboard { length: _, text } => {
                         if LocalConfig::get_clipboard_sync() {
                             let mut ctx = ClipboardContext::new().unwrap();
-                            ctx.set_contents(text).unwrap();
-                            log::info!("[Controller] {}", t!("scrcpy.syncClipboardFromMain"));
+                            match ctx.set_contents(text) {
+                                Ok(()) => log::info!(
+                                    "[Controller] {}",
+                                    t!("scrcpy.syncClipboardFromMain")
+                                ),
+                                Err(e) => log::info!(
+                                    "[Controller] {}: {}",
+                                    t!("scrcpy.syncClipboardFromMain"),
+                                    e
+                                ),
+                            }
                         }
                     }
                     ScrcpyDeviceMsg::AckClipboard { .. } => {}

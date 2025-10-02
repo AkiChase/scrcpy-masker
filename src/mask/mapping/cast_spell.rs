@@ -303,6 +303,11 @@ pub fn handle_mouse_cast_spell(
                     let original_pos: Vec2 = mapping.position.into();
                     let center_pos: Vec2 = mapping.center.into();
                     let release_mode = mapping.release_mode.clone();
+                    let cast_no_direction = mapping.cast_no_direction;
+                    let cast_radius = mapping.cast_radius;
+                    let drag_radius = mapping.drag_radius;
+                    let horizontal_scale_factor = mapping.horizontal_scale_factor;
+                    let vertical_scale_factor = mapping.vertical_scale_factor;
                     let mut current_pos = original_pos / original_size * cur_mask_size;
 
                     if !matches!(mapping.release_mode, MouseCastReleaseMode::OnPress) {
@@ -310,10 +315,26 @@ pub fn handle_mouse_cast_spell(
                         let enable_instant =
                             Instant::now() + Duration::from_millis(CAST_SPELL_DELAY * 2);
 
+                        let record_current_pos = if !cast_no_direction {
+                            cal_mouse_cast_spell_current_pos(
+                                cur_cursor_pos,
+                                center_pos,
+                                original_pos,
+                                cast_radius,
+                                drag_radius,
+                                cur_mask_size,
+                                original_size,
+                                horizontal_scale_factor,
+                                vertical_scale_factor,
+                            )
+                        } else {
+                            current_pos
+                        };
+
                         active_cast.0 = Some(ActiveCastSpellItem::new_mouse_item(
                             action.to_string(),
                             pointer_id,
-                            current_pos,
+                            record_current_pos,
                             original_size,
                             original_pos,
                             mapping.drag_radius,
@@ -335,24 +356,21 @@ pub fn handle_mouse_cast_spell(
                         current_pos,
                     );
 
-                    let cast_no_direction = mapping.cast_no_direction;
-                    let cast_radius = mapping.cast_radius;
-                    let drag_radius = mapping.drag_radius;
-                    let horizontal_scale_factor = mapping.horizontal_scale_factor;
-                    let vertical_scale_factor = mapping.vertical_scale_factor;
                     let cs_tx = cs_tx_res.0.clone();
                     runtime.spawn_background_task(move |_ctx| async move {
                         // stay at the center
                         let steps: u64 = 5;
                         let step_interval = CAST_SPELL_DELAY / steps;
+                        let mut delta = Vec2::new(0., 0.);
                         for _ in 0..steps {
                             ControlMsgHelper::send_touch(
                                 &cs_tx,
                                 MotionEventAction::Move,
                                 pointer_id,
                                 cur_mask_size,
-                                current_pos,
+                                current_pos + delta,
                             );
+                            delta += Vec2::new(1., -1.);
                             sleep(Duration::from_millis(step_interval)).await;
                         }
 
@@ -603,6 +621,19 @@ pub fn handle_pad_cast_spell(
                         mask_size.0,
                         current_pos,
                     );
+                    // touch move around current_pos
+                    let steps: u64 = 5;
+                    let mut delta = Vec2::new(0., 0.);
+                    for _ in 0..steps {
+                        ControlMsgHelper::send_touch(
+                            &cs_tx_res.0,
+                            MotionEventAction::Move,
+                            pointer_id,
+                            mask_size.0,
+                            current_pos + delta,
+                        );
+                        delta += Vec2::new(1., -1.);
+                    }
                 } else if ineffable.just_deactivated(action.ineff_continuous()) {
                     if let PadCastReleaseMode::OnRelease = mapping.release_mode {
                         let Some(cast) = &active_cast.0 else {
