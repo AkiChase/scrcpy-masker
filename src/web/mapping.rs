@@ -17,7 +17,7 @@ use crate::{
         mapping::config::{MappingConfig, MappingType, save_mapping_config},
         mask_command::MaskCommand,
     },
-    utils::{is_safe_file_name, relate_to_root_path},
+    utils::{is_safe_file_name, relate_to_data_path},
     web::{JsonResponse, WebServerError},
 };
 
@@ -135,7 +135,7 @@ async fn create_mapping(
         ));
     }
 
-    let config_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let config_path = relate_to_data_path(["mapping", &payload.file]);
     if config_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -200,7 +200,7 @@ async fn delete_mapping(
     if file == payload.file {
         return bad_request(t!("web.mapping.cannotDeleteActiveMapping").to_string());
     }
-    let file_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let file_path = relate_to_data_path(["mapping", &payload.file]);
     if !file_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -269,7 +269,7 @@ async fn rename_mapping(
     }
 
     // rename file
-    let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let old_path = relate_to_data_path(["mapping", &payload.file]);
     if !old_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -277,7 +277,7 @@ async fn rename_mapping(
             old_path.to_str().unwrap()
         ));
     }
-    let new_path = relate_to_root_path(["local", "mapping", &payload.new_file]);
+    let new_path = relate_to_data_path(["mapping", &payload.new_file]);
     if new_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -372,7 +372,7 @@ async fn duplicate_mapping(
         ));
     }
 
-    let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let old_path = relate_to_data_path(["mapping", &payload.file]);
     if !old_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -380,7 +380,7 @@ async fn duplicate_mapping(
             old_path.to_str().unwrap()
         ));
     }
-    let new_path = relate_to_root_path(["local", "mapping", &payload.new_file]);
+    let new_path = relate_to_data_path(["mapping", &payload.new_file]);
     if new_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -431,7 +431,7 @@ async fn update_mapping(
         .map_err(|e| WebServerError::bad_request(e))?;
 
     // save to file
-    let config_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let config_path = relate_to_data_path(["mapping", &payload.file]);
     save_mapping_config(&payload.config, &config_path)
         .map_err(|e| WebServerError::bad_request(e))?;
 
@@ -483,7 +483,7 @@ async fn update_mapping(
 async fn get_mapping_list(
     State(state): State<AppStatMapping>,
 ) -> Result<JsonResponse, WebServerError> {
-    let dir_path = relate_to_root_path(["local", "mapping"]);
+    let dir_path = relate_to_data_path(["mapping"]);
     let entries = fs::read_dir(dir_path).map_err(|e| {
         WebServerError::bad_request(format!(
             "{}: {}",
@@ -544,7 +544,7 @@ async fn read_mapping(
     }
 
     // load from file
-    let path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let path = relate_to_data_path(["mapping", &payload.file]);
     if !path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -618,7 +618,7 @@ async fn migrate_mapping(
         ));
     }
 
-    let old_path = relate_to_root_path(["local", "mapping", &payload.file]);
+    let old_path = relate_to_data_path(["mapping", &payload.file]);
     if !old_path.exists() {
         return bad_request(format!(
             "{}: {}",
@@ -627,7 +627,7 @@ async fn migrate_mapping(
         ));
     }
 
-    let new_path = relate_to_root_path(["local", "mapping", &payload.new_file]);
+    let new_path = relate_to_data_path(["mapping", &payload.new_file]);
     if new_path.exists() {
         return bad_request(format!(
             "{}: {}",

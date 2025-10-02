@@ -281,6 +281,7 @@
     "videoMaxSize": "视频最大尺寸",
     "zeroUnlimitedTip": "设为 0 表示无限制",
     "videoMaxFps": "视频最大FPS",
-    "alwaysOnTop": "蒙版置顶"
+    "alwaysOnTop": "蒙版置顶",
+    "openDataPath": "打开数据目录"
   }
 }

@@ -66,10 +66,9 @@ impl Server {
             url
         );
 
-        // TODO 在浏览器打开
-        // opener::open(url).unwrap_or_else(|e| {
-        //     log::error!("[WebServe] {}: {}", t!("web.server.failedToOpenBrowser"), e)
-        // });
+        opener::open(url).unwrap_or_else(|e| {
+            log::error!("[WebServe] {}: {}", t!("web.server.failedToOpenBrowser"), e)
+        });
 
         axum::serve(listener, Self::app(cs_tx, d_tx, m_tx, ws_tx))
             .await

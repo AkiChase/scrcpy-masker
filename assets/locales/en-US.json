@@ -107,7 +107,9 @@
       "videoMaxSizeTypeError": "The video_max_size must be u32",
       "setVideoMaxFpsSuccess": "Successfully set video_max_fps (takes effect on next connection)",
       "videoMaxFpsTypeError": "The video_max_fps must be u32",
-      "alwaysOnTopMustBeBool": "The always_on_top must be bool"
+      "alwaysOnTopMustBeBool": "The always_on_top must be bool",
+      "openDataPathFailed": "Failed to open data path",
+      "openDataPathSuccess": "Successfully open data path"
     }
   },
   "utils": {

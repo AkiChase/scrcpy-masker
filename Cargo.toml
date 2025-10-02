@@ -1,5 +1,5 @@
 [package]
-name = "scrcpy-masker"
+name = "scrcpy-mask"
 version = "0.1.0"
 edition = "2024"
 
@@ -26,7 +26,8 @@ tokio = { version = "1", features = [
 ] }
 which = "7"
 adb_client = "*"
-rand = "*"
+rand = "0.9"
+dirs = "6.0.0"
 tracing-appender = "0.2"
 axum = { version = "0.8.4", features = ["macros", "ws"] }
 opener = "0.8.2"
@@ -62,3 +63,8 @@ opt-level = 3
 opt-level = 'z'
 lto = true
 codegen-units = 1
+
+[package.metadata.bundle]
+name = "scrcpy-mask"
+identifier = "com.akichase.scrcpy-mask"
+icon = ["icons/icon.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]

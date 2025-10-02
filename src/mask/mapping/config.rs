@@ -43,7 +43,7 @@ use crate::{
         },
         utils::Size,
     },
-    utils::{is_safe_file_name, relate_to_root_path},
+    utils::{is_safe_file_name, relate_to_data_path},
 };
 
 // declare 32 actions for each kind of key mapping
@@ -574,7 +574,7 @@ pub fn load_mapping_config(
     }
 
     // load from file
-    let path = relate_to_root_path(["local", "mapping", file_name.as_ref()]);
+    let path = relate_to_data_path(["mapping", file_name.as_ref()]);
     if !path.exists() {
         return Err(format!(
             "{}: {}",

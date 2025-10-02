@@ -1,11 +1,11 @@
-use std::{env, fs::File, net::SocketAddrV4, process::exit, sync::OnceLock};
+use std::{fs::File, net::SocketAddrV4, sync::OnceLock};
 
 use bevy::{
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
     prelude::*,
     window::{PresentMode, WindowLevel},
 };
-use scrcpy_masker::{
+use scrcpy_mask::{
     config::LocalConfig,
     mask::{MaskPlugins, mask_command::MaskCommand},
     scrcpy::{
@@ -13,8 +13,7 @@ use scrcpy_masker::{
         controller::{self, ControllerCommand},
         media::VideoMsg,
     },
-    update,
-    utils::{ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, relate_to_root_path},
+    utils::{ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, relate_to_data_path},
     web::{self, ws::WebSocketNotification},
 };
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -23,7 +22,7 @@ use tracing_appender::non_blocking::WorkerGuard;
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
-    let file = File::create(relate_to_root_path(["app.log"])).unwrap_or_else(|e| {
+    let file = File::create(relate_to_data_path(["app.log"])).unwrap_or_else(|e| {
         panic!("Failed to create log file: {}", e);
     });
     let (non_blocking, guard) = tracing_appender::non_blocking(file);
@@ -41,12 +40,6 @@ fn log_custom_layer(_app: &mut App) -> Option<BoxedLayer> {
 fn main() {
     let default_language = "en-US";
     rust_i18n::set_locale(default_language);
-
-    let args: Vec<String> = env::args().collect();
-    if args.contains(&"--self_update".to_string()) {
-        update::self_update();
-        exit(0);
-    }
 
     if let Err(e) = LocalConfig::load() {
         println!("LocalConfig load failed. {}", e);

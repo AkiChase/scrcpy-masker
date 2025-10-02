@@ -30,7 +30,7 @@ if ($args[0] -eq "run") {
     }
 
     Write-Host "Build successful, creating zip package..."
-    $OutputZip = "$ScriptDir\$ProjectName-$OS.zip"
+    $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
     $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
     $AssetsDir = "$ScriptDir\assets"
     

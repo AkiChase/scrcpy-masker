@@ -106,7 +106,9 @@
       "setVideoMaxSizeSuccess": "成功设置视频最大尺寸（下次连接时生效）",
       "videoMaxSizeTypeError": "视频最大尺寸必须为 u32",
       "setVideoMaxFpsSuccess": "成功设置视频最大尺寸（下次连接时生效）",
-      "videoMaxFpsTypeError": "视频最大FPS必须为 u32"
+      "videoMaxFpsTypeError": "视频最大FPS必须为 u32",
+      "openDataPathFailed": "打开数据目录失败",
+      "openDataPathSuccess": "成功打开数据目录"
     }
   },
   "utils": {

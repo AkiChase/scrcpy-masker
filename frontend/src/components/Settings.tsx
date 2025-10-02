@@ -70,6 +70,17 @@ export default function Settings() {
     dispatch(setIsLoading(false));
   }
 
+  async function openDataPath() {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestGet("/api/config/open_data_path");
+      messageApi?.success(res.message);
+    } catch (err: any) {
+      messageApi?.error(err);
+    }
+    dispatch(setIsLoading(false));
+  }
+
   return (
     <div className="page-container">
       <section>
@@ -272,6 +283,11 @@ export default function Settings() {
               value={localConfig.controllerPort}
               onChange={(v) => v !== null && dispatch(setControllerPort(v))}
             />
+          </ItemBox>
+          <ItemBox>
+            <Button type="primary" onClick={openDataPath}>
+              {t("settings.openDataPath")}
+            </Button>
           </ItemBox>
         </ItemBoxContainer>
       </section>

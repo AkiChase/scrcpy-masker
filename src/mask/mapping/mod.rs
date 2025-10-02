@@ -25,7 +25,7 @@ use crate::{
         },
         cursor::{CursorPlugins, CursorState},
     },
-    utils::relate_to_root_path,
+    utils::{relate_to_data_path},
 };
 
 #[derive(States, Clone, Copy, Default, Eq, PartialEq, Hash, Debug)]
@@ -125,7 +125,7 @@ fn init(mut ineffable: IneffableCommands, mut active_mapping: ResMut<ActiveMappi
                     t!("mask.mapping.useDefaultMapping")
                 );
                 let default_mapping = default_mapping_config();
-                let config_path = relate_to_root_path(["local", "mapping", "default.json"]);
+                let config_path = relate_to_data_path(["mapping", "default.json"]);
                 save_mapping_config(&default_mapping, &config_path).unwrap();
                 LocalConfig::set_active_mapping_file("default.json".to_string());
                 let default_bind_mapping: BindMappingConfig = default_mapping.into();

@@ -292,7 +292,7 @@ struct PostDataId {
 async fn adb_screenshot(
     Json(payload): Json<PostDataId>,
 ) -> Result<impl IntoResponse, WebServerError> {
-    let src = "/data/local/tmp/_screenshot_scrcpy_masker.png";
+    let src = "/data/local/tmp/_screenshot_scrcpy_mask.png";
 
     Device::shell(
         &payload.id,

@@ -11,7 +11,7 @@ use crate::{
     config::LocalConfig,
     mask::mask_command::MaskCommand,
     scrcpy::{adb::Adb, media::VideoCodec},
-    utils::{mask_win_move_helper, share::ControlledDevice},
+    utils::{IDENTIFIER, mask_win_move_helper, share::ControlledDevice},
     web::{JsonResponse, WebServerError},
 };
 
@@ -26,6 +26,7 @@ pub fn routers(
     Router::new()
         .route("/get_config", get(get_config))
         .route("/update_config", post(update_config))
+        .route("/open_data_path", get(open_data_path))
         .with_state(AppStatConfig { m_tx })
 }
 
@@ -35,6 +36,18 @@ async fn get_config() -> Result<JsonResponse, WebServerError> {
         t!("web.config.getLocalConfigSuccess"),
         Some(serde_json::to_value(&config).unwrap()),
     ))
+}
+
+async fn open_data_path() -> Result<JsonResponse, WebServerError> {
+    let path = dirs::data_dir().unwrap().join(IDENTIFIER);
+    opener::open(path).map_err(|e| {
+        WebServerError::bad_request(format!("{}: {}", t!("web.config.openDataPathFailed"), e))
+    })?;
+
+    return Ok(JsonResponse::success(
+        t!("web.config.openDataPathSuccess"),
+        None,
+    ));
 }
 
 #[derive(Deserialize)]

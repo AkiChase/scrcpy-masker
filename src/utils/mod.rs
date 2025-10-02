@@ -14,6 +14,20 @@ use crate::{
     scrcpy::{control_msg::ScrcpyControlMsg, media::VideoMsg},
 };
 
+pub const IDENTIFIER: &str = "com.akichase.scrcpy-mask";
+
+pub fn relate_to_data_path<P>(segments: P) -> PathBuf
+where
+    P: IntoIterator,
+    P::Item: AsRef<Path>,
+{
+    segments
+        .into_iter()
+        .fold(dirs::data_dir().unwrap().join(IDENTIFIER), |acc, seg| {
+            acc.join(seg)
+        })
+}
+
 pub fn relate_to_root_path<P>(segments: P) -> PathBuf
 where
     P: IntoIterator,

@@ -4,7 +4,7 @@ use std::{
     sync::RwLock,
 };
 
-use crate::{scrcpy::media::VideoCodec, utils::relate_to_root_path};
+use crate::{scrcpy::media::VideoCodec, utils::relate_to_data_path};
 use once_cell::sync::Lazy;
 use paste::paste;
 use rust_i18n::t;
@@ -84,7 +84,7 @@ impl LocalConfig {
         let config_json = to_string_pretty(&Self::get())
             .map_err(|e| format!("{}: {}", t!("localConfig.serializeConfigError"), e))?;
 
-        let path = relate_to_root_path(["local", "config.json"]);
+        let path = relate_to_data_path(["config.json"]);
         if let Some(parent) = path.parent() {
             create_dir_all(parent)
                 .map_err(|e| format!("{}: {}", t!("localConfig.createConfigDirError"), e))?;
@@ -97,7 +97,7 @@ impl LocalConfig {
     }
 
     pub fn load() -> Result<(), String> {
-        let path = relate_to_root_path(["local", "config.json"]);
+        let path = relate_to_data_path(["config.json"]);
         let config_string = std::fs::read_to_string(&path).map_err(|e| {
             format!(
                 "{} {}: {}",
