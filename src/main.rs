@@ -1,6 +1,7 @@
 use std::{fs::File, net::SocketAddrV4, sync::OnceLock};
 
 use bevy::{
+    ecs::schedule::MainThreadExecutor,
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
     prelude::*,
     window::{PresentMode, WindowLevel},
@@ -61,39 +62,61 @@ fn main() {
 
     ffmpeg_next::init().unwrap();
 
-    App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(LogPlugin {
-                    custom_layer: log_custom_layer,
-                    ..default()
-                })
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        has_shadow: false,
-                        transparent: true,
-                        decorations: false,
-                        present_mode: PresentMode::AutoVsync,
-                        resizable: false,
-                        visible: false,
-                        window_level: if local_config.always_on_top {
-                            WindowLevel::AlwaysOnTop
-                        } else {
-                            WindowLevel::Normal
-                        },
-                        #[cfg(target_os = "macos")]
-                        composite_alpha_mode: bevy::window::CompositeAlphaMode::PostMultiplied,
-                        #[cfg(target_os = "linux")]
-                        composite_alpha_mode: bevy::window::CompositeAlphaMode::PreMultiplied,
-                        ..default()
-                    }),
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(LogPlugin {
+                custom_layer: log_custom_layer,
+                ..default()
+            })
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    has_shadow: false,
+                    transparent: true,
+                    decorations: false,
+                    present_mode: PresentMode::AutoVsync,
+                    resizable: false,
+                    visible: false,
+                    window_level: if local_config.always_on_top {
+                        WindowLevel::AlwaysOnTop
+                    } else {
+                        WindowLevel::Normal
+                    },
+                    #[cfg(target_os = "macos")]
+                    composite_alpha_mode: bevy::window::CompositeAlphaMode::PostMultiplied,
+                    #[cfg(target_os = "linux")]
+                    composite_alpha_mode: bevy::window::CompositeAlphaMode::PreMultiplied,
                     ..default()
                 }),
-        )
-        .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default())
-        .add_plugins(MaskPlugins)
-        .add_systems(Startup, start_servers)
-        .run();
+                ..default()
+            }),
+    )
+    .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default())
+    .add_plugins(MaskPlugins)
+    .add_systems(Startup, start_servers);
+
+    #[cfg(target_os = "macos")]
+    {
+        app.insert_resource(MainThreadExecutor::default())
+            .add_systems(Startup, macos_menu);
+    }
+
+    app.run();
+}
+
+#[cfg(target_os = "macos")]
+fn macos_menu(executor: Res<MainThreadExecutor>) {
+    use muda::{Menu, Submenu};
+    // remove default menu
+    executor
+        .0
+        .spawn(async move {
+            let menu = Menu::new();
+            let submenu = Submenu::new("scrcpy-mask", true);
+            menu.append(&submenu).unwrap();
+            menu.init_for_nsapp();
+        })
+        .detach();
 }
 
 fn start_servers(mut commands: Commands) {

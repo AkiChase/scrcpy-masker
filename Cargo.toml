@@ -51,6 +51,9 @@ ffmpeg-next = { version = "7.1.0", default-features = false, features = [
     "software-scaling",
 ] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+muda = "0.17"
+
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
 opt-level = 1
@@ -67,4 +70,10 @@ codegen-units = 1
 [package.metadata.bundle]
 name = "scrcpy-mask"
 identifier = "com.akichase.scrcpy-mask"
-icon = ["icons/icon.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+icon = [
+    "icons/icon.png",
+    "icons/128x128.png",
+    "icons/128x128@2x.png",
+    "icons/icon.icns",
+    "icons/icon.ico",
+]
