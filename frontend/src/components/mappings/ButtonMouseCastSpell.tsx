@@ -423,7 +423,10 @@ function SkillEditor({
       >
         <DeviceBackground alpha={0} />
         <div className="w-full h-full absolute" onMouseMove={handleMouseMove}>
-          <CursorPos ref={cursorPosRef} className="top--6" />
+          <CursorPos ref={cursorPosRef} className="absolute top--6" />
+          <div className="color-text-secondary font-bold absolute top--6 right-0">
+            {`[${originalSize.width} x ${originalSize.height}]`}
+          </div>
           <svg className="w-full h-full">
             {!config.cast_no_direction && (
               <CastCenter

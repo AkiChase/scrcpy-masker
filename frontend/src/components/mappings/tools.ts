@@ -102,3 +102,53 @@ export function mappingButtonDragFactory(
 
   return handleDrag;
 }
+
+export function mappingModalDragFactory(
+  delay?: number
+) {
+  delay = delay ?? 150;
+  const handleDrag = (downEvent: React.MouseEvent) => {
+    if (downEvent.button !== 0) return;
+    const element = document.querySelector(".setting-modal") as HTMLElement;
+
+    let dragStarted = false;
+    let longPressTimer = 0;
+    let oX = downEvent.clientX;
+    let oY = downEvent.clientY;
+    let cX = oX;
+    let cY = oY;
+    let match = element.style.transform.match(/translate\((-?\d+)px,\s*(-?\d+)px\)/);
+    let oldTX = match ? parseInt(match[1]) : 0;
+    let oldTY = match ? parseInt(match[2]) : 0;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      cX = moveEvent.clientX
+      cY = moveEvent.clientY
+      if (!dragStarted) return;
+      element.style.transform = `translate(${oldTX + cX - oX}px, ${oldTY + cY - oY}px)`;
+    };
+
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      clearTimeout(longPressTimer);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      if (!dragStarted) return;
+
+      cX = upEvent.clientX
+      cY = upEvent.clientY
+      element.style.transform = `translate(${oldTX + cX - oX}px, ${oldTY + cY - oY}px)`;
+    };
+
+    cX = downEvent.clientX
+    cY = downEvent.clientY
+    window.addEventListener("mousemove", handleMouseMove);
+
+    longPressTimer = setTimeout(() => {
+      dragStarted = true;
+      element.style.transform = `translate(${oldTX + cX - oX}px, ${oldTY + cY - oY}px)`;
+    }, delay);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  return handleDrag;
+}

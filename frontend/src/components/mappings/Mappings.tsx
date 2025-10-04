@@ -531,75 +531,79 @@ function Displayer({
   }, 100);
 
   return (
-    <div
-      ref={displayerRef}
-      className="w-full border-text-quaternary border-solid border relative select-none"
-      style={ratioStyle}
-      onMouseMove={handleMouseMove}
-    >
-      <DeviceBackground />
-      <Dropdown
-        menu={{
-          items: menuItems.map(([key, tID]) => ({
-            key,
-            label: t(tID),
-          })),
-          onClick({ key }) {
-            let config: MappingType;
-            if (key === "MouseCastSpell") {
-              config = mappingConstructorMap.MouseCastSpell(
-                contextMenuPosRef.current,
-                {
-                  x: originalSize.width / 2,
-                  y: Math.round(originalSize.height * 0.566),
-                }
-              );
-            } else {
-              config = mappingConstructorMap[key](contextMenuPosRef.current);
-            }
-            const newState = { ...state, edited: true };
-            newState.current.mappings.push(config);
-            setState(newState);
-          },
-        }}
-        trigger={["contextMenu"]}
+    <div className="w-full">
+      <Flex justify="space-between">
+        <CursorPos ref={cursorPosRef} />
+        <div className="color-text-secondary font-bold">
+          {`[${originalSize.width} x ${originalSize.height}]`}
+        </div>
+      </Flex>
+      <div
+        ref={displayerRef}
+        className="w-full border-text-quaternary border-solid border relative select-none"
+        style={ratioStyle}
+        onMouseMove={handleMouseMove}
       >
-        <div
-          onContextMenu={(e) => {
-            contextMenuPosRef.current = clientPositionToMappingPosition(
-              e.clientX,
-              e.clientY,
-              maskArea,
-              originalSize.width,
-              originalSize.height
-            );
+        <DeviceBackground />
+        <Dropdown
+          menu={{
+            items: menuItems.map(([key, tID]) => ({
+              key,
+              label: t(tID),
+            })),
+            onClick({ key }) {
+              let config: MappingType;
+              if (key === "MouseCastSpell") {
+                config = mappingConstructorMap.MouseCastSpell(
+                  contextMenuPosRef.current,
+                  {
+                    x: originalSize.width / 2,
+                    y: Math.round(originalSize.height * 0.566),
+                  }
+                );
+              } else {
+                config = mappingConstructorMap[key](contextMenuPosRef.current);
+              }
+              const newState = { ...state, edited: true };
+              newState.current.mappings.push(config);
+              setState(newState);
+            },
           }}
-          className="w-full h-full absolute bg-transparent"
-        />
-      </Dropdown>
-      <CursorPos ref={cursorPosRef} className="top--6" />
-      <div className="absolute color-text-secondary font-bold top--6 right-0">
-        {`[${originalSize.width} x ${originalSize.height}]`}
+          trigger={["contextMenu"]}
+        >
+          <div
+            onContextMenu={(e) => {
+              contextMenuPosRef.current = clientPositionToMappingPosition(
+                e.clientX,
+                e.clientY,
+                maskArea,
+                originalSize.width,
+                originalSize.height
+              );
+            }}
+            className="w-full h-full absolute bg-transparent"
+          />
+        </Dropdown>
+        {state.current.mappings.map((mapping, index) => {
+          const props: any = {
+            originalSize,
+            index,
+            config: mapping,
+            onConfigChange: (updater: any | ((prev: any) => any)) =>
+              updateMapping(index, updater),
+            onConfigDelete: () => deleteMappingButton(index),
+            onConfigCopy: () => copyMappingButton(index),
+          };
+
+          if (mapping.type in mappingButtonMap) {
+            const ButtonComponent =
+              mappingButtonMap[mapping.type as keyof typeof mappingButtonMap];
+            return <ButtonComponent key={index} {...props} />;
+          }
+
+          return <div key={index}></div>;
+        })}
       </div>
-      {state.current.mappings.map((mapping, index) => {
-        const props: any = {
-          originalSize,
-          index,
-          config: mapping,
-          onConfigChange: (updater: any | ((prev: any) => any)) =>
-            updateMapping(index, updater),
-          onConfigDelete: () => deleteMappingButton(index),
-          onConfigCopy: () => copyMappingButton(index),
-        };
-
-        if (mapping.type in mappingButtonMap) {
-          const ButtonComponent =
-            mappingButtonMap[mapping.type as keyof typeof mappingButtonMap];
-          return <ButtonComponent key={index} {...props} />;
-        }
-
-        return <div key={index}></div>;
-      })}
     </div>
   );
 }

@@ -35,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { ItemBox } from "../common/ItemBox";
 import { useAppSelector } from "../../store/store";
 import { useRefreshBackgroundImage } from "../../hooks";
+import { mappingModalDragFactory } from "./tools";
 
 const MOUSE_BUTTONS = ["M-Left", "M-Middle", "M-Right", "M-Forward", "M-Back"];
 
@@ -44,6 +45,7 @@ type SettingModalProps = PropsWithChildren<{
 }>;
 
 export function SettingModal({ children, open, onClose }: SettingModalProps) {
+  const handleDrag = mappingModalDragFactory()
   return (
     <Modal
       footer={null}
@@ -51,8 +53,12 @@ export function SettingModal({ children, open, onClose }: SettingModalProps) {
       onCancel={onClose}
       destroyOnHidden={true}
       keyboard={false}
-      className="w-min-50vw"
+      className="w-min-50vw setting-modal"
     >
+      <div className="mx-auto mb-3 mt--3 h-1.5 w-50% rounded-full bg-text-secondary transition-colors duration-400
+      hover:bg-text-tertiary cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={handleDrag}
+      />
       {children}
     </Modal>
   );
@@ -222,7 +228,7 @@ function mappingButtonBindFactory(
 
   const handleWheel = (() => {
     const debounced = debounce((deltaY: number) => {
-      const key = deltaY > 0 ? "ScrollUp" : "ScrollDown";
+      const key = deltaY > 0 ? "ScrollDown" : "ScrollUp";
       pressedKeys.add(key);
       onBindChange([...pressedKeys]);
       pressedKeys.delete(key);
@@ -282,7 +288,7 @@ function AutoInputBinding({
   const { t } = useTranslation();
   const [isRecording, setIsRecording] = useState(false);
   const inputRef = useRef<InputRef>(null);
-  const startRecord = useRef(() => {});
+  const startRecord = useRef(() => { });
 
   useEffect(() => {
     startRecord.current = mappingButtonBindFactory(
@@ -392,7 +398,7 @@ export const CursorPos = forwardRef<
   ComponentPropsWithoutRef<"div">
 >((props, ref) => {
   const className =
-    "absolute cursor-default color-text-secondary font-bold z-10 " +
+    "cursor-default color-text-secondary font-bold z-10 " +
     (props.className ?? "");
 
   return <div style={props.style} ref={ref} className={className} />;
