@@ -39,10 +39,13 @@ elif [[ "$1" == "release" ]]; then
         exit 1
     fi
 
-    export CARGO_BUNDLE_SKIP_BUILD="1"
-    cargo bundle -r
+    ASSETS_DIR="$SCRIPT_DIR/assets"
+    LIB_OS_FOLDER="$ASSETS_DIR/lib/$OS"
 
     if [[ "$(uname)" == "Darwin" ]]; then
+        export CARGO_BUNDLE_SKIP_BUILD="1"
+        cargo bundle -r
+
         echo "Adjusting bundle files..."
         BUNDLE_DIR="$SCRIPT_DIR/target/release/bundle/osx/scrcpy-mask.app"
         DMG_PATH="$SCRIPT_DIR/target/release/scrcpy-mask.dmg"
@@ -60,10 +63,8 @@ osascript -e "tell application \"Terminal\" to activate"
 EOF
         chmod +x "$APP_BIN_DIR/scrcpy-mask"
 
-        ASSETS_DIR="$SCRIPT_DIR/assets"
         BUNDLE_ASSETS_DIR="$APP_BIN_DIR/assets"
         BUNDLE_LIB_DIR="$APP_BIN_DIR/ffmpeg-macos/lib"
-        LIB_OS_FOLDER="$ASSETS_DIR/lib/$OS"
 
         if [[ ! -d "$LIB_OS_FOLDER" ]]; then
             echo "Required folder not found: $LIB_OS_FOLDER"
@@ -88,8 +89,31 @@ EOF
         echo "DMG created: $DMG_PATH"
         exit $?
     elif [[ "$(uname)" == "Linux" ]]; then
-        # TODO Linux打包待完成
-        exit 1
+        BUNDLE_DIR="$SCRIPT_DIR/target/release/tmp"
+        BUNDLE_ASSETS_DIR="$BUNDLE_DIR/assets"
+        BUNDLE_LIB_DIR="$BUNDLE_DIR/ffmpeg-linux/lib"
+        if [[ ! -d "$LIB_OS_FOLDER" ]]; then
+            echo "Required folder not found: $LIB_OS_FOLDER"
+            exit 1
+        fi
+        mkdir -p "$BUNDLE_ASSETS_DIR"
+        mkdir -p "$BUNDLE_LIB_DIR"
+
+        find "$ASSETS_DIR" -mindepth 1 -maxdepth 1 ! -name 'lib' -exec cp -R {} "$BUNDLE_ASSETS_DIR" \;
+        find "$LIB_OS_FOLDER" -maxdepth 1 -type f -exec cp '{}' "$BUNDLE_LIB_DIR/" \;
+        BUILD_TARGET="$SCRIPT_DIR/target/release/scrcpy-mask"
+        cp "$BUILD_TARGET" "$BUNDLE_DIR"
+
+        OUTPUT_ZIP="$SCRIPT_DIR/target/release/scrcpy-mask-$OS.zip"
+        rm -f "$OUTPUT_ZIP"
+        
+        cd "$BUNDLE_DIR"
+        zip -r "$OUTPUT_ZIP" ./*
+        rm -rf "$BUNDLE_DIR"
+        cd "$SCRIPT_DIR"
+        
+        echo "Zip created: $OUTPUT_ZIP"
+        exit $?
     else
         echo "Unhandled system: $(uname). Exiting."
         exit 1

@@ -1,7 +1,6 @@
 use std::{fs::File, net::SocketAddrV4, sync::OnceLock};
 
 use bevy::{
-    ecs::schedule::MainThreadExecutor,
     log::{BoxedLayer, LogPlugin, tracing_subscriber::Layer},
     prelude::*,
     window::{PresentMode, WindowLevel},
@@ -97,7 +96,7 @@ fn main() {
 
     #[cfg(target_os = "macos")]
     {
-        app.insert_resource(MainThreadExecutor::default())
+        app.insert_resource(bevy::ecs::schedule::MainThreadExecutor::default())
             .add_systems(Startup, macos_menu);
     }
 
@@ -105,7 +104,7 @@ fn main() {
 }
 
 #[cfg(target_os = "macos")]
-fn macos_menu(executor: Res<MainThreadExecutor>) {
+fn macos_menu(executor: Res<bevy::ecs::schedule::MainThreadExecutor>) {
     use muda::{Menu, Submenu};
     // remove default menu
     executor

@@ -2,6 +2,20 @@
 
 This guide provides a brief description of how to run and compile the project.
 
+## Web Frontend
+
+Use [pnpm](https://pnpm.io/) to manage dependencies:
+
+```bash
+cd frontend
+pnpm install
+pnpm build
+```
+
+The build output will be in `assets/web`.
+
+## FFMpeg
+
 Since the project relies on FFmpeg, some additional steps are required to ensure FFmpeg is properly set up and available.
 
 > I'm not familiar with FFmpeg, so the instructions below reflect my current configure. If you have a better build configure, feel free to submit a PR!
@@ -20,28 +34,21 @@ cd ffmpeg-7.1.2
 
 ## Build FFMpeg
 
-### Windows
-
 ```bash
-./configure --prefix=./ffmpeg-windows \
+OS="windows"
+# OS="macos"
+# OS="linux"
+
+./configure --prefix=./ffmpeg-$OS \
     --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
     --enable-swscale --enable-filter=scale \
     --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
     --enable-gpl --disable-static --enable-shared
+
 make -j$(nproc)
-make install
-```
+# For macOS, use the following command
+# make -j$(sysctl -n hw.ncpu)
 
-### MacOS
-
-```bash
-./configure --prefix=./ffmpeg-macos \
-    --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-    --enable-swscale --enable-filter=scale \
-    --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-    --enable-videotoolbox \
-    --enable-gpl --disable-static --enable-shared
-make -j$(sysctl -n hw.ncpu)
 make install
 ```
 
@@ -53,7 +60,7 @@ For example, if you're targeting Windows, copy the `.dll` files; for macOS, copy
 
 ```bash
 # Example for copying dynamic libraries (adjust paths as necessary)
-cp /path/to/compiled/libs/*.so /assets/lib/linux-x64/
+cp /path/to/compiled/libs/*.so.* /assets/lib/linux-x64/
 cp /path/to/compiled/libs/*.dylib /assets/lib/darwin-arm64/
 cp /path/to/compiled/libs/*.dll /assets/lib/windows-x64/
 ```
@@ -92,6 +99,21 @@ export DYLD_LIBRARY_PATH="$SCRIPT_DIR/assets/lib/$DYLIB:$DYLD_LIBRARY_PATH"
 
 cargo run
 ```
+
+### Example for Linux
+
+```bash
+PREFIX="ffmpeg-linux"
+DYLIB="linux-x64"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+export PKG_CONFIG_PATH="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX/lib/pkgconfig"
+export FFMPEG_DIR="$SCRIPT_DIR/ffmpeg-7.1.2/$PREFIX"
+export LD_LIBRARY_PATH="$SCRIPT_DIR/assets/lib/$DYLIB:$LD_LIBRARY_PATH"
+
+cargo run
+```
+
 
 ### Note
 
