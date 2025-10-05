@@ -1,0 +1,80 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  main:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          
+      - name: Set up FFMpeg build environment (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential yasm pkg-config
+
+      - name: Set up FFMpeg build environment (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          brew install yasm pkg-config
+
+      - name: Set up FFMpeg build environment (Windows)
+        if: matrix.platform == 'windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            base-devel
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-yasm
+            mingw-w64-x86_64-pkg-config
+
+      - name: Cache FFmpeg build
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: ffmpeg-${{ matrix.platform }}
+          key: ${{ runner.os }}-ffmpeg-7.1.2-v0.1
+
+      - name: Download and build FFmpeg (if not cached)
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          OS=${{ matrix.platform }}
+          
+          wget https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
+          tar -xjf ffmpeg-7.1.2.tar.bz2
+          rm ffmpeg-7.1.2.tar.bz2
+          cd ffmpeg-7.1.2
+
+          ./configure --prefix=./ffmpeg-$OS \
+              --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
+              --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
+              --enable-gpl --disable-static --enable-shared
+              
+          if [[ "$OS" == "macos" ]]; then
+            make -j$(sysctl -n hw.ncpu)
+          else
+            make -j$(nproc)
+          fi
+          make install
+
+      - name: Verify FFmpeg (optional)
+        run: |
+          ./ffmpeg-${{ matrix.platform }}/bin/ffmpeg -version
+
