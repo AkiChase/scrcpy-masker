@@ -80,6 +80,7 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Build scrcpy-mask
         shell: pwsh
         run: |
@@ -91,31 +92,35 @@ jobs:
           
           $env:PKG_CONFIG_PATH = "$ScriptDir\$FFMpeg\$Prefix\lib\pkgconfig"
           $env:FFMPEG_DIR = "$ScriptDir\$FFMpeg\$Prefix"
-          
-          cargo build --release
 
-          $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
-          $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
-          $AssetsDir = "$ScriptDir\assets"
+          ls $env:PKG_CONFIG_PATH
+          ls $env:FFMPEG_DIR
+          ls $ScriptDir
           
-          $TmpDir = "$ScriptDir\target\tmp"
-          $TmpAssetsDir = "$TmpDir\assets"
-          if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
-          New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
+          # cargo build --release
+
+          # $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
+          # $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
+          # $AssetsDir = "$ScriptDir\assets"
           
-          Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
-              Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
-          }
+          # $TmpDir = "$ScriptDir\target\tmp"
+          # $TmpAssetsDir = "$TmpDir\assets"
+          # if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
+          # New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
           
-          $LibOSFolder = "$AssetsDir\lib\$OS"
-          if (-not (Test-Path $LibOSFolder)) {
-              Write-Error "Required folder not found: $LibOSFolder"
-              exit 1
-          }
+          # Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
+          #     Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
+          # }
           
-          $LibOSItems = Get-ChildItem -Path $LibOSFolder
-          $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
-          Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
+          # $LibOSFolder = "$AssetsDir\lib\$OS"
+          # if (-not (Test-Path $LibOSFolder)) {
+          #     Write-Error "Required folder not found: $LibOSFolder"
+          #     exit 1
+          # }
+          
+          # $LibOSItems = Get-ChildItem -Path $LibOSFolder
+          # $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
+          # Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
         
           
       

@@ -3,6 +3,5 @@ scrcpy-masker.code-workspace
 .DS_Store
 .vscode
 /local
-app.log
 assets/web
 ffmpeg-7.1.2
