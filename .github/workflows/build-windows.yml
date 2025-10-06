@@ -14,6 +14,9 @@ jobs:
             platform: windows
             
     steps:
+      - name: Checkout codes
+        uses: actions/checkout@v5.0.0
+
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
         with:
@@ -25,7 +28,7 @@ jobs:
             gcc
             yasm
             pkg-config
-              
+
       - name: Cache FFmpeg build
         id: ffmpeg-cache
         uses: actions/cache@v4
@@ -53,9 +56,6 @@ jobs:
           make -j$(nproc)
           make install
     
-      - name: Checkout codes
-        uses: actions/checkout@v5.0.0
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4.1.0
         with:
@@ -94,8 +94,8 @@ jobs:
           $env:FFMPEG_DIR = "$ScriptDir\$FFMpeg\$Prefix"
 
           ls $ScriptDir
-          # ls $env:FFMPEG_DIR
-          # ls $env:PKG_CONFIG_PATH
+          ls $env:FFMPEG_DIR
+          ls $env:PKG_CONFIG_PATH
           
           # cargo build --release
 
