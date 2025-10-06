@@ -8,43 +8,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [windows-latest]
         include:
-          # - os: ubuntu-latest
-          #   platform: linux
           - os: windows-latest
             platform: windows
-          # - os: macos-latest
-          #   platform: macos
+    defaults:
+      run:
+        shell: msys2 {0}
+            
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
-          
-      - name: Set up FFMpeg build environment (Linux)
-        if: matrix.platform == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential yasm pkg-config
-
-      - name: Set up FFMpeg build environment (macOS)
-        if: matrix.platform == 'macos'
-        run: |
-          brew install yasm pkg-config
-
-      - name: Set up FFMpeg build environment (Windows)
-        if: matrix.platform == 'windows'
+      - name: Setup msys2
         uses: msys2/setup-msys2@v2
         with:
+          update: true
           msystem: MINGW64
           install: >-
-            base-devel
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-yasm
-            mingw-w64-x86_64-pkg-config
-
+            make
+            diffutils
+            gcc
+            yasm
+            pkg-config
+              
       - name: Cache FFmpeg build
         id: ffmpeg-cache
         uses: actions/cache@v4
@@ -54,7 +38,6 @@ jobs:
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
-        shell: bash
         run: |
           OS=${{ matrix.platform }}
           
@@ -68,11 +51,7 @@ jobs:
               --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
               --enable-gpl --disable-static --enable-shared
               
-          if [[ "$OS" == "macos" ]]; then
-            make -j$(sysctl -n hw.ncpu)
-          else
-            make -j$(nproc)
-          fi
+          make -j$(nproc)
           make install
 
       - name: Verify FFmpeg (optional)
