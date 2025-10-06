@@ -55,14 +55,39 @@ jobs:
           make -j$(nproc)
           make install
           mv ffmpeg-$OS ../ffmpeg-$OS
-
-      - name: Upload ffmpeg artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ffmpeg-${{ matrix.platform }}
-          path: ffmpeg-${{ matrix.platform }}
     
-      # - name: Checkout codes
-      #   uses: actions/checkout@v5.0.0
-      #   with:
-      #       path: scrcpy-mask
+      - name: Checkout codes
+        uses: actions/checkout@v5.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4.1.0
+      - name: Build frontend
+        run: |
+          cd frontend
+          pnpm install
+          pnpm build
+      
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build scrcpy-mask
+        run: |
+          set -e
+          
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          OS=${{ matrix.platform }}
+          PREFIX="ffmpeg-$OS"
+          
+          export FFMPEG_DIR="$SCRIPT_DIR/$PREFIX"
+          export PKG_CONFIG_PATH="$FFMPEG_DIR/lib/pkgconfig"
+          cargo build --release
+        
+          
+      
