@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ffmpeg-${{ matrix.platform }}
-          key: ${{ runner.os }}-ffmpeg-7.1.2-v0.1
+          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.1
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
