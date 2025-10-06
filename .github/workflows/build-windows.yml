@@ -1,4 +1,4 @@
-name: Build
+name: Build windows
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           update: true
-          msystem: MINGW64
+          msystem: UCRT64
           install: >-
             make
             diffutils
