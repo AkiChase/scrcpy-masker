@@ -11,10 +11,10 @@ jobs:
         # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [windows-latest]
         include:
-          - os: ubuntu-latest
-            platform: linux
-          # - os: windows-latest
-          #   platform: windows
+          # - os: ubuntu-latest
+          #   platform: linux
+          - os: windows-latest
+            platform: windows
           # - os: macos-latest
           #   platform: macos
     steps:
@@ -44,7 +44,6 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-yasm
             mingw-w64-x86_64-pkg-config
-            wget
 
       - name: Cache FFmpeg build
         id: ffmpeg-cache
@@ -54,35 +53,12 @@ jobs:
           key: ${{ runner.os }}-ffmpeg-7.1.2-v0.1
 
       - name: Download and build FFmpeg (if not cached)
-        if: matrix.platform != 'windows' && steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
         shell: bash
         run: |
           OS=${{ matrix.platform }}
           
-          wget https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
-          tar -xjf ffmpeg-7.1.2.tar.bz2
-          rm ffmpeg-7.1.2.tar.bz2
-          cd ffmpeg-7.1.2
-
-          ./configure --prefix=./ffmpeg-$OS \
-              --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
-              --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-              --enable-gpl --disable-static --enable-shared
-              
-          if [[ "$OS" == "macos" ]]; then
-            make -j$(sysctl -n hw.ncpu)
-          else
-            make -j$(nproc)
-          fi
-          make install
-
-      - name: Download and build FFmpeg for Windows (if not cached)
-        if: matrix.platform == 'windows' && steps.cache-ffmpeg.outputs.cache-hit != 'true'
-        shell: msys2 {0}
-        run: |
-          OS=${{ matrix.platform }}
-          
-          wget https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
+          curl -L -o ffmpeg-7.1.2.tar.bz2 https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
           tar -xjf ffmpeg-7.1.2.tar.bz2
           rm ffmpeg-7.1.2.tar.bz2
           cd ffmpeg-7.1.2
