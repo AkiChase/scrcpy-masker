@@ -12,9 +12,6 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-    defaults:
-      run:
-        shell: msys2 {0}
             
     steps:
       - name: Setup msys2
@@ -38,6 +35,7 @@ jobs:
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        shell: msys2 {0}
         run: |
           OS=${{ matrix.platform }}
           
@@ -66,6 +64,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
       - name: Build frontend
+        shell: pwsh
         run: |
           cd frontend
           pnpm install
