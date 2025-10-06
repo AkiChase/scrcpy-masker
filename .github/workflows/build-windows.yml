@@ -87,11 +87,35 @@ jobs:
           $ScriptDir = Get-Location
           $Prefix = "ffmpeg-windows"
           $OS = "windows-x64"
+          $ProjectName = "scrcpy-mask"
           
           $env:FFMPEG_DIR = "$ScriptDir\$Prefix"
           $env:PKG_CONFIG_PATH = "$env:FFMPEG_DIR\lib\pkgconfig"
           
           cargo build --release
+
+          $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
+          $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
+          $AssetsDir = "$ScriptDir\assets"
+          
+          $TmpDir = "$ScriptDir\target\tmp"
+          $TmpAssetsDir = "$TmpDir\assets"
+          if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
+          New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
+          
+          Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
+              Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
+          }
+          
+          $LibOSFolder = "$AssetsDir\lib\$OS"
+          if (-not (Test-Path $LibOSFolder)) {
+              Write-Error "Required folder not found: $LibOSFolder"
+              exit 1
+          }
+          
+          $LibOSItems = Get-ChildItem -Path $LibOSFolder
+          $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
+          Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
         
           
       
