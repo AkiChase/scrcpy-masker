@@ -37,7 +37,7 @@ jobs:
           key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.1
 
       - name: Download and build FFmpeg (if not cached)
-        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         run: |
           OS=${{ matrix.platform }}
           
@@ -47,6 +47,7 @@ jobs:
           cd ffmpeg-7.1.2
 
           ./configure --prefix=./ffmpeg-$OS \
+              --disable-libavdevice \
               --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
               --enable-swscale --enable-filter=scale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
               --enable-gpl --disable-static --enable-shared
