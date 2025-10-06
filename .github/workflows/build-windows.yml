@@ -30,8 +30,8 @@ jobs:
         id: ffmpeg-cache
         uses: actions/cache@v4
         with:
-          path: ffmpeg-${{ matrix.platform }}
-          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.1
+          path: ffmpeg-7.1.2/ffmpeg-${{ matrix.platform }}
+          key: ffmpeg-${{ matrix.platform }}-7.1.2-v0.2
 
       - name: Download and build FFmpeg (if not cached)
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
@@ -52,7 +52,6 @@ jobs:
               
           make -j$(nproc)
           make install
-          mv ffmpeg-$OS ../ffmpeg-$OS
     
       - name: Checkout codes
         uses: actions/checkout@v5.0.0
@@ -85,12 +84,13 @@ jobs:
         shell: pwsh
         run: |
           $ScriptDir = Get-Location
-          $Prefix = "ffmpeg-windows"
+          $Prefix = "ffmpeg-${{ matrix.platform }}"
           $OS = "windows-x64"
           $ProjectName = "scrcpy-mask"
+          $FFMpeg = "ffmpeg-7.1.2"
           
-          $env:FFMPEG_DIR = "$ScriptDir\$Prefix"
-          $env:PKG_CONFIG_PATH = "$env:FFMPEG_DIR\lib\pkgconfig"
+          $env:PKG_CONFIG_PATH = "$ScriptDir\$FFMpeg\$Prefix\lib\pkgconfig"
+          $env:FFMPEG_DIR = "$ScriptDir\$FFMpeg\$Prefix"
           
           cargo build --release
 
