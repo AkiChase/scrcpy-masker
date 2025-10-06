@@ -82,16 +82,15 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Build scrcpy-mask
-        shell: msys2 {0}
+        shell: pwsh
         run: |
-          set -e
+          $ScriptDir = Get-Location
+          $Prefix = "ffmpeg-windows"
+          $OS = "windows-x64"
           
-          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-          OS=${{ matrix.platform }}
-          PREFIX="ffmpeg-$OS"
+          $env:FFMPEG_DIR = "$ScriptDir\$Prefix"
+          $env:PKG_CONFIG_PATH = "$env:FFMPEG_DIR\lib\pkgconfig"
           
-          export FFMPEG_DIR="$SCRIPT_DIR/$PREFIX"
-          export PKG_CONFIG_PATH="$FFMPEG_DIR/lib/pkgconfig"
           cargo build --release
         
           
