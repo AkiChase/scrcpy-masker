@@ -93,9 +93,9 @@ jobs:
           $env:PKG_CONFIG_PATH = "$ScriptDir\$FFMpeg\$Prefix\lib\pkgconfig"
           $env:FFMPEG_DIR = "$ScriptDir\$FFMpeg\$Prefix"
 
-          ls $env:PKG_CONFIG_PATH
-          ls $env:FFMPEG_DIR
           ls $ScriptDir
+          # ls $env:FFMPEG_DIR
+          # ls $env:PKG_CONFIG_PATH
           
           # cargo build --release
 
