@@ -1,5 +1,5 @@
 Write-Host "Building for Windows x64"
-$ProjectName = "scrcpy-masker"
+$ProjectName = "scrcpy-mask"
 $Prefix = "ffmpeg-windows"
 $OS = "windows-x64"
 $FFMpeg = "ffmpeg-7.1.2"
