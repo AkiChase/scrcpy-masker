@@ -147,6 +147,8 @@ jobs:
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
+          brew install automake git libtool nasm shtool
+
           OS=${{ matrix.platform }}
           
           curl -L -o ffmpeg-7.1.2.tar.bz2 https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
@@ -279,6 +281,16 @@ jobs:
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+              autoconf \
+              automake \
+              build-essential \
+              libtool \
+              pkg-config \
+              yasm \
+              zlib1g-dev
+
           OS=${{ matrix.platform }}
           
           curl -L -o ffmpeg-7.1.2.tar.bz2 https://ffmpeg.org/releases/ffmpeg-7.1.2.tar.bz2
