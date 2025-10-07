@@ -84,7 +84,7 @@ jobs:
   #     - name: Build scrcpy-mask
   #       shell: pwsh
   #       run: |
-  #         $ScriptDir = Get-Location
+  #         $ScriptDir = "${{ github.workspace }}"
   #         $Prefix = "ffmpeg-${{ matrix.platform }}"
   #         $OS = "windows-x64"
   #         $ProjectName = "scrcpy-mask"
@@ -191,7 +191,7 @@ jobs:
   #     - name: Build scrcpy-mask
   #       shell: bash
   #       run: |
-  #         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  #         SCRIPT_DIR="${{ github.workspace }}"
   #         FFMPEG="ffmpeg-7.1.2"
   #         PREFIX="ffmpeg-${{ matrix.platform }}"
   #         OS="macos-arm64"
@@ -337,7 +337,7 @@ jobs:
       - name: Build scrcpy-mask
         shell: bash
         run: |
-          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          SCRIPT_DIR="${{ github.workspace }}"
           FFMPEG="ffmpeg-7.1.2"
           PREFIX="ffmpeg-${{ matrix.platform }}"
           OS="linux-x64"
