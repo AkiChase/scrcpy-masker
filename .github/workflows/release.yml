@@ -202,9 +202,9 @@ jobs:
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
           export FFMPEG_DIR="$SCRIPT_DIR/$FFMPEG/$PREFIX"
 
-          ls "$SCRIPT_DIR"
-          ls "$FFMPEG_DIR"
-          ls "PKG_CONFIG_PATH"
+          echo "$SCRIPT_DIR" && ls "$SCRIPT_DIR"
+          echo "$FFMPEG_DIR" && ls "$FFMPEG_DIR"
+          echo "PKG_CONFIG_PATH" && ls "PKG_CONFIG_PATH"
           exit 0
 
           cargo build --release
@@ -349,9 +349,9 @@ jobs:
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
           export FFMPEG_DIR="$SCRIPT_DIR/$FFMPEG/$PREFIX"
 
-          ls "$SCRIPT_DIR"
-          ls "$FFMPEG_DIR"
-          ls "PKG_CONFIG_PATH"
+          echo "$SCRIPT_DIR" && ls "$SCRIPT_DIR"
+          echo "$FFMPEG_DIR" && ls "$FFMPEG_DIR"
+          echo "PKG_CONFIG_PATH" && ls "PKG_CONFIG_PATH"
           exit 0
 
           cargo build --release
