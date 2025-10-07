@@ -197,7 +197,7 @@ jobs:
           FFMPEG="ffmpeg-7.1.2"
           PREFIX="ffmpeg-${{ matrix.platform }}"
           OS="macos-arm64"
-          PROJECT_NAME = "scrcpy-mask"
+          PROJECT_NAME="scrcpy-mask"
           
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
           export FFMPEG_DIR="$SCRIPT_DIR/$FFMPEG/$PREFIX"
@@ -339,7 +339,7 @@ jobs:
           FFMPEG="ffmpeg-7.1.2"
           PREFIX="ffmpeg-${{ matrix.platform }}"
           OS="linux-x64"
-          PROJECT_NAME = "scrcpy-mask"
+          PROJECT_NAME="scrcpy-mask"
           
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
           export FFMPEG_DIR="$SCRIPT_DIR/$FFMPEG/$PREFIX"
