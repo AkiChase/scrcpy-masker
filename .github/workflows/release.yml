@@ -191,8 +191,6 @@ jobs:
   #     - name: Build scrcpy-mask
   #       shell: bash
   #       run: |
-  #         cargo install cargo-bundle
-
   #         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   #         FFMPEG="ffmpeg-7.1.2"
   #         PREFIX="ffmpeg-${{ matrix.platform }}"
@@ -212,6 +210,7 @@ jobs:
   #         ASSETS_DIR="$SCRIPT_DIR/assets"
   #         LIB_OS_FOLDER="$ASSETS_DIR/lib/$OS"
 
+  #         cargo install cargo-bundle
   #         export CARGO_BUNDLE_SKIP_BUILD="1"
   #         cargo bundle -r
 
@@ -338,8 +337,6 @@ jobs:
       - name: Build scrcpy-mask
         shell: bash
         run: |
-          cargo install cargo-bundle
-
           SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
           FFMPEG="ffmpeg-7.1.2"
           PREFIX="ffmpeg-${{ matrix.platform }}"
@@ -349,9 +346,27 @@ jobs:
           export PKG_CONFIG_PATH="$SCRIPT_DIR/$FFMPEG/$PREFIX/lib/pkgconfig"
           export FFMPEG_DIR="$SCRIPT_DIR/$FFMPEG/$PREFIX"
 
-          echo "$SCRIPT_DIR" && ls "$SCRIPT_DIR"
-          echo "$FFMPEG_DIR" && ls "$FFMPEG_DIR"
-          echo "PKG_CONFIG_PATH" && ls "PKG_CONFIG_PATH"
+          echo "SCRIPT_DIR: $SCRIPT_DIR"
+          if [ -d "$SCRIPT_DIR" ]; then
+            ls -la "$SCRIPT_DIR"
+          else
+            echo "SCRIPT_DIR does not exist"
+          fi
+
+          echo "FFMPEG_DIR: $FFMPEG_DIR"
+          if [ -d "$FFMPEG_DIR" ]; then
+            ls -la "$FFMPEG_DIR"
+          else
+            echo "FFMPEG_DIR does not exist"
+          fi
+
+          echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+          if [ -d "$PKG_CONFIG_PATH" ]; then
+            ls -la "$PKG_CONFIG_PATH"
+          else
+            echo "PKG_CONFIG_PATH does not exist or is not a directory"
+          fi
+
           exit 0
 
           cargo build --release
