@@ -93,34 +93,30 @@ jobs:
           $env:PKG_CONFIG_PATH = "$ScriptDir\$FFMpeg\$Prefix\lib\pkgconfig"
           $env:FFMPEG_DIR = "$ScriptDir\$FFMpeg\$Prefix"
 
-          ls $ScriptDir
-          ls $env:FFMPEG_DIR
-          ls $env:PKG_CONFIG_PATH
-          
-          # cargo build --release
+          cargo build --release
 
-          # $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
-          # $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
-          # $AssetsDir = "$ScriptDir\assets"
+          $OutputZip = "$ScriptDir\target\release\$ProjectName-$OS.zip"
+          $BuildTarget = "$ScriptDir\target\release\$ProjectName.exe"
+          $AssetsDir = "$ScriptDir\assets"
           
-          # $TmpDir = "$ScriptDir\target\tmp"
-          # $TmpAssetsDir = "$TmpDir\assets"
-          # if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
-          # New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
+          $TmpDir = "$ScriptDir\target\tmp"
+          $TmpAssetsDir = "$TmpDir\assets"
+          if (Test-Path $TmpDir) { Remove-Item -Recurse -Force $TmpDir }
+          New-Item -ItemType Directory -Path $TmpAssetsDir | Out-Null
           
-          # Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
-          #     Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
-          # }
+          Get-ChildItem -Path $AssetsDir -Exclude 'lib' | ForEach-Object {
+              Copy-Item -Path $_.FullName -Destination $TmpAssetsDir -Recurse
+          }
           
-          # $LibOSFolder = "$AssetsDir\lib\$OS"
-          # if (-not (Test-Path $LibOSFolder)) {
-          #     Write-Error "Required folder not found: $LibOSFolder"
-          #     exit 1
-          # }
+          $LibOSFolder = "$AssetsDir\lib\$OS"
+          if (-not (Test-Path $LibOSFolder)) {
+              Write-Error "Required folder not found: $LibOSFolder"
+              exit 1
+          }
           
-          # $LibOSItems = Get-ChildItem -Path $LibOSFolder
-          # $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
-          # Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
+          $LibOSItems = Get-ChildItem -Path $LibOSFolder
+          $PathsToCompress = @($BuildTarget, $TmpAssetsDir) + $LibOSItems.FullName
+          Compress-Archive -Path $PathsToCompress -DestinationPath $OutputZip -Force
         
           
       
