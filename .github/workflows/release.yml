@@ -197,7 +197,7 @@ jobs:
 
           SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
           FFMPEG="ffmpeg-7.1.2"
-          PREFIX = "ffmpeg-${{ matrix.platform }}"
+          PREFIX="ffmpeg-${{ matrix.platform }}"
           OS="macos-arm64"
           PROJECT_NAME = "scrcpy-mask"
           
@@ -339,7 +339,7 @@ jobs:
 
           SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
           FFMPEG="ffmpeg-7.1.2"
-          PREFIX = "ffmpeg-${{ matrix.platform }}"
+          PREFIX="ffmpeg-${{ matrix.platform }}"
           OS="linux-x64"
           PROJECT_NAME = "scrcpy-mask"
           
