@@ -3,6 +3,9 @@ name: Release scrcpy-mask
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   windows:
     runs-on: ${{ matrix.os }}
@@ -410,5 +413,5 @@ jobs:
           draft: true
           files: |
             scrcpy-mask-linux-x64/**
-            release-assets/scrcpy-mask-windows-x64/**
-            release-assets/scrcpy-mask-macos-arm64/**
+            scrcpy-mask-windows-x64/**
+            scrcpy-mask-macos-arm64/**
