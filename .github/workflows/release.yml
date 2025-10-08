@@ -349,6 +349,11 @@ jobs:
       - name: Build scrcpy-mask
         shell: bash
         run: |
+          sudo apt-get update
+          sudo apt-get -y install \
+            libudev-dev \
+            libasound2-dev
+
           SCRIPT_DIR="${{ github.workspace }}"
           FFMPEG="ffmpeg-7.1.2"
           PREFIX="ffmpeg-${{ matrix.platform }}"
