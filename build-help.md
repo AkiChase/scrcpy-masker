@@ -40,6 +40,7 @@ OS="windows"
 # OS="linux"
 
 ./configure --prefix=./ffmpeg-$OS \
+    --disable-avdevice --disable-postproc \
     --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
     --enable-swscale --enable-filter=scale \
     --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \

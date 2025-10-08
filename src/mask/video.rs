@@ -81,7 +81,13 @@ pub fn handle_video_msg(
                 }
             }
             VideoMsg::Close => {
-                video_attr.image_handle = None;
+                if let Some(image_handle) = video_attr.image_handle.take() {
+                    if let Some(image) = images.get_mut(&image_handle) {
+                        let lenght = image.data.take().unwrap().len();
+                        image.data = Some(vec![0; lenght]);
+                    }
+                    video_attr.image_handle = None;
+                }
             }
         }
     }

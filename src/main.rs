@@ -71,7 +71,7 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     has_shadow: false,
-                    transparent: true,
+                    transparent: true, // for windows: https://github.com/bevyengine/bevy/issues/7544
                     decorations: false,
                     present_mode: PresentMode::AutoVsync,
                     resizable: false,
