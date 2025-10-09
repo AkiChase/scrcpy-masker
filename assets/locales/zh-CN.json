@@ -109,7 +109,8 @@
       "videoMaxFpsTypeError": "视频最大FPS必须为 u32",
       "openDataPathFailed": "打开数据目录失败",
       "openDataPathSuccess": "成功打开数据目录",
-      "getUpdateInfoSuccess": "成功获取更新信息"
+      "getUpdateInfoSuccess": "成功获取更新信息",
+      "alwaysOnTopMustBeBool": "蒙版置顶必须为 bool"
     }
   },
   "utils": {

@@ -282,6 +282,16 @@
     "zeroUnlimitedTip": "Set to 0 for unlimited",
     "videoMaxFps": "Video max FPS",
     "alwaysOnTop": "Mask always on top",
-    "openDataPath": "Open data path"
+    "openDataPath": "Open data path",
+    "about": {
+      "title": "About",
+      "intro": "A Scrcpy client built with Rust, Bevy, and React that lets you control your Android device as if you were using an game emulator.",
+      "currentVersion": "Current version",
+      "latestVersion": "Latest version",
+      "checkUpdate": "Check update",
+      "showUpdateDialog": "Update details",
+      "download": "Download",
+      "cancel": "Cancel"
+    }
   }
 }

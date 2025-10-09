@@ -282,6 +282,16 @@
     "zeroUnlimitedTip": "设为 0 表示无限制",
     "videoMaxFps": "视频最大FPS",
     "alwaysOnTop": "蒙版置顶",
-    "openDataPath": "打开数据目录"
+    "openDataPath": "打开数据目录",
+    "about": {
+      "title": "关于",
+      "intro": "基于 Rust、Bevy 与 React 构建的 Scrcpy 客户端，让你像使用游戏模拟器一样控制安卓设备",
+      "currentVersion": "当前版本",
+      "latestVersion": "最新版本",
+      "checkUpdate": "检查更新",
+      "showUpdateDialog": "更新详情",
+      "download": "下载",
+      "cancel": "取消"
+    }
   }
 }

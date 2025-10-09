@@ -11,6 +11,15 @@ export interface OtherState {
   };
   backgroundImage: string;
   controlledDevices: ControlledDevice[];
+  updateInfo: {
+    hasUpdate: boolean;
+    currentVersion: string;
+    latestVersion: string;
+    title: string;
+    body: string;
+    time: string;
+  };
+  showUpdateDialog: boolean;
 }
 
 const initialState: OtherState = {
@@ -23,6 +32,15 @@ const initialState: OtherState = {
   },
   backgroundImage: "",
   controlledDevices: [],
+  updateInfo: {
+    hasUpdate: false,
+    currentVersion: "Unknown",
+    latestVersion: "Unknown",
+    title: "Unknown",
+    body: "Unknown",
+    time: "",
+  },
+  showUpdateDialog: false,
 };
 
 const otherSlice = createSlice({
@@ -50,6 +68,15 @@ const otherSlice = createSlice({
     ) => {
       state.controlledDevices = action.payload;
     },
+    setUpdateInfo: (state, action: PayloadAction<OtherState["updateInfo"]>) => {
+      state.updateInfo = action.payload;
+    },
+    setShowUpdateDialog: (
+      state,
+      action: PayloadAction<OtherState["showUpdateDialog"]>
+    ) => {
+      state.showUpdateDialog = action.payload;
+    },
   },
 });
 
@@ -58,6 +85,8 @@ export const {
   setMaskArea,
   setBackgroundImage,
   setControlledDevices,
+  setUpdateInfo,
+  setShowUpdateDialog,
 } = otherSlice.actions;
 
 export default otherSlice.reducer;

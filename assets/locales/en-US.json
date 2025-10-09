@@ -118,7 +118,7 @@
     "noParentDirectory": "No parent directory for executable",
     "checkForUpdateFailed": "Check for update failed",
     "updateAvailable": "Update available",
-    "noUpdateAvailable": "No update available"
+    "noUpdateAvailable": "Already up to date"
   },
   "scrcpy": {
     "syncClipboardFromMain": "Sync clipboard from main device",

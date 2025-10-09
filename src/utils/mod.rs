@@ -124,6 +124,9 @@ const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Deserialize)]
 struct ReleaseInfo {
     tag_name: String,
+    body: String,
+    name: String,
+    updated_at: String,
 }
 
 pub async fn check_for_update() -> Result<(), String> {
@@ -150,22 +153,36 @@ pub async fn check_for_update() -> Result<(), String> {
         .await
         .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
 
-    let latest_tag = release.tag_name;
+    let latest_version = release.tag_name.trim_start_matches('v');
     let current = Version::parse(CURRENT_VERSION)
         .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
 
-    let latest = Version::parse(latest_tag.trim_start_matches('v'))
+    let latest = Version::parse(latest_version)
         .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
 
     let info = UpdateInfo {
         has_update: latest > current,
-        latest_tag: latest_tag,
+        latest_version: latest_version.to_string(),
+        current_version: CURRENT_VERSION.to_string(),
+        title: release.name,
+        body: release.body,
+        time: release.updated_at,
     };
 
     if info.has_update {
-        log::info!("{}: {}", t!("utils.updateAvailable"), info.latest_tag);
+        log::info!(
+            "{}: {} <= {}",
+            t!("utils.updateAvailable"),
+            info.current_version,
+            info.latest_version
+        );
     } else {
-        log::info!("{}: {}", t!("utils.noUpdateAvailable"), info.latest_tag);
+        log::info!(
+            "{}: {} >= {}",
+            t!("utils.noUpdateAvailable"),
+            info.current_version,
+            info.latest_version
+        );
     }
 
     UpdateInfo::set(info).await;

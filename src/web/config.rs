@@ -12,7 +12,7 @@ use crate::{
     mask::mask_command::MaskCommand,
     scrcpy::{adb::Adb, media::VideoCodec},
     utils::{
-        IDENTIFIER, mask_win_move_helper,
+        IDENTIFIER, check_for_update, mask_win_move_helper,
         share::{ControlledDevice, UpdateInfo},
     },
     web::{JsonResponse, WebServerError},
@@ -31,6 +31,7 @@ pub fn routers(
         .route("/update_config", post(update_config))
         .route("/open_data_path", get(open_data_path))
         .route("/get_update_info", get(get_update_info))
+        .route("/check_update", get(check_update))
         .with_state(AppStatConfig { m_tx })
 }
 
@@ -60,6 +61,21 @@ async fn get_update_info() -> Result<JsonResponse, WebServerError> {
         t!("web.config.getUpdateInfoSuccess"),
         Some(serde_json::to_value(&info).unwrap()),
     ));
+}
+
+async fn check_update() -> Result<JsonResponse, WebServerError> {
+    match check_for_update().await {
+        Err(e) => {
+            return Err(WebServerError::bad_request(e.to_string()));
+        }
+        Ok(()) => {
+            let info = UpdateInfo::get().await;
+            return Ok(JsonResponse::success(
+                t!("web.config.getUpdateInfoSuccess"),
+                Some(serde_json::to_value(&info).unwrap()),
+            ));
+        }
+    };
 }
 
 #[derive(Deserialize)]

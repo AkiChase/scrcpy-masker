@@ -63,7 +63,11 @@ impl ControlledDevice {
 #[derive(Clone, Serialize)]
 pub struct UpdateInfo {
     pub has_update: bool,
-    pub latest_tag: String,
+    pub latest_version: String,
+    pub current_version: String,
+    pub title: String,
+    pub body: String,
+    pub time: String,
 }
 
 impl UpdateInfo {
@@ -79,6 +83,10 @@ impl UpdateInfo {
 static UPDATE_INFO: Lazy<RwLock<UpdateInfo>> = Lazy::new(|| {
     RwLock::new(UpdateInfo {
         has_update: false,
-        latest_tag: "Unknown".to_string(),
+        latest_version: "Unknown".to_string(),
+        current_version: "Unknown".to_string(),
+        title: "Unknown".to_string(),
+        body: "Unknown".to_string(),
+        time: "".to_string(),
     })
 });

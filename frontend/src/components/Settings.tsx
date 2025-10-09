@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import { ItemBox, ItemBoxContainer } from "./common/ItemBox";
 import {
+  Badge,
   Button,
   Flex,
   Input,
@@ -10,6 +11,7 @@ import {
   Slider,
   Space,
   Switch,
+  Typography,
 } from "antd";
 import {
   forceSetLocalConfig,
@@ -29,11 +31,21 @@ import {
   setVideoMaxFps,
   setAlwaysOnTop,
 } from "../store/localConfig";
-import { setIsLoading } from "../store/other";
+import {
+  setIsLoading,
+  setShowUpdateDialog,
+  setUpdateInfo,
+} from "../store/other";
 import { requestGet } from "../utils";
 import i18n from "../i18n";
 import { useMessageContext } from "../hooks";
-import { SyncOutlined } from "@ant-design/icons";
+import {
+  BilibiliFilled,
+  CloudSyncOutlined,
+  GithubFilled,
+  InfoCircleOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
 
 const languageOptions = [
   {
@@ -51,12 +63,12 @@ const videoCodecOptions = ["H264", "H265", "AV1"].map((v) => ({
   label: v,
 }));
 
-
 export default function Settings() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const messageApi = useMessageContext();
   const localConfig = useAppSelector((state) => state.localConfig);
+  const updateInfo = useAppSelector((state) => state.other.updateInfo);
 
   async function loadLocalConfig() {
     dispatch(setIsLoading(true));
@@ -81,14 +93,25 @@ export default function Settings() {
     dispatch(setIsLoading(false));
   }
 
-  async function getUpdateInfo() {
-    dispatch(setIsLoading(true));
+  async function checkUpdate() {
     try {
-      const res = await requestGet("/api/config/get_update_info");
+      const res = await requestGet("/api/config/check_update");
+      dispatch(
+        setUpdateInfo({
+          currentVersion: res.data.current_version,
+          hasUpdate: res.data.has_update,
+          latestVersion: res.data.latest_version,
+          title: res.data.title,
+          body: res.data.body,
+          time: res.data.time,
+        })
+      );
+      if (res.data.has_update) {
+        dispatch(setShowUpdateDialog(true));
+      }
     } catch (err: any) {
       messageApi?.error(err);
     }
-    dispatch(setIsLoading(false));
   }
 
   return (
@@ -103,7 +126,7 @@ export default function Settings() {
             icon={<SyncOutlined />}
             shape="circle"
             onClick={loadLocalConfig}
-          ></Button>
+          />
         </Flex>
         <h3 className="title-with-line-sub">{t("settings.title.basic")}</h3>
         <ItemBoxContainer className="mb-6">
@@ -302,8 +325,54 @@ export default function Settings() {
         </ItemBoxContainer>
       </section>
       <section>
-        <h2 className="title-with-line">About</h2>
-        Author, Current version, CheckForUpdate
+        <h2 className="title-with-line">{t("settings.about.title")}</h2>
+        <Typography.Paragraph>{t("settings.about.intro")}</Typography.Paragraph>
+        <Flex gap="large">
+          <Button
+            type="text"
+            icon={<GithubFilled />}
+            onClick={() =>
+              window.open("https://github.com/AkiChase/scrcpy-mask", "_blank")
+            }
+          >
+            Github
+          </Button>
+          <Button
+            type="text"
+            icon={<BilibiliFilled />}
+            onClick={() =>
+              window.open("https://space.bilibili.com/440760180", "_blank")
+            }
+          >
+            BiliBili
+          </Button>
+        </Flex>
+        <Flex gap="large" align="center" className="mt-4">
+          <Button
+            type="primary"
+            icon={<CloudSyncOutlined />}
+            onClick={checkUpdate}
+          >
+            {t("settings.about.checkUpdate")}
+          </Button>
+          <Badge dot={updateInfo.hasUpdate}>
+            <Button
+              type="primary"
+              icon={<InfoCircleOutlined />}
+              onClick={() => dispatch(setShowUpdateDialog(true))}
+            >
+              {t("settings.about.showUpdateDialog")}
+            </Button>
+          </Badge>
+        </Flex>
+        <Flex gap="large" align="center" className="mt-4">
+          <Typography.Text>
+            {t("settings.about.currentVersion")}: {updateInfo.currentVersion}
+          </Typography.Text>
+          <Typography.Text>
+            {t("settings.about.latestVersion")}: {updateInfo.latestVersion}
+          </Typography.Text>
+        </Flex>
       </section>
     </div>
   );
