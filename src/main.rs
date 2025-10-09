@@ -5,6 +5,7 @@ use bevy::{
     prelude::*,
     window::{PresentMode, WindowLevel},
 };
+use bevy_tokio_tasks::TokioTasksRuntime;
 use scrcpy_mask::{
     config::LocalConfig,
     mask::{MaskPlugins, mask_command::MaskCommand},
@@ -13,7 +14,9 @@ use scrcpy_mask::{
         controller::{self, ControllerCommand},
         media::VideoMsg,
     },
-    utils::{ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, relate_to_data_path},
+    utils::{
+        ChannelReceiverM, ChannelReceiverV, ChannelSenderCS, check_for_update, relate_to_data_path,
+    },
     web::{self, ws::WebSocketNotification},
 };
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -92,7 +95,7 @@ fn main() {
     )
     .add_plugins(bevy_tokio_tasks::TokioTasksPlugin::default())
     .add_plugins(MaskPlugins)
-    .add_systems(Startup, start_servers);
+    .add_systems(Startup, (start_servers, check_for_update_system));
 
     #[cfg(target_os = "macos")]
     {
@@ -137,4 +140,12 @@ fn start_servers(mut commands: Commands) {
     commands.insert_resource(ChannelReceiverM(m_rx));
     web::Server::start(web_addr, cs_tx.clone(), d_tx, m_tx.clone(), ws_tx.clone());
     controller::Controller::start(controller_addr, cs_tx, v_tx, d_rx, m_tx, ws_tx);
+}
+
+fn check_for_update_system(runtime: ResMut<TokioTasksRuntime>) {
+    runtime.spawn_background_task(move |_ctx| async move {
+        if let Err(e) = check_for_update().await {
+            log::error!("{}", e);
+        }
+    });
 }

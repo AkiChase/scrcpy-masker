@@ -108,12 +108,16 @@
       "setVideoMaxFpsSuccess": "成功设置视频最大尺寸（下次连接时生效）",
       "videoMaxFpsTypeError": "视频最大FPS必须为 u32",
       "openDataPathFailed": "打开数据目录失败",
-      "openDataPathSuccess": "成功打开数据目录"
+      "openDataPathSuccess": "成功打开数据目录",
+      "getUpdateInfoSuccess": "成功获取更新信息"
     }
   },
   "utils": {
     "cannotGetCurrentExePath": "无法获取当前可执行文件路径",
-    "noParentDirectory": "可执行文件没有父目录"
+    "noParentDirectory": "可执行文件没有父目录",
+    "checkForUpdateFailed": "检查更新失败",
+    "updateAvailable": "检测到新版本",
+    "noUpdateAvailable": "当前版本已是最新版本"
   },
   "scrcpy": {
     "syncClipboardFromMain": "从主设备同步剪贴板",

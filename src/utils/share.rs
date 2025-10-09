@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::scrcpy::ScrcpyDevice;
@@ -58,3 +59,26 @@ impl ControlledDevice {
         }
     }
 }
+
+#[derive(Clone, Serialize)]
+pub struct UpdateInfo {
+    pub has_update: bool,
+    pub latest_tag: String,
+}
+
+impl UpdateInfo {
+    pub async fn get() -> UpdateInfo {
+        UPDATE_INFO.read().await.clone()
+    }
+
+    pub async fn set(info: UpdateInfo) {
+        *UPDATE_INFO.write().await = info;
+    }
+}
+
+static UPDATE_INFO: Lazy<RwLock<UpdateInfo>> = Lazy::new(|| {
+    RwLock::new(UpdateInfo {
+        has_update: false,
+        latest_tag: "Unknown".to_string(),
+    })
+});

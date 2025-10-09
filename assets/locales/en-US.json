@@ -109,12 +109,16 @@
       "videoMaxFpsTypeError": "The video_max_fps must be u32",
       "alwaysOnTopMustBeBool": "The always_on_top must be bool",
       "openDataPathFailed": "Failed to open data path",
-      "openDataPathSuccess": "Successfully open data path"
+      "openDataPathSuccess": "Successfully open data path",
+      "getUpdateInfoSuccess": "Successfully get update info"
     }
   },
   "utils": {
     "cannotGetCurrentExePath": "Cannot get current executable path",
-    "noParentDirectory": "No parent directory for executable"
+    "noParentDirectory": "No parent directory for executable",
+    "checkForUpdateFailed": "Check for update failed",
+    "updateAvailable": "Update available",
+    "noUpdateAvailable": "No update available"
   },
   "scrcpy": {
     "syncClipboardFromMain": "Sync clipboard from main device",

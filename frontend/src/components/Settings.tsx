@@ -81,6 +81,16 @@ export default function Settings() {
     dispatch(setIsLoading(false));
   }
 
+  async function getUpdateInfo() {
+    dispatch(setIsLoading(true));
+    try {
+      const res = await requestGet("/api/config/get_update_info");
+    } catch (err: any) {
+      messageApi?.error(err);
+    }
+    dispatch(setIsLoading(false));
+  }
+
   return (
     <div className="page-container">
       <section>

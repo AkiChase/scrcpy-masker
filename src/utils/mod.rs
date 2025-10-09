@@ -5,13 +5,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use axum::http::{HeaderMap, HeaderValue};
 use bevy::ecs::resource::Resource;
+use reqwest::header::USER_AGENT;
+use rust_i18n::t;
+use semver::Version;
+use serde::Deserialize;
 use tokio::sync::{broadcast, oneshot};
 
 use crate::{
     config::LocalConfig,
     mask::mask_command::MaskCommand,
     scrcpy::{control_msg::ScrcpyControlMsg, media::VideoMsg},
+    utils::share::UpdateInfo,
 };
 
 pub const IDENTIFIER: &str = "com.akichase.scrcpy-mask";
@@ -110,4 +116,59 @@ pub async fn mask_win_move_helper(
     ))
     .unwrap();
     oneshot_rx.await.unwrap().unwrap()
+}
+
+const UPDATE_URL: &str = "https://api.github.com/repos/AkiChase/scrcpy-mask/releases/latest";
+const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Deserialize)]
+struct ReleaseInfo {
+    tag_name: String,
+}
+
+pub async fn check_for_update() -> Result<(), String> {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static("scrcpy-mask-update-checker"),
+    );
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(UPDATE_URL)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("GitHub API request failed: {}", resp.status()).into());
+    }
+
+    let release: ReleaseInfo = resp
+        .json()
+        .await
+        .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
+
+    let latest_tag = release.tag_name;
+    let current = Version::parse(CURRENT_VERSION)
+        .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
+
+    let latest = Version::parse(latest_tag.trim_start_matches('v'))
+        .map_err(|e| format!("{}: {}", t!("utils.checkForUpdateFailed"), e))?;
+
+    let info = UpdateInfo {
+        has_update: latest > current,
+        latest_tag: latest_tag,
+    };
+
+    if info.has_update {
+        log::info!("{}: {}", t!("utils.updateAvailable"), info.latest_tag);
+    } else {
+        log::info!("{}: {}", t!("utils.noUpdateAvailable"), info.latest_tag);
+    }
+
+    UpdateInfo::set(info).await;
+
+    Ok(())
 }
