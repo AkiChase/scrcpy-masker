@@ -81,6 +81,7 @@ fn gen_scid() -> String {
 #[derive(Deserialize)]
 struct PostDataControlDevice {
     device_id: String,
+    display_id: i32,
     video: bool,
 }
 
@@ -90,6 +91,7 @@ async fn control_device(
 ) -> Result<JsonResponse, WebServerError> {
     let device_id = payload.device_id;
     let video = payload.video;
+    let display_id = payload.display_id;
 
     let local_config = LocalConfig::get();
 
@@ -138,6 +140,7 @@ async fn control_device(
     args.push(version.to_string());
     args.push(format!("scid={}", scid));
     args.push(format!("video={}", video));
+    args.push(format!("display_id={}", display_id));
     args.push("audio=false".to_string());
 
     // create device

@@ -6,6 +6,7 @@ import {
   Dropdown,
   Flex,
   Input,
+  InputNumber,
   Popover,
   Space,
   Table,
@@ -311,12 +312,14 @@ function OtherDevices({
   const messageApi = useMessageContext();
 
   const [isVideo, setIsVideo] = useState(false);
+  const [displayID, setDisplayID] = useState(0);
 
   async function controlDevice(device: AdbDevice) {
     dispatch(setIsLoading(true));
     try {
       const res = await requestPost("/api/device/control_device", {
         device_id: device.id,
+        display_id: displayID,
         video: isVideo,
       });
       messageApi?.success(res.message);
@@ -340,14 +343,26 @@ function OtherDevices({
     },
     {
       title: (
-        <Flex justify="center" align="center">
-          <Checkbox
-            checked={isVideo}
-            onChange={(e) => setIsVideo(e.target.checked)}
-          >
-            {t("devices.otherDevices.video")}
-          </Checkbox>
-        </Flex>
+        <Popover
+          trigger="hover"
+          content={
+            <InputNumber
+              className="w-full"
+              value={displayID}
+              onChange={(v) => v !== null && setDisplayID(v)}
+            />
+          }
+          title="Display id"
+        >
+          <Flex justify="center" align="center">
+            <Checkbox
+              checked={isVideo}
+              onChange={(e) => setIsVideo(e.target.checked)}
+            >
+              {t("devices.otherDevices.video")}
+            </Checkbox>
+          </Flex>
+        </Popover>
       ),
       key: "action",
       align: "center",
