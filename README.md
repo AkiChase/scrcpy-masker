@@ -47,6 +47,8 @@ To better support the interaction between **Scrcpy Mask** and Android devices, w
 
 ## Contributing
 
+The [build-help](./build-help.md) provides a brief description of how to run and compile the project.
+
 If you’re interested in this project, feel free to submit a **PR** or open an **Issue**.
 Due to limited personal time and resources, I may not be able to respond to all feedback promptly — thank you for your understanding.
 
