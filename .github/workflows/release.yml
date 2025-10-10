@@ -1,6 +1,9 @@
 name: Release scrcpy-mask
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
