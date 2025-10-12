@@ -56,7 +56,7 @@ jobs:
               --toolchain=msvc \
               --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=av1 \
               --enable-swscale --enable-avformat --enable-avcodec --enable-avutil --enable-swresample \
-              --enable-gpl --disable-static --enable-shared
+              --enable-gpl --enable-static --disable-shared
 
           make -j$(nproc)
           make install
